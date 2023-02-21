@@ -286,10 +286,10 @@ function cleanNode(node: Node, complete: boolean): void {
   delete node[NODE_CONTEXT]
   if (complete) {
     delete node[VALUE]
+    delete node[NODE_PARENT]
     delete node[NODE_CHILDREN]
     delete node[NODE_CLEANUPS]
     delete node[NODE_CALLBACK]
-    delete node[NODE_PARENT]
     delete node[NODE_SOURCES]
     delete node[NODE_SOURCESLOTS]
   }
