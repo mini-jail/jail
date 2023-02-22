@@ -8,19 +8,19 @@ export type Signal<T = any> = {
   (callback: Callback<T>): void
 }
 export type Source<T = any> = {
-  value?: T
-  nodes?: Node[]
-  nodeSlots?: number[]
+  value: T | undefined
+  nodes: Node[] | undefined
+  nodeSlots: number[] | undefined
 }
 export type Node<T = any> = {
-  value?: T
-  parentNode?: Node
-  children?: Node[]
-  context?: { [id: symbol]: any }
-  cleanups?: Cleanup[]
-  callback?: Callback<any>
-  sources?: Source[]
-  sourceSlots?: number[]
+  value: T | undefined
+  parentNode: Node | undefined
+  children: Node[] | undefined
+  context: { [id: symbol]: any } | undefined
+  cleanups: Cleanup[] | undefined
+  callback: Callback<any> | undefined
+  sources: Source[] | undefined
+  sourceSlots: number[] | undefined
 }
 export type Ref<T = any> = {
   value: T
@@ -55,11 +55,17 @@ export function root<T = any>(callback: (cleanup: Cleanup) => T): T | void {
 }
 
 function node<T = any>(initialValue?: T, callback?: Callback<T>): Node<T> {
-  const _node: Node<T> = {}
-  if (initialValue) _node.value = initialValue
-  if (callback) _node.callback = callback
+  const _node: Node<T> = {
+    value: initialValue,
+    parentNode,
+    children: undefined,
+    context: undefined,
+    cleanups: undefined,
+    callback,
+    sources: undefined,
+    sourceSlots: undefined,
+  }
   if (parentNode) {
-    _node.parentNode = parentNode
     if (parentNode.children === undefined) {
       parentNode.children = [_node]
     } else {
@@ -108,9 +114,11 @@ function lookup(node: Node | undefined, id: symbol): any | undefined {
 }
 
 function source<T = any>(initialValue?: T): Source<T> {
-  const _source: Source<T> = {}
-  if (initialValue) _source.value = initialValue
-  return _source
+  return {
+    value: initialValue,
+    nodes: undefined,
+    nodeSlots: undefined,
+  }
 }
 
 function sourceValue<T = any>(source: Source<T>): T
@@ -274,7 +282,6 @@ function cleanNode(node: Node, complete: boolean): void {
   if (complete) {
     for (const property in node) {
       node[property as keyof Node] = undefined
-      delete node[property as keyof Node]
     }
   }
 }
