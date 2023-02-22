@@ -18,7 +18,7 @@ export type Cleanup = () => void
 export type Callback<T = void> = T extends void ? (() => void)
   : ((value: T) => T)
 export type Accessor<T = any> = () => T
-export type SignalHandler<T = any> = {
+export type Signal<T = any> = {
   (): T
   (value: T | undefined): void
   (callback: Callback<T>): void
@@ -167,9 +167,9 @@ function sourceValue<T = any>(source: Source<T>, next?: any) {
   }
 }
 
-export function signal<T>(initialValue?: T): SignalHandler<T> {
+export function signal<T>(initialValue?: T): Signal<T> {
   const _source = source(initialValue)
-  return sourceValue.bind(undefined, _source) as SignalHandler<T>
+  return sourceValue.bind(undefined, _source) as Signal<T>
 }
 
 export function ref<T>(initialValue?: T): Ref<T> {
