@@ -1,6 +1,9 @@
 export type Cleanup = () => void
 export type Callback<T = void> = T extends void ? (() => void)
-  : ((value: T) => T)
+  : {
+    (): T
+    (value: T): T
+  }
 export type Accessor<T = any> = () => T
 export type Signal<T = any> = {
   (): T
@@ -8,12 +11,12 @@ export type Signal<T = any> = {
   (callback: Callback<T>): void
 }
 export type Source<T = any> = {
-  value: T | undefined
+  value: T | undefined | null
   nodes: Node[] | undefined
   nodeSlots: number[] | undefined
 }
 export type Node<T = any> = {
-  value: T | undefined
+  value: T | undefined | null
   parentNode: Node | undefined
   children: Node[] | undefined
   context: { [id: symbol]: any } | undefined
@@ -31,6 +34,7 @@ export type Context<T> = {
   provide<R>(value: T, callback: Accessor<R>): R
 }
 
+const unset = undefined
 const Error = Symbol("Error")
 const Queue = new Set<Node>()
 let nodeQueue: Set<Node> | undefined
@@ -41,9 +45,9 @@ export function root<T = any>(callback: (cleanup: Cleanup) => T): T | void {
   parentNode = _node
   try {
     return batch(() => {
-      let _cleanup: Cleanup | never = <never> undefined
+      let _cleanup: Cleanup | never = <never> unset
       if (callback.length) {
-        _cleanup = cleanNode.bind(undefined, _node, true)
+        _cleanup = cleanNode.bind(unset, _node, true)
       }
       return callback(_cleanup)
     })!
@@ -58,15 +62,15 @@ function node<T = any>(initialValue?: T, callback?: Callback<T>): Node<T> {
   const _node: Node<T> = {
     value: initialValue,
     parentNode,
-    children: undefined,
-    context: undefined,
-    cleanups: undefined,
+    children: unset,
+    context: unset,
+    cleanups: unset,
     callback,
-    sources: undefined,
-    sourceSlots: undefined,
+    sources: unset,
+    sourceSlots: unset,
   }
   if (parentNode) {
-    if (parentNode.children === undefined) {
+    if (parentNode.children === unset) {
       parentNode.children = [_node]
     } else {
       parentNode.children.push(_node)
@@ -93,8 +97,7 @@ export function destroy(callback: Callback): void {
 }
 
 export function effect(callback: Callback): void
-export function effect<T>(callback: Callback<T>): void
-export function effect<T>(callback: Callback<T>, initialValue: T): void
+export function effect<T>(callback: Callback<T>, initialValue?: T): void
 export function effect(callback: Callback<any>, initialValue?: any): void {
   if (parentNode) {
     const _node = node(initialValue, callback)
@@ -110,14 +113,14 @@ function lookup(node: Node | undefined, id: symbol): any | undefined {
     ? node.context && id in node.context
       ? node.context[id]
       : lookup(node.parentNode, id)
-    : undefined
+    : unset
 }
 
 function source<T = any>(initialValue?: T): Source<T> {
   return {
     value: initialValue,
-    nodes: undefined,
-    nodeSlots: undefined,
+    nodes: unset,
+    nodeSlots: unset,
   }
 }
 
@@ -132,14 +135,14 @@ function sourceValue<T = any>(source: Source<T>, next?: any) {
     if (parentNode && parentNode.callback) {
       const sourceSlot = source.nodes?.length || 0,
         nodeSlot = parentNode.sources?.length || 0
-      if (parentNode.sources === undefined) {
+      if (parentNode.sources === unset) {
         parentNode.sources = [source]
         parentNode.sourceSlots = [sourceSlot]
       } else {
         parentNode.sources.push(source)
         parentNode.sourceSlots!.push(sourceSlot)
       }
-      if (source.nodes === undefined) {
+      if (source.nodes === unset) {
         source.nodes = [parentNode]
         source.nodeSlots = [nodeSlot]
       } else {
@@ -164,7 +167,7 @@ function sourceValue<T = any>(source: Source<T>, next?: any) {
 
 export function signal<T>(initialValue?: T): Signal<T> {
   const _source = source(initialValue)
-  return sourceValue.bind(undefined, _source) as Signal<T>
+  return sourceValue.bind(unset, _source) as Signal<T>
 }
 
 export function ref<T>(initialValue?: T): Ref<T> {
@@ -188,8 +191,8 @@ function handleError(error: any): void {
 }
 
 export function error<T = any>(callback: Callback<T>): void {
-  if (parentNode === undefined) return
-  if (parentNode.context === undefined) {
+  if (parentNode === unset) return
+  if (parentNode.context === unset) {
     parentNode.context = { [Error]: [callback] }
   } else {
     parentNode.context[Error].push(callback)
@@ -197,14 +200,14 @@ export function error<T = any>(callback: Callback<T>): void {
 }
 
 export function cleanup(callback: Callback): void {
-  if (parentNode === undefined) return
+  if (parentNode === unset) return
   else if (!parentNode.cleanups) parentNode.cleanups = [callback]
   else parentNode.cleanups.push(callback)
 }
 
 export function untrack<T>(callback: () => T): T {
   const node = parentNode
-  parentNode = undefined
+  parentNode = unset
   const result = callback()
   parentNode = node
   return result
@@ -219,17 +222,17 @@ function batch<T>(callback: () => T): T {
 }
 
 function flush(): void {
-  if (nodeQueue === undefined) return
+  if (nodeQueue === unset) return
   for (const node of nodeQueue) {
     nodeQueue.delete(node)
     updateNode(node, false)
   }
-  nodeQueue = undefined
+  nodeQueue = unset
 }
 
 function updateNode(node: Node, complete: boolean): void {
   cleanNode(node, complete)
-  if (node.callback === undefined) return
+  if (node.callback === unset) return
   const previousNode = parentNode
   parentNode = node
   try {
@@ -259,13 +262,13 @@ function cleanNodeSources(node: Node): void {
 }
 
 function cleanChildNodes(node: Node, complete: boolean): void {
-  const hasCallback = node.callback !== undefined
+  const hasCallback = node.callback !== unset
   let childNode: Node
   while (node.children!.length) {
     childNode = node.children!.pop()!
     cleanNode(
       childNode,
-      complete || (hasCallback && childNode.callback !== undefined),
+      complete || (hasCallback && childNode.callback !== unset),
     )
   }
 }
@@ -278,11 +281,15 @@ function cleanNode(node: Node, complete: boolean): void {
       node.cleanups.pop()!()
     }
   }
-  node.context = undefined
+  node.context = unset
   if (complete) {
-    for (const property in node) {
-      node[property as keyof Node] = undefined
-    }
+    node.value = unset
+    node.parentNode = unset
+    node.children = unset
+    node.cleanups = unset
+    node.callback = unset
+    node.sources = unset
+    node.sourceSlots = unset
   }
 }
 
