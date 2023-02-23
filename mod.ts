@@ -1,9 +1,6 @@
 export type Cleanup = () => void
 export type Callback<T = void> = T extends void ? (() => void)
-  : {
-    (): T
-    (value: T): T
-  }
+  : ((value: T) => T)
 export type Accessor<T = any> = () => T
 export type Signal<T = any> = {
   (): T
