@@ -85,14 +85,6 @@ export function computed<T>(
   return () => sourceValue(_source)
 }
 
-export function mount(callback: Callback): void {
-  effect(() => untrack(callback))
-}
-
-export function destroy(callback: Callback): void {
-  cleanup(() => untrack(callback))
-}
-
 export function effect(callback: Callback): void
 export function effect<T>(callback: Callback<T>, initialValue?: T): void
 export function effect(callback: Callback<any>, initialValue?: any): void {
@@ -102,6 +94,20 @@ export function effect(callback: Callback<any>, initialValue?: any): void {
     else queueMicrotask(() => updateNode(_node, false))
   } else {
     queueMicrotask(() => callback(initialValue))
+  }
+}
+
+export function layoutEffect(callback: Callback): void
+export function layoutEffect<T>(callback: Callback<T>, initialValue?: T): void
+export function layoutEffect(
+  callback: Callback<any>,
+  initialValue?: any,
+): void {
+  if (parentNode) {
+    const _node = node(initialValue, callback)
+    if (nodeQueue) updateNode(_node, false)
+  } else {
+    callback(initialValue)
   }
 }
 
