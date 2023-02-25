@@ -302,6 +302,10 @@ export function context<T>(defaultValue?: T): Context<T> {
   }
 }
 
+export function provider<T>(callback: Accessor<T>): Context<T> {
+  return scoped(() => context(callback()))!
+}
+
 export function inject<T>(context: Context<T>): T {
   return lookup(parentNode, context.id) || context.defaultValue
 }
