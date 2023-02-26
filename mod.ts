@@ -1,11 +1,8 @@
 export type Cleanup = () => void
-export type Callback<T = void> = T extends void ? (() => void)
-  : ((value: T) => T)
-export type Accessor<T = any> = () => T
 export type Signal<T = any> = {
   (): T
   (value: T | undefined): void
-  (callback: Callback<T>): void
+  (callback: (current: T | undefined) => T): void
 }
 export type Source<T = any> = {
   value: T | undefined | null
@@ -18,7 +15,7 @@ export type Node<T = any> = {
   children: Node[] | undefined
   context: { [id: symbol]: any } | undefined
   cleanups: Cleanup[] | undefined
-  callback: Callback<any> | undefined
+  callback: ((current: T) => T) | undefined
   sources: Source[] | undefined
   sourceSlots: number[] | undefined
 }
@@ -28,7 +25,7 @@ export type Ref<T = any> = {
 export type Context<T> = {
   readonly id: symbol
   readonly defaultValue: T | undefined
-  provide<R>(value: T, callback: Accessor<R>): R
+  provide<R>(value: T, callback: () => R): R
 }
 
 const Error = Symbol("Error")
@@ -54,8 +51,17 @@ export function scoped<T = any>(callback: (cleanup: Cleanup) => T): T | void {
   }
 }
 
-function node<T = any>(initialValue?: T, callback?: Callback<T>): Node<T> {
-  const _node: Node<T> = {
+function node<T = any>(): Node<T | undefined>
+function node<T = any>(initialValue: T): Node<T>
+function node<T = any>(
+  initialValue: T,
+  callback: (current: T | undefined) => T,
+): Node<T>
+function node(
+  initialValue?: any,
+  callback?: (current: any | undefined) => any,
+): Node<any | undefined> {
+  const _node: Node = {
     value: initialValue,
     parentNode,
     children: undefined,
@@ -75,23 +81,31 @@ function node<T = any>(initialValue?: T, callback?: Callback<T>): Node<T> {
   return _node
 }
 
-export function computed<T>(callback: Callback<T>): Accessor<T> {
-  const _source = source()
-  effect(() => set(_source, callback(_source.value!)))
-  return get.bind(undefined, _source) as Accessor<T>
-}
-
-export function onMount(callback: Callback): void {
+export function onMount(callback: () => void): void {
   effect(() => untrack(callback))
 }
 
-export function onDestroy(callback: Callback): void {
+export function onDestroy(callback: () => void): void {
   onCleanup(() => untrack(callback))
 }
 
-export function effect(callback: Callback): void
-export function effect<T>(callback: Callback<T>, initialValue?: T): void
-export function effect(callback: Callback<any>, initialValue?: any): void {
+export function on<T>(
+  dependency: () => unknown,
+  callback: (current: T | undefined) => T,
+): (current: T | undefined) => T {
+  return ((current) => {
+    dependency()
+    return untrack(() => callback(current))
+  })
+}
+
+export function effect(callback: () => void): void
+export function effect<T, N>(callback: (current: T | undefined) => N): void
+export function effect<T, I>(callback: (current: I) => T, initialValue: I): void
+export function effect(
+  callback: (current: unknown) => unknown,
+  initialValue?: unknown,
+): void {
   if (parentNode) {
     const _node = node(initialValue, callback)
     if (nodeQueue) nodeQueue.add(_node)
@@ -99,6 +113,20 @@ export function effect(callback: Callback<any>, initialValue?: any): void {
   } else {
     queueMicrotask(() => callback(initialValue))
   }
+}
+
+export function computed<T, N>(callback: (current: T | undefined) => N): () => N
+export function computed<T, I>(
+  callback: (current: I) => T,
+  initialValue: I,
+): () => T
+export function computed(
+  callback: (current: unknown) => unknown,
+  initialValue?: unknown,
+): (current: unknown) => unknown {
+  const _source = source(initialValue)
+  effect(() => set(_source, callback(_source.value!)))
+  return get.bind(undefined, _source)
 }
 
 function lookup(node: Node | undefined, id: symbol): any | undefined {
@@ -109,7 +137,9 @@ function lookup(node: Node | undefined, id: symbol): any | undefined {
     : undefined
 }
 
-function source<T = any>(initialValue?: T): Source<T> {
+function source<T = any>(): Source<T | undefined>
+function source<T = any>(initialValue: T): Source<T>
+function source(initialValue?: any): Source<any | undefined> {
   return { value: initialValue, nodes: undefined, nodeSlots: undefined }
 }
 
@@ -151,12 +181,16 @@ function getSet<T = any>(source: Source<T>, value?: any): T | void {
   return arguments.length === 1 ? get(source) : set(source, value)
 }
 
-export function signal<T>(initialValue?: T): Signal<T> {
+export function signal<T>(): Signal<T | undefined>
+export function signal<T>(initialValue: T): Signal<T>
+export function signal(initialValue?: any): Signal<any | undefined> {
   const _source = source(initialValue)
-  return getSet.bind(undefined, _source) as Signal<T>
+  return getSet.bind(undefined, _source) as Signal<any | undefined>
 }
 
-export function ref<T>(initialValue?: T): Ref<T> {
+export function ref<T>(): Ref<T | undefined>
+export function ref<T>(initialValue: T): Ref<T>
+export function ref(initialValue?: any): Ref<any | undefined> {
   const _source = source(initialValue)
   return {
     get value() {
@@ -169,14 +203,14 @@ export function ref<T>(initialValue?: T): Ref<T> {
 }
 
 function handleError(error: any): void {
-  const errorCallbacks: Callback<any>[] = lookup(parentNode, Error)
+  const errorCallbacks: ((err: any) => void)[] = lookup(parentNode, Error)
   if (!errorCallbacks) return reportError(error)
   for (const callback of errorCallbacks) {
     callback(error)
   }
 }
 
-export function onError<T = any>(callback: Callback<T>): void {
+export function onError<T = any>(callback: (error: T) => void): void {
   if (parentNode === undefined) return
   if (parentNode.context === undefined) {
     parentNode.context = { [Error]: [callback] }
@@ -185,7 +219,7 @@ export function onError<T = any>(callback: Callback<T>): void {
   }
 }
 
-export function onCleanup(callback: Callback): void {
+export function onCleanup(callback: () => void): void {
   if (parentNode === undefined) return
   else if (!parentNode.cleanups) parentNode.cleanups = [callback]
   else parentNode.cleanups.push(callback)
@@ -197,12 +231,6 @@ export function untrack<T>(callback: () => T): T {
   const result = callback()
   parentNode = node
   return result
-}
-
-export function fromPromise<T>(promise: Promise<T>): Accessor<T> {
-  const _source = source<T>()
-  effect(() => promise.then((value) => set(_source, value)))
-  return get.bind(undefined, _source) as Accessor<T>
 }
 
 function batch<T>(callback: () => T): T {
@@ -289,7 +317,9 @@ function disposeNode(node: Node): void {
   node.sourceSlots = undefined
 }
 
-export function context<T>(defaultValue?: T): Context<T> {
+export function context<T>(): Context<T | undefined>
+export function context<T>(defaultValue: T): Context<T>
+export function context(defaultValue?: any): Context<any | undefined> {
   return {
     id: Symbol(),
     defaultValue,
@@ -302,7 +332,7 @@ export function context<T>(defaultValue?: T): Context<T> {
   }
 }
 
-export function provider<T>(callback: Accessor<T>): Context<T> {
+export function provider<T>(callback: () => T): Context<T> {
   return scoped(() => context(callback()))!
 }
 
