@@ -99,9 +99,11 @@ export function on<T>(
   })
 }
 
-export function effect(callback: () => void): void
-export function effect<T, N>(callback: (current: T | undefined) => N): void
-export function effect<T, I>(callback: (current: I) => T, initialValue: I): void
+export function effect<T>(callback: (current: T | undefined) => T): void
+export function effect<T, I>(
+  callback: (current: I | T) => T,
+  initialValue: I,
+): void
 export function effect(
   callback: (current: unknown) => unknown,
   initialValue?: unknown,
@@ -115,13 +117,13 @@ export function effect(
   }
 }
 
-export function computed<T, N>(callback: (current: T | undefined) => N): () => N
+export function computed<T>(callback: (current: T | undefined) => T): () => T
 export function computed<T, I>(
-  callback: (current: I) => T,
+  callback: (current: I | T) => T,
   initialValue: I,
 ): () => T
 export function computed(
-  callback: (current: unknown) => unknown,
+  callback: (current: unknown | undefined) => unknown,
   initialValue?: unknown,
 ): (current: unknown) => unknown {
   const _source = source(initialValue)
