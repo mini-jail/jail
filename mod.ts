@@ -51,6 +51,10 @@ export function scoped<T = any>(callback: (cleanup: Cleanup) => T): T | void {
   }
 }
 
+export function nodeRef(): Node | undefined {
+  return parentNode
+}
+
 function node<T = any>(): Node<T | undefined>
 function node<T = any>(initialValue: T): Node<T>
 function node<T = any>(
@@ -332,10 +336,6 @@ export function context(defaultValue?: any): Context<any | undefined> {
       })!
     },
   }
-}
-
-export function provider<T>(callback: () => T): Context<T> {
-  return scoped(() => context(callback()))!
 }
 
 export function inject<T>(context: Context<T>): T {
