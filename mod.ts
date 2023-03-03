@@ -13,7 +13,7 @@ export type Node<T = any> = {
   value: T | undefined | null
   parentNode: Node | undefined
   children: Node[] | undefined
-  context: { [id: symbol]: any } | undefined
+  injections: { [id: symbol]: any } | undefined
   cleanups: Cleanup[] | undefined
   callback: ((current: T) => T) | undefined
   sources: Source[] | undefined
@@ -22,32 +22,32 @@ export type Node<T = any> = {
 export type Ref<T = any> = {
   value: T
 }
-export type Context<T> = {
+export type Provider<T> = <R>(value: T, callback: () => R) => R
+export type Injection<T> = {
   readonly id: symbol
   readonly defaultValue: T | undefined
-  provide<R>(value: T, callback: () => R): R
 }
 
-const Error = Symbol("Error")
+const Error = Symbol()
 const Queue = new Set<Node>()
 let nodeQueue: Set<Node> | undefined
 let parentNode: Node | undefined
 
 export function scoped<T = any>(callback: (cleanup: Cleanup) => T): T | void {
-  const _node = node<T>()
-  parentNode = _node
+  const node = createNode<T>()
+  parentNode = node
   try {
     return batch(() => {
       let _cleanup: Cleanup | never = <never> undefined
       if (callback.length) {
-        _cleanup = cleanNode.bind(undefined, _node, true)
+        _cleanup = cleanNode.bind(undefined, node, true)
       }
       return callback(_cleanup)
     })!
   } catch (error) {
     handleError(error)
   } finally {
-    parentNode = _node.parentNode
+    parentNode = node.parentNode
   }
 }
 
@@ -55,13 +55,13 @@ export function nodeRef(): Node | undefined {
   return parentNode
 }
 
-function node<T = any>(): Node<T | undefined>
-function node<T = any>(initialValue: T): Node<T>
-function node<T = any>(
+function createNode<T = any>(): Node<T | undefined>
+function createNode<T = any>(initialValue: T): Node<T>
+function createNode<T = any>(
   initialValue: T,
   callback: (current: T | undefined) => T,
 ): Node<T>
-function node(
+function createNode(
   initialValue?: any,
   callback?: (current: any | undefined) => any,
 ): Node<any | undefined> {
@@ -69,7 +69,7 @@ function node(
     value: initialValue,
     parentNode,
     children: undefined,
-    context: undefined,
+    injections: undefined,
     cleanups: undefined,
     callback,
     sources: undefined,
@@ -113,9 +113,9 @@ export function effect(
   initialValue?: unknown,
 ): void {
   if (parentNode) {
-    const _node = node(initialValue, callback)
-    if (nodeQueue) nodeQueue.add(_node)
-    else queueMicrotask(() => updateNode(_node, false))
+    const node = createNode(initialValue, callback)
+    if (nodeQueue) nodeQueue.add(node)
+    else queueMicrotask(() => updateNode(node, false))
   } else {
     queueMicrotask(() => callback(initialValue))
   }
@@ -130,26 +130,26 @@ export function computed(
   callback: (current: unknown | undefined) => unknown,
   initialValue?: unknown,
 ): (current: unknown) => unknown {
-  const _source = source(initialValue)
-  effect(() => set(_source, callback(_source.value!)))
-  return get.bind(undefined, _source)
+  const source = createSource(initialValue)
+  effect(() => setSourceValue(source, callback(source.value!)))
+  return getSourceValue.bind(undefined, source)
 }
 
 function lookup(node: Node | undefined, id: symbol): any | undefined {
   return node
-    ? node.context && id in node.context
-      ? node.context[id]
+    ? node.injections && id in node.injections
+      ? node.injections[id]
       : lookup(node.parentNode, id)
     : undefined
 }
 
-function source<T = any>(): Source<T | undefined>
-function source<T = any>(initialValue: T): Source<T>
-function source(initialValue?: any): Source<any | undefined> {
+function createSource<T = any>(): Source<T | undefined>
+function createSource<T = any>(initialValue: T): Source<T>
+function createSource(initialValue?: any): Source<any | undefined> {
   return { value: initialValue, nodes: undefined, nodeSlots: undefined }
 }
 
-function get<T = any>(source: Source<T>): T {
+function getSourceValue<T = any>(source: Source<T>): T {
   if (parentNode && parentNode.callback) {
     const sourceSlot = source.nodes?.length || 0,
       nodeSlot = parentNode.sources?.length || 0
@@ -171,7 +171,7 @@ function get<T = any>(source: Source<T>): T {
   return source.value!
 }
 
-function set<T = any>(source: Source<T>, value: any): void {
+function setSourceValue<T = any>(source: Source<T>, value: any): void {
   if (typeof value === "function") value = value(source.value)
   source.value = value
   if (source.nodes?.length) {
@@ -183,27 +183,29 @@ function set<T = any>(source: Source<T>, value: any): void {
   }
 }
 
-function getSet<T = any>(source: Source<T>, value?: any): T | void {
-  return arguments.length === 1 ? get(source) : set(source, value)
+function sourceValue<T = any>(source: Source<T>, value?: any): T | void {
+  return arguments.length === 1
+    ? getSourceValue(source)
+    : setSourceValue(source, value)
 }
 
 export function signal<T>(): Signal<T | undefined>
 export function signal<T>(initialValue: T): Signal<T>
 export function signal(initialValue?: any): Signal<any | undefined> {
-  const _source = source(initialValue)
-  return getSet.bind(undefined, _source) as Signal<any | undefined>
+  const source = createSource(initialValue)
+  return sourceValue.bind(undefined, source) as Signal<any | undefined>
 }
 
 export function ref<T>(): Ref<T | undefined>
 export function ref<T>(initialValue: T): Ref<T>
 export function ref(initialValue?: any): Ref<any | undefined> {
-  const _source = source(initialValue)
+  const source = createSource(initialValue)
   return {
     get value() {
-      return get(_source)
+      return getSourceValue(source)
     },
     set value(nextValue) {
-      set(_source, nextValue)
+      setSourceValue(source, nextValue)
     },
   }
 }
@@ -218,10 +220,10 @@ function handleError(error: any): void {
 
 export function onError<T = any>(callback: (error: T) => void): void {
   if (parentNode === undefined) return
-  if (parentNode.context === undefined) {
-    parentNode.context = { [Error]: [callback] }
+  if (parentNode.injections === undefined) {
+    parentNode.injections = { [Error]: [callback] }
   } else {
-    parentNode.context[Error].push(callback)
+    parentNode.injections[Error].push(callback)
   }
 }
 
@@ -303,7 +305,7 @@ function cleanNode(node: Node, complete: boolean): void {
   if (node.sources?.length) cleanNodeSources(node)
   if (node.children?.length) cleanChildNodes(node, complete)
   if (node.cleanups?.length) cleanup(node)
-  node.context = undefined
+  node.injections = undefined
   if (complete) disposeNode(node)
 }
 
@@ -323,21 +325,27 @@ function disposeNode(node: Node): void {
   node.sourceSlots = undefined
 }
 
-export function context<T>(): Context<T | undefined>
-export function context<T>(defaultValue: T): Context<T>
-export function context(defaultValue?: any): Context<any | undefined> {
-  return {
-    id: Symbol(),
-    defaultValue,
-    provide(value, callback) {
-      return scoped(() => {
-        parentNode!.context = { [this.id]: value }
-        return callback()
-      })!
-    },
-  }
+export function injection<T>(): Injection<T | undefined>
+export function injection<T>(defaultValue: T): Injection<T>
+export function injection(defaultValue?: any): Injection<any | undefined> {
+  return { id: Symbol(), defaultValue }
 }
 
-export function inject<T>(context: Context<T>): T {
-  return lookup(parentNode, context.id) || context.defaultValue
+export function provide<T, R>(
+  injection: Injection<T>,
+  value: T,
+  callback: () => R,
+): R {
+  return scoped(() => {
+    parentNode!.injections = { [injection.id]: value }
+    return callback()
+  })!
+}
+
+export function provider<T>(injection: Injection<T>): Provider<T> {
+  return (value, callback) => provide(injection, value, callback)
+}
+
+export function inject<T>(injection: Injection<T>): T {
+  return lookup(parentNode, injection.id) || injection.defaultValue
 }
