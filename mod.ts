@@ -65,7 +65,7 @@ function createNode(
   initialValue?: any,
   callback?: (current: any | undefined) => any,
 ): Node<any | undefined> {
-  const _node: Node = {
+  const node: Node = {
     value: initialValue,
     parentNode,
     children: undefined,
@@ -77,12 +77,12 @@ function createNode(
   }
   if (parentNode) {
     if (parentNode.children === undefined) {
-      parentNode.children = [_node]
+      parentNode.children = [node]
     } else {
-      parentNode.children.push(_node)
+      parentNode.children.push(node)
     }
   }
-  return _node
+  return node
 }
 
 export function onMount(callback: () => void): void {
@@ -119,6 +119,21 @@ export function effect(
   } else {
     queueMicrotask(() => callback(initialValue))
   }
+}
+
+export function immediateEffect<T>(
+  callback: (current: T | undefined) => T,
+): void
+export function immediateEffect<T, I>(
+  callback: (current: I | T) => T,
+  initialValue: I,
+): void
+export function immediateEffect(
+  callback: (current: unknown) => unknown,
+  initialValue?: unknown,
+): void {
+  if (parentNode) updateNode(createNode(initialValue, callback), false)
+  else callback(initialValue)
 }
 
 export function computed<T>(callback: (current: T | undefined) => T): () => T
