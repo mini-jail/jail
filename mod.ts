@@ -6,53 +6,52 @@ export type Signal<T = any> = {
 }
 export type Source<T = any> = {
   value: T | undefined | null
-  nodes: Node[] | undefined
-  nodeSlots: number[] | undefined
+  nodes: Node[] | null
+  nodeSlots: number[] | null
 }
 export type Node<T = any> = {
   value: T | undefined | null
-  parentNode: Node | undefined
-  children: Node[] | undefined
-  injections: { [id: symbol]: any } | undefined
-  cleanups: Cleanup[] | undefined
-  callback: ((current: T) => T) | undefined
-  sources: Source[] | undefined
-  sourceSlots: number[] | undefined
+  parentNode: Node | null
+  children: Node[] | null
+  injections: { [id: symbol]: any } | null
+  cleanups: Cleanup[] | null
+  callback: ((current: T) => T) | null
+  sources: Source[] | null
+  sourceSlots: number[] | null
 }
 export type Ref<T = any> = {
   value: T
 }
-export type Provider<T> = <R>(value: T, callback: () => R) => R
 export type Injection<T> = {
   readonly id: symbol
-  readonly defaultValue: T | undefined
+  readonly defaultValue: T | null
+  provide<R>(value: T, callback: () => R): R
 }
 
 const Error = Symbol()
 const Queue = new Set<Node>()
-let nodeQueue: Set<Node> | undefined
-let parentNode: Node | undefined
+let isRunning = false
+let activeNode: Node | null = null
 
 export function scoped<T = any>(callback: (cleanup: Cleanup) => T): T | void {
-  const node = createNode<T>()
-  parentNode = node
+  activeNode = createNode<T>()
   try {
     return batch(() => {
       let _cleanup: Cleanup | never = <never> undefined
       if (callback.length) {
-        _cleanup = cleanNode.bind(undefined, node, true)
+        _cleanup = cleanNode.bind(undefined, activeNode!, true)
       }
       return callback(_cleanup)
     })!
   } catch (error) {
     handleError(error)
   } finally {
-    parentNode = node.parentNode
+    activeNode = activeNode.parentNode
   }
 }
 
-export function nodeRef(): Node | undefined {
-  return parentNode
+export function nodeRef(): Node | null {
+  return activeNode
 }
 
 function createNode<T = any>(): Node<T | undefined>
@@ -67,19 +66,19 @@ function createNode(
 ): Node<any | undefined> {
   const node: Node = {
     value: initialValue,
-    parentNode,
-    children: undefined,
-    injections: undefined,
-    cleanups: undefined,
-    callback,
-    sources: undefined,
-    sourceSlots: undefined,
+    parentNode: activeNode,
+    children: null,
+    injections: null,
+    cleanups: null,
+    callback: callback || null,
+    sources: null,
+    sourceSlots: null,
   }
-  if (parentNode) {
-    if (parentNode.children === undefined) {
-      parentNode.children = [node]
+  if (activeNode) {
+    if (activeNode.children === null) {
+      activeNode.children = [node]
     } else {
-      parentNode.children.push(node)
+      activeNode.children.push(node)
     }
   }
   return node
@@ -94,7 +93,7 @@ export function onDestroy(callback: () => void): void {
 }
 
 export function on<T>(
-  dependency: () => unknown,
+  dependency: () => void,
   callback: (current: T | undefined) => T,
 ): (current: T | undefined) => T {
   return ((current) => {
@@ -112,28 +111,13 @@ export function effect(
   callback: (current: unknown) => unknown,
   initialValue?: unknown,
 ): void {
-  if (parentNode) {
+  if (activeNode) {
     const node = createNode(initialValue, callback)
-    if (nodeQueue) nodeQueue.add(node)
+    if (isRunning) Queue.add(node)
     else queueMicrotask(() => updateNode(node, false))
   } else {
     queueMicrotask(() => callback(initialValue))
   }
-}
-
-export function immediateEffect<T>(
-  callback: (current: T | undefined) => T,
-): void
-export function immediateEffect<T, I>(
-  callback: (current: I | T) => T,
-  initialValue: I,
-): void
-export function immediateEffect(
-  callback: (current: unknown) => unknown,
-  initialValue?: unknown,
-): void {
-  if (parentNode) updateNode(createNode(initialValue, callback), false)
-  else callback(initialValue)
 }
 
 export function computed<T>(callback: (current: T | undefined) => T): () => T
@@ -150,7 +134,7 @@ export function computed(
   return getSourceValue.bind(undefined, source)
 }
 
-function lookup(node: Node | undefined, id: symbol): any | undefined {
+function lookup(node: Node | null, id: symbol): any | undefined {
   return node
     ? node.injections && id in node.injections
       ? node.injections[id]
@@ -161,25 +145,25 @@ function lookup(node: Node | undefined, id: symbol): any | undefined {
 function createSource<T = any>(): Source<T | undefined>
 function createSource<T = any>(initialValue: T): Source<T>
 function createSource(initialValue?: any): Source<any | undefined> {
-  return { value: initialValue, nodes: undefined, nodeSlots: undefined }
+  return { value: initialValue, nodes: null, nodeSlots: null }
 }
 
 function getSourceValue<T = any>(source: Source<T>): T {
-  if (parentNode && parentNode.callback) {
+  if (activeNode && activeNode.callback) {
     const sourceSlot = source.nodes?.length || 0,
-      nodeSlot = parentNode.sources?.length || 0
-    if (parentNode.sources === undefined) {
-      parentNode.sources = [source]
-      parentNode.sourceSlots = [sourceSlot]
+      nodeSlot = activeNode.sources?.length || 0
+    if (activeNode.sources === null) {
+      activeNode.sources = [source]
+      activeNode.sourceSlots = [sourceSlot]
     } else {
-      parentNode.sources.push(source)
-      parentNode.sourceSlots!.push(sourceSlot)
+      activeNode.sources.push(source)
+      activeNode.sourceSlots!.push(sourceSlot)
     }
-    if (source.nodes === undefined) {
-      source.nodes = [parentNode]
+    if (source.nodes === null) {
+      source.nodes = [activeNode]
       source.nodeSlots = [nodeSlot]
     } else {
-      source.nodes!.push(parentNode)
+      source.nodes!.push(activeNode)
       source.nodeSlots!.push(nodeSlot)
     }
   }
@@ -192,7 +176,7 @@ function setSourceValue<T = any>(source: Source<T>, value: any): void {
   if (source.nodes?.length) {
     batch(() => {
       for (const node of source.nodes!) {
-        nodeQueue!.add(node)
+        Queue.add(node)
       }
     })
   }
@@ -226,64 +210,64 @@ export function ref(initialValue?: any): Ref<any | undefined> {
 }
 
 function handleError(error: any): void {
-  const errorCallbacks: ((err: any) => void)[] = lookup(parentNode, Error)
+  const errorCallbacks: ((err: any) => void)[] = lookup(activeNode, Error)
   if (!errorCallbacks) return reportError(error)
   for (const callback of errorCallbacks) {
     callback(error)
   }
 }
 
-export function onError<T = any>(callback: (error: T) => void): void {
-  if (parentNode === undefined) return
-  if (parentNode.injections === undefined) {
-    parentNode.injections = { [Error]: [callback] }
+export function catchError<T = any>(callback: (error: T) => void): void {
+  if (activeNode === null) return
+  if (activeNode.injections === null) {
+    activeNode.injections = { [Error]: [callback] }
   } else {
-    parentNode.injections[Error].push(callback)
+    activeNode.injections[Error].push(callback)
   }
 }
 
 export function onCleanup(callback: () => void): void {
-  if (parentNode === undefined) return
-  else if (!parentNode.cleanups) parentNode.cleanups = [callback]
-  else parentNode.cleanups.push(callback)
+  if (activeNode === null) return
+  else if (!activeNode.cleanups) activeNode.cleanups = [callback]
+  else activeNode.cleanups.push(callback)
 }
 
 export function untrack<T>(callback: () => T): T {
-  const node = parentNode
-  parentNode = undefined
+  const node = activeNode
+  activeNode = null
   const result = callback()
-  parentNode = node
+  activeNode = node
   return result
 }
 
 function batch<T>(callback: () => T): T {
-  if (nodeQueue) return callback()
-  nodeQueue = Queue
+  if (isRunning) return callback()
+  isRunning = true
   const result = callback()
   queueMicrotask(flush)
   return result
 }
 
 function flush(): void {
-  if (nodeQueue === undefined) return
-  for (const node of nodeQueue) {
-    nodeQueue.delete(node)
+  if (isRunning === false) return
+  for (const node of Queue) {
+    Queue.delete(node)
     updateNode(node, false)
   }
-  nodeQueue = undefined
+  isRunning = false
 }
 
 function updateNode(node: Node, complete: boolean): void {
   cleanNode(node, complete)
-  if (node.callback === undefined) return
-  const previousNode = parentNode
-  parentNode = node
+  if (node.callback === null) return
+  const previousNode = activeNode
+  activeNode = node
   try {
     node.value = node.callback(node.value)
   } catch (error) {
     handleError(error)
   } finally {
-    parentNode = previousNode
+    activeNode = previousNode
   }
 }
 
@@ -320,7 +304,7 @@ function cleanNode(node: Node, complete: boolean): void {
   if (node.sources?.length) cleanNodeSources(node)
   if (node.children?.length) cleanChildNodes(node, complete)
   if (node.cleanups?.length) cleanup(node)
-  node.injections = undefined
+  node.injections = null
   if (complete) disposeNode(node)
 }
 
@@ -331,36 +315,24 @@ function cleanup(node: Node): void {
 }
 
 function disposeNode(node: Node): void {
-  node.value = undefined
-  node.parentNode = undefined
-  node.children = undefined
-  node.cleanups = undefined
-  node.callback = undefined
-  node.sources = undefined
-  node.sourceSlots = undefined
+  node.value = null
+  node.parentNode = null
+  node.children = null
+  node.cleanups = null
+  node.callback = null
+  node.sources = null
+  node.sourceSlots = null
 }
 
-export function injection<T>(): Injection<T | undefined>
-export function injection<T>(defaultValue: T): Injection<T>
-export function injection(defaultValue?: any): Injection<any | undefined> {
-  return { id: Symbol(), defaultValue }
-}
-
-export function provide<T, R>(
-  injection: Injection<T>,
-  value: T,
-  callback: () => R,
-): R {
-  return scoped(() => {
-    parentNode!.injections = { [injection.id]: value }
-    return callback()
-  })!
-}
-
-export function provider<T>(injection: Injection<T>): Provider<T> {
-  return (value, callback) => provide(injection, value, callback)
-}
-
-export function inject<T>(injection: Injection<T>): T {
-  return lookup(parentNode, injection.id) || injection.defaultValue
+export function injection<T>(defaultValue?: T): Injection<T | undefined> {
+  return {
+    id: Symbol(),
+    defaultValue,
+    provide(value, callback) {
+      return scoped(() => {
+        activeNode!.injections = { [this.id]: value }
+        return callback()
+      })!
+    },
+  }
 }
