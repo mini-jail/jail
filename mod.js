@@ -59,6 +59,13 @@ let activeNode = null;
  * @template [T = unknown]
  * @param {(cleanup: Cleanup) => T | void} callback
  * @returns {T | void}
+ * @example
+ * ```js
+ * scoped((cleanup) => {
+ *   // ...
+ *   // use cleanup() to stop all effects
+ * });
+ * ```
  */
 export function scoped(callback) {
   const node = activeNode = createNode();
@@ -77,6 +84,19 @@ export function scoped(callback) {
 
 /**
  * @returns {Node | null}
+ * @example
+ * ```js
+ * // save node reference for later
+ * const [node, cleanup] = scoped((cleanup) => {
+ *   // ...
+ *   return [nodeRef(), cleanup];
+ * });
+ *
+ * // use node reference from before
+ * withNode(node, () => {
+ *   // cleanup();
+ * });
+ * ```
  */
 export function nodeRef() {
   return activeNode;
@@ -86,6 +106,18 @@ export function nodeRef() {
  * @template [T = unknown]
  * @param {Node} node
  * @param {() => T} callback
+ * @example
+ * ```js
+ * // save node reference for later
+ * const [node, cleanup] = scoped((cleanup) => {
+ *   // ...
+ *   return [nodeRef(), cleanup];
+ * });
+ * // use node reference from before
+ * withNode(node, () => {
+ *   // cleanup();
+ * });
+ * ```
  */
 export function withNode(node, callback) {
   const previousNode = activeNode;
@@ -126,6 +158,15 @@ function createNode(initialValue, callback) {
 /**
  * @param {() => void} callback
  * @returns {void}
+ * @example
+ * ```js
+ * scoped(() => {
+ *   onMount(() => {
+ *     console.log("I will run in Queue");
+ *   });
+ *   console.log("I will run first");
+ * });
+ * ```
  */
 export function onMount(callback) {
   effect(() => untrack(callback));
@@ -134,6 +175,15 @@ export function onMount(callback) {
 /**
  * @param {() => void} callback
  * @returns {void}
+ * @example
+ * ```js
+ * scoped((cleanup) => {
+ *   onDestroy(() => {
+ *     console.log("I will run when cleanup() is executed");
+ *   });
+ *   cleanup();
+ * });
+ * ```
  */
 export function onDestroy(callback) {
   onCleanup(() => untrack(callback));
