@@ -91,7 +91,6 @@ export function scoped(callback) {
  *   // ...
  *   return [nodeRef(), cleanup];
  * });
- *
  * // use node reference from before
  * withNode(node, () => {
  *   // cleanup();
