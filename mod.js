@@ -3,7 +3,7 @@
  */
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @typedef {{
  *   () : T
  *   (value: T): void
@@ -12,7 +12,7 @@
  */
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @typedef {{
  *   value: T | undefined | null
  *   nodes: Node[] | null
@@ -21,30 +21,30 @@
  */
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @typedef {{
  *   value: T | undefined | null
  *   parentNode: Node | null
- *   children: Node[] | null
+ *   childNodes: Node[] | null
  *   injections: { [id: symbol]: any } | null
  *   cleanups: Cleanup[] | null
- *   callback: ((currentValue: T | undefined) => T) | null
+ *   onupdate: ((currentValue: T | undefined) => T) | null
  *   sources: Source[] | null
  *   sourceSlots: number[] | null
  * }} Node<T>
  */
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @typedef {{ value: T }} Ref<T>
  */
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @typedef {{
  *   readonly id: symbol
  *   readonly defaultValue: T | undefined
- *   provide<R>(value: T, callback: () => R): R
+ *   provide<R>(value: T, callback: () => R): R | void
  * }} Injection<T>
  */
 
@@ -56,23 +56,23 @@ let isRunning = false;
 let activeNode = null;
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {(cleanup: Cleanup) => T | void} callback
  * @returns {T | void}
  * @example
  * ```js
- * scoped((cleanup) => {
- *   // ...
+ * createScope((cleanup) => {
+ *   // do stuff
  *   // use cleanup() to stop all effects
  * });
  * ```
  */
-export function scoped(callback) {
+export function createScope(callback) {
   const node = activeNode = createNode();
   try {
     return batch(() =>
       callback(
-        callback.length === 0 ? undefined : cleanNode.bind(node, true),
+        callback.length === 0 ? undefined : clean.bind(node, true),
       )
     );
   } catch (error) {
@@ -87,10 +87,11 @@ export function scoped(callback) {
  * @example
  * ```js
  * // save node reference for later
- * const [node, cleanup] = scoped((cleanup) => {
+ * const [node, cleanup] = createScope((cleanup) => {
  *   // ...
  *   return [nodeRef(), cleanup];
  * });
+ *
  * // use node reference from before
  * withNode(node, () => {
  *   // cleanup();
@@ -102,19 +103,20 @@ export function nodeRef() {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {Node} node
  * @param {() => T} callback
  * @example
  * ```js
  * // save node reference for later
- * const [node, cleanup] = scoped((cleanup) => {
+ * const node = createScope(() => {
  *   // ...
- *   return [nodeRef(), cleanup];
+ *   return nodeRef();
  * });
+ *
  * // use node reference from before
  * withNode(node, () => {
- *   // cleanup();
+ *   // do something inside that node
  * });
  * ```
  */
@@ -127,31 +129,40 @@ export function withNode(node, callback) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {T} [initialValue]
- * @param {(currentValue: T | undefined) => T} [callback]
+ * @param {(currentValue: T | undefined) => T} [onupdate]
  * @returns {Node<T>}
  */
-function createNode(initialValue, callback) {
+function createNode(initialValue, onupdate) {
   /** @type {Node<T>} */
   const node = {
     value: initialValue,
     parentNode: activeNode,
-    children: null,
+    childNodes: null,
     injections: null,
     cleanups: null,
-    callback: callback || null,
+    onupdate: onupdate || null,
     sources: null,
     sourceSlots: null,
   };
   if (activeNode !== null) {
-    if (activeNode.children === null) {
-      activeNode.children = [node];
-    } else {
-      activeNode.children.push(node);
-    }
+    addChild.call(activeNode, node);
   }
   return node;
+}
+
+/**
+ * @this {Node}
+ * @param {Node} node
+ * @returns {void}
+ */
+function addChild(node) {
+  if (this.childNodes === null) {
+    this.childNodes = [node];
+  } else {
+    this.childNodes.push(node);
+  }
 }
 
 /**
@@ -159,9 +170,9 @@ function createNode(initialValue, callback) {
  * @returns {void}
  * @example
  * ```js
- * scoped(() => {
+ * createScope(() => {
  *   onMount(() => {
- *     console.log("I will run in Queue");
+ *     console.log("I will run in a queue");
  *   });
  *   console.log("I will run first");
  * });
@@ -176,7 +187,7 @@ export function onMount(callback) {
  * @returns {void}
  * @example
  * ```js
- * scoped((cleanup) => {
+ * createScope((cleanup) => {
  *   onDestroy(() => {
  *     console.log("I will run when cleanup() is executed");
  *   });
@@ -189,10 +200,20 @@ export function onDestroy(callback) {
 }
 
 /**
- * @template [T = unknown]
- * @param {() => void} dependency
+ * @template [T = any]
+ * @param {() => any} dependency
  * @param {(currentValue: T | undefined) => T} callback
  * @returns {(currentValue: T | undefined) => T}
+ * @example
+ * ```js
+ * const sig1 = createSignal();
+ * const sig2 = createSignal();
+ *
+ * effect(on(
+ *   () => sig1(),
+ *   () => console.log("I only re-run when sig1 is updated.")
+ * ));
+ * ```
  */
 export function on(dependency, callback) {
   return ((currentValue) => {
@@ -202,18 +223,27 @@ export function on(dependency, callback) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {(currentValue: T | undefined) => T} callback
  * @param {T} [initialValue]
  * @returns {void}
+ * @example
+ * ```js
+ * const signal = createSignal();
+ *
+ * createEffect(() => {
+ *   // will run when signal(s) are updated.
+ *   console.log("current value", signal());
+ * });
+ * ```
  */
-export function effect(callback, initialValue) {
+export function createEffect(callback, initialValue) {
   if (activeNode !== null) {
     const node = createNode(initialValue, callback);
     if (isRunning) {
       Queue.add(node);
     } else {
-      queueMicrotask(() => updateNode.call(node, false));
+      queueMicrotask(() => update.call(node, false));
     }
   } else {
     queueMicrotask(() => callback(initialValue));
@@ -221,15 +251,24 @@ export function effect(callback, initialValue) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {(currentValue: T | undefined) => T} callback
  * @param {T} [initialValue]
  * @returns {() => T}
+ * @example
+ * ```js
+ * const counter = createSignal(0);
+ *
+ * const double = createComputed(() => {
+ *   // will run when signal(s) are updated.
+ *   return counter() * 2;
+ * });
+ * ```
  */
-export function computed(callback, initialValue) {
+export function createComputed(callback, initialValue) {
   const source = createSource(initialValue);
-  effect(() => setSourceValue.call(source, callback(source.value)));
-  return getSourceValue.bind(source);
+  effect(() => setValue.call(source, callback(source.value)));
+  return getValue.bind(source);
 }
 
 /**
@@ -246,7 +285,7 @@ function lookup(id) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {T} [initialValue]
  * @returns {Source<T>}
  */
@@ -255,12 +294,12 @@ function createSource(initialValue) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @this {Source<T>}
  * @returns {T | null | undefined}
  */
-function getSourceValue() {
-  if (activeNode && activeNode.callback) {
+function getValue() {
+  if (activeNode && activeNode.onupdate) {
     const sourceSlot = this.nodes?.length || 0,
       nodeSlot = activeNode.sources?.length || 0;
     if (activeNode.sources === null) {
@@ -282,23 +321,25 @@ function getSourceValue() {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @this {Source<T>}
  * @param {T | ((value: T) => T)} value
  * @returns {void}
  */
-function setSourceValue(value) {
-  if (typeof value === "function") value = value(this.value);
+function setValue(value) {
+  if (typeof value === "function") {
+    value = value(this.value);
+  }
   this.value = value;
-  queueSourceNodes.call(this);
+  queueNodes.call(this);
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @this {Source<T>}
  * @returns {void}
  */
-function queueSourceNodes() {
+function queueNodes() {
   if (this.nodes?.length) {
     batch(() => {
       for (const node of this.nodes) {
@@ -309,66 +350,61 @@ function queueSourceNodes() {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @this {Source<T>}
  * @param {T | ((value: T) => T)} [value]
  * @returns {T | void}
  */
 function sourceValue(value) {
   return arguments.length === 1
-    ? setSourceValue.call(this, value)
-    : getSourceValue.call(this);
+    ? setValue.call(this, value)
+    : getValue.call(this);
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {T} [initialValue]
  * @returns {Signal<T>}
+ * @example
+ * ```js
+ * const signal = createSignal("hello world");
+ * signal(); // "hello world"
+ *
+ * signal("bye world");
+ * signal(); // "bye world"
+ *
+ * signal((currentValue) => currentValue + "!");
+ * signal(); //"bye world!"
+ * ```
  */
-export function signal(initialValue) {
+export function createSignal(initialValue) {
   return sourceValue.bind(createSource(initialValue));
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {T} [initialValue]
  * @returns {Ref<T>}
+ * @example
+ * ```js
+ * const ref = createRef("hello world");
+ * ref.value; // "hello world"
+ *
+ * ref.value = "bye world";
+ * ref.value; // "bye world"
+ * ```
  */
-export function ref(initialValue) {
+export function createRef(initialValue) {
   const source = createSource(initialValue);
   return {
     get value() {
-      return getSourceValue.call(source);
+      return getValue.call(source);
     },
     set value(nextValue) {
-      setSourceValue.call(source, nextValue);
+      setValue.call(source, nextValue);
     },
   };
 }
-
-/**
- * @template [T = unknown]
- * @param {T & object} object
- * @returns {T}
- */
-export function reactive(object) {
-  return new Proxy(createSource(object), reactiveTrap);
-}
-
-/** @type {ProxyHandler<Source<T & object>>)} */
-const reactiveTrap = {
-  set(target, property, value) {
-    const reflection = Reflect.set(target.value, property, value);
-    queueSourceNodes.call(target);
-    return reflection;
-  },
-  get(target, property) {
-    return Reflect.get(getSourceValue.call(target), property);
-  },
-  has(target, property) {
-    return Reflect.has(getSourceValue.call(target), property);
-  },
-};
 
 /**
  * @param {any} error
@@ -386,9 +422,19 @@ function handleError(error) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {(error: T) => void} callback
  * @returns {void}
+ * @example
+ * ```js
+ * createScope(() => {
+ *   catchError((err) => {
+ *     console.info("There is an error, lol:", err);
+ *   });
+ *
+ *   throw new Error("Take this, dirty scope1");
+ * });
+ * ```
  */
 export function catchError(callback) {
   if (activeNode === null) {
@@ -404,6 +450,16 @@ export function catchError(callback) {
 /**
  * @param {Cleanup} callback
  * @returns {void}
+ * @example
+ * ```js
+ * const id = setInterval(() => ..., 1000);
+ *
+ * createScope((cleanup) => {
+ *   onCleanup(() => clearInterval(id));
+ *   // ...
+ *   cleanup(); // will also run callback from onCleanup
+ * });
+ * ```
  */
 export function onCleanup(callback) {
   if (activeNode === null) {
@@ -417,9 +473,22 @@ export function onCleanup(callback) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {() => T} callback
  * @returns {T}
+ * @example
+ * ```js
+ * const signal1 = createSignal();
+ * const signal2 = createSignal();
+ *
+ * createEffect(() => {
+ *   signal1();
+ *   untrack(() => {
+ *     signal2();
+ *     // I will only run when signal1 is updated.
+ *   });
+ * });
+ * ```
  */
 export function untrack(callback) {
   const node = activeNode;
@@ -430,7 +499,7 @@ export function untrack(callback) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {() => T} callback
  * @returns {T}
  */
@@ -453,7 +522,7 @@ function flush() {
   }
   for (const node of Queue) {
     Queue.delete(node);
-    updateNode.call(node, false);
+    update.call(node, false);
   }
   isRunning = false;
 }
@@ -463,15 +532,15 @@ function flush() {
  * @param {boolean} complete
  * @returns {void}
  */
-function updateNode(complete) {
-  cleanNode.call(this, complete);
-  if (this.callback === null) {
+function update(complete) {
+  clean.call(this, complete);
+  if (this.onupdate === null) {
     return;
   }
   const previousNode = activeNode;
   activeNode = this;
   try {
-    this.value = this.callback(this.value);
+    this.value = this.onupdate(this.value);
   } catch (error) {
     handleError(error);
   } finally {
@@ -482,7 +551,7 @@ function updateNode(complete) {
 /**
  * @this {Node}
  */
-function cleanNodeSources() {
+function cleanSources() {
   while (this.sources.length) {
     const source = this.sources.pop();
     const sourceSlot = this.sourceSlots.pop();
@@ -504,12 +573,12 @@ function cleanNodeSources() {
  * @returns {void}
  */
 function cleanChildNodes(complete) {
-  const hasCallback = !!this.callback;
-  while (this.children.length) {
-    const childNode = this.children.pop();
-    cleanNode.call(
+  const hasUpdateHandler = this.onupdate !== null;
+  while (this.childNodes.length) {
+    const childNode = this.childNodes.pop();
+    clean.call(
       childNode,
-      complete || (hasCallback && !!childNode.callback),
+      complete || (hasUpdateHandler && childNode.onupdate !== null),
     );
   }
 }
@@ -519,11 +588,11 @@ function cleanChildNodes(complete) {
  * @param {boolean} complete
  * @returns {void}
  */
-function cleanNode(complete) {
+function clean(complete) {
   if (this.sources?.length) {
-    cleanNodeSources.call(this);
+    cleanSources.call(this);
   }
-  if (this.children?.length) {
+  if (this.childNodes?.length) {
     cleanChildNodes.call(this, complete);
   }
   if (this.cleanups?.length) {
@@ -531,7 +600,7 @@ function cleanNode(complete) {
   }
   this.injections = null;
   if (complete) {
-    disposeNode.call(this);
+    dispose.call(this);
   }
 }
 
@@ -540,7 +609,7 @@ function cleanNode(complete) {
  * @returns {void}
  */
 function cleanup() {
-  while (this.cleanups?.length) {
+  while (this.cleanups.length) {
     this.cleanups.pop()();
   }
 }
@@ -549,27 +618,39 @@ function cleanup() {
  * @this {Node}
  * @returns {void}
  */
-function disposeNode() {
+function dispose() {
   this.value = null;
   this.parentNode = null;
-  this.children = null;
+  this.childNodes = null;
   this.cleanups = null;
-  this.callback = null;
+  this.onupdate = null;
   this.sources = null;
   this.sourceSlots = null;
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {T} [defaultValue]
  * @returns {Injection<T>}
+ * @example
+ * ```js
+ * const Theme = createInjection({
+ *   color: "pink",
+ * });
+ *
+ * Theme.provide({ color: "black" }, () => {
+ *   const theme = inject(Theme); // { color: "black" }
+ * });
+ *
+ * const theme = inject(Theme); // { color: "pink" }
+ * ```
  */
-export function injection(defaultValue) {
+export function createInjection(defaultValue) {
   return {
     id: Symbol(),
     defaultValue,
     provide(value, callback) {
-      return scoped(() => {
+      return createScope(() => {
         activeNode.injections = { [this.id]: value };
         return callback();
       });
@@ -578,9 +659,19 @@ export function injection(defaultValue) {
 }
 
 /**
- * @template [T = unknown]
+ * @template [T = any]
  * @param {Injection<T>} injection
  * @returns {T | undefined}
+ * @example
+ * ```js
+ * const Word = createInjection();
+ *
+ * Word.provide("hello", () => {
+ *   inject(Word); // "hello"
+ * });
+ *
+ * inject(Word); // undefined
+ * ```
  */
 export function inject(injection) {
   return lookup.call(activeNode, injection.id) || injection.defaultValue;
