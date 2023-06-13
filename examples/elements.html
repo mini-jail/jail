@@ -7,12 +7,11 @@
     <script type="importmap">
       {
         "imports": {
-          "signal": "../mod.js"
+          "signal": "https://cdn.jsdelivr.net/gh/mini-jail/signal/mod.js"
         }
       }
     </script>
     <script type="module">
-      /// <reference path="../mod.js" />
       import {
         createSignal,
         createScope,
@@ -23,11 +22,11 @@
 
       /**
        * @template T
-       * @typedef {(this: T, props: Record<string, any>) => void} Modify<T>
+       * @typedef {(this: T, props: Props) => void} Modify<T>
        */
 
       /**
-       * @typedef {Record<string, any>}
+       * @typedef {Record<string, any>} Props
        */
 
       /** @type {Element | null} */
@@ -35,7 +34,7 @@
 
       /**
        * @param {Element} elt
-       * @param {Record<string, any>} props
+       * @param {Props} props
        */
       const setProps = (elt, props) => {
         for (const key in props) {
@@ -66,7 +65,7 @@
         set(_target, tagName, modify) {
           const parent = parentElement;
           const elt = document.createElement(tagName);
-          const props = Object.create(null);
+          const props = modify.length ? Object.create(null) : undefined;
           parentElement = elt;
           modify(props);
           parentElement = parent;
