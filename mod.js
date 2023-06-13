@@ -179,7 +179,7 @@ function addChild(node) {
  * ```
  */
 export function onMount(callback) {
-  effect(() => untrack(callback));
+  createEffect(() => untrack(callback));
 }
 
 /**
@@ -209,7 +209,7 @@ export function onDestroy(callback) {
  * const sig1 = createSignal();
  * const sig2 = createSignal();
  *
- * effect(on(
+ * createEffect(on(
  *   () => sig1(),
  *   () => console.log("I only re-run when sig1 is updated.")
  * ));
@@ -267,7 +267,7 @@ export function createEffect(callback, initialValue) {
  */
 export function createComputed(callback, initialValue) {
   const source = createSource(initialValue);
-  effect(() => setValue.call(source, callback(source.value)));
+  createEffect(() => setValue.call(source, callback(source.value)));
   return getValue.bind(source);
 }
 

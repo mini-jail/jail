@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>signal/counter</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "signal": "../mod.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import { createSignal, createScope, createEffect } from "signal";
+
+      /** @type {(id: string) => Element | undefined} **/
+      const byId = document.getElementById.bind(document);
+
+      createScope((dispose) => {
+        const counter = createSignal(0);
+        const counterElt = byId("counter");
+        const addElt = byId("add");
+        const subElt = byId("sub");
+        const stopElt = byId("stop");
+        const resetElt = byId("reset");
+
+        createEffect(() => {
+          counterElt.textContent = `current value: ${counter()}`;
+        });
+
+        addElt.onclick = () => counter(counter() + 1);
+        subElt.onclick = () => counter(counter() - 1);
+        stopElt.onclick = () => dispose();
+        resetElt.onclick = () => counter(0);
+      });
+    </script>
+  </head>
+  <body>
+    <h1>signal/counter</h1>
+    <div id="counter"></div>
+    <div>
+      <button id="add">+</button>
+      <button id="sub">-</button>
+    </div>
+    <button id="stop">Stop counting</button>
+    <button id="reset">Set counter to 0</button>
+  </body>
+</html>
