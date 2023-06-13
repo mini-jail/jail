@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>signal/templates</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "signal": "https://cdn.jsdelivr.net/gh/mini-jail/signal/mod.js"
+        }
+      }
+    </script>
+    <script type="module">
+      /** @type {{ [tagName: string]: Node}} */
+      const Templates = Object.create(null);
+
+      /**
+       * @this {Element}
+       * @param {string} tagName
+       */
+      function render(tagName) {
+        this.attachShadow({ mode: "open" }).appendChild(
+          Templates[tagName].cloneNode(true)
+        );
+      }
+
+      for (const elt of document.getElementsByTagName("template")) {
+        const name = elt.getAttribute("name")?.toLocaleLowerCase();
+        if (name === undefined) continue;
+        const tagName = name;
+        Templates[tagName] = elt.content.cloneNode(true);
+        customElements.define(
+          tagName,
+          class extends HTMLElement {
+            constructor() {
+              super();
+              render.call(this, tagName);
+            }
+          }
+        );
+        elt.remove();
+      }
+    </script>
+  </head>
+  <body>
+    <template name="my-counter">
+      <style>
+        :host {
+          cursor: pointer;
+          background-color: ghostwhite;
+          padding: 4px;
+          display: inline-block;
+          border-radius: 4px;
+          border: 1px solid rgba(0, 0, 0, 0.125);
+          box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
+        }
+        slot {
+          font-weight: bold;
+        }
+      </style>
+      <script type="module">
+        import { createSignal, createEffect, createScope } from "signal";
+
+        const elt = document.getElementById("main");
+        const signal = createSignal(Number(elt.textContent) || 0);
+
+        elt.onclick = () => signal(signal() + 1);
+
+        createScope(() =>
+          createEffect(() => {
+            elt.textContent = String(signal());
+          })
+        );
+      </script>
+      <div class="counter">Current value: <slot></slot></div>
+    </template>
+
+    <h1>signal/templates</h1>
+    <my-counter id="main">0</my-counter>
+  </body>
+</html>

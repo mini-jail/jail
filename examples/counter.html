@@ -14,7 +14,7 @@
     <script type="module">
       import { createSignal, createScope, createEffect } from "signal";
 
-      /** @type {(id: string) => Element | undefined} **/
+      /** @type {(id: string) => Element | null} **/
       const byId = document.getElementById.bind(document);
 
       createScope((dispose) => {
