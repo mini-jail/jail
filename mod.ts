@@ -1,5 +1,4 @@
 // todo: delete file
-
 export type Cleanup = () => void;
 export type Signal<T = any> = {
   (): T;

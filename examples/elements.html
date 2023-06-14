@@ -67,7 +67,7 @@
           const elt = document.createElement(tagName);
           const props = modify.length ? Object.create(null) : undefined;
           parentElement = elt;
-          modify(props);
+          modify.call(elt, props);
           parentElement = parent;
           createEffect(() => setProps(elt, props));
           parent?.appendChild(elt);
@@ -105,8 +105,10 @@
         };
 
         html.main = () => {
-          html.div = (props) => {
-            props.textContent = counter;
+          html.div = function () {
+            createEffect(() => {
+              this.textContent = String(counter());
+            });
           };
 
           html.button = (props) => {

@@ -1,26 +1,54 @@
 /**
+ * #### Cleanup
+ * A function that runs before a **Node** updates.
+ *
+ * Can be used to manually reset timer, intervals, etc.
+ *
  * @typedef {() => void} Cleanup
  */
 
 /**
+ * #### Signal\<T\>
+ * A function which:
+ * * returns value `signal()`
+ * * sets a new value `signal(value)`
+ * * modifies current value `signal((currentValue) => nextValue)`
+ *
  * @template [T = any]
  * @typedef {{
  *   () : T
  *   (value: T): void
  *   (callback: (currentValue: T | undefined) => T): void
- * }} Signal<T>
+ * }} Signal
  */
 
 /**
+ * #### Source\<T\>
+ * An object which contains:
+ * * a value
+ * * an array of Nodes
+ * * an array of Slots from the corresponding Nodes
+ *
  * @template [T = any]
  * @typedef {{
  *   value: T | undefined | null
  *   nodes: Node[] | null
  *   nodeSlots: number[] | null
- * }} Source<T>
+ * }} Source
  */
 
 /**
+ * #### Node\<T\>
+ * A reactive object.
+ *
+ * If the Node will be triggered for an update, it will:
+ * * remove all unused **Sources**
+ * * run all **cleanup** functions
+ * * run all **cleanup** function from its containing **child Nodes**
+ * * run its **onupdate**
+ * * update its **value**
+ * * resets its **injections**
+ *
  * @template [T = any]
  * @typedef {{
  *   value: T | undefined | null
@@ -31,21 +59,28 @@
  *   onupdate: ((currentValue: T | undefined) => T) | null
  *   sources: Source[] | null
  *   sourceSlots: number[] | null
- * }} Node<T>
+ * }} Node
  */
 
 /**
+ * #### Node\<T\>
+ * A object which contains the reactive property **value**.
+ *
  * @template [T = any]
- * @typedef {{ value: T }} Ref<T>
+ * @typedef {{ value: T }} Ref
  */
 
 /**
+ * #### Injection\<T\>
+ * An object containing a default value and a provider,
+ * the provided value can be injected by calling **inject**.
+ *
  * @template [T = any]
  * @typedef {{
  *   readonly id: symbol
  *   readonly defaultValue: T | undefined
  *   provide<R>(value: T, callback: () => R): R | void
- * }} Injection<T>
+ * }} Injection
  */
 
 const Error = Symbol();

@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "signal": "https://cdn.jsdelivr.net/gh/mini-jail/signal/mod.js"
+  }
+}
