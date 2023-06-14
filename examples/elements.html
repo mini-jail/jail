@@ -20,77 +20,44 @@
         onMount,
       } from "signal";
 
-      /**
-       * @template T
-       * @typedef {(this: T, props: Props) => void} Modify<T>
-       */
-
-      /**
-       * @typedef {Record<string, any>} Props
-       */
-
       /** @type {Element | null} */
       let parentElement = null;
 
       /**
-       * @param {Element} elt
-       * @param {Props} props
+       * @template T
+       * @param {T & keyof HTMLElementTagNameMap} tagName
+       * @param {(elt: HTMLElementTagNameMap[T]) => void} [modify]
+       * @returns {HTMLElementTagNameMap[T]}
        */
-      const setProps = (elt, props) => {
-        for (const key in props) {
-          const value = props[key];
-          if (value == null) {
-            continue;
-          }
-          if (key.startsWith("on")) {
-            const eventName = key.slice(2).toLocaleLowerCase();
-            elt.addEventListener(eventName, value);
-          } else if (key in elt) {
-            elt[key] = typeof value === "function" ? value() : value;
-          } else {
-            elt.setAttribute(
-              key,
-              String(value === "function" ? value() : value)
-            );
-          }
+      const createElement = (tagName, modify) => {
+        const parent = parentElement;
+        const elt = document.createElement(tagName);
+        if (modify) {
+          parentElement = elt;
+          modify(modify?.length ? elt : undefined);
+          parentElement = parent;
         }
+        parent?.appendChild(elt);
+        return elt;
       };
 
       /**
-       * @type {{
-       *   [TagName in keyof HTMLElementTagNameMap]: Modify<HTMLElementTagNameMap[TagName]>;
-       * }}
-       */
-      const html = new Proxy(Object.create(null), {
-        set(_target, tagName, modify) {
-          const parent = parentElement;
-          const elt = document.createElement(tagName);
-          const props = modify.length ? Object.create(null) : undefined;
-          parentElement = elt;
-          modify.call(elt, props);
-          parentElement = parent;
-          createEffect(() => setProps(elt, props));
-          parent?.appendChild(elt);
-          return true;
-        },
-      });
-
-      /**
-       * @param {Element} rootElement
-       * @param {() => void} modify
+       * @template T
+       * @param {T & Element} rootElement
+       * @param {(elt: T) => void} modify
        * @returns {() => void}
        */
       const render = (rootElement, modify) => {
         return createScope((dispose) => {
           const previousParentElement = parentElement;
           parentElement = rootElement;
-          modify();
+          modify(parentElement);
           parentElement = previousParentElement;
           return dispose;
         });
       };
 
-      const stopEffects = render(document.body, () => {
+      const App = () => {
         const counter = createSignal(0);
         let id;
         onMount(() => {
@@ -100,22 +67,24 @@
         });
         onCleanup(() => clearInterval(id));
 
-        html.h1 = (props) => {
-          props.textContent = "signal/elements";
-        };
-
-        html.main = () => {
-          html.div = function () {
+        createElement("h1", (elt) => {
+          elt.textContent = "signal/elements";
+        });
+        createElement("main", () => {
+          createElement("div", (elt) => {
             createEffect(() => {
-              this.textContent = String(counter());
+              elt.textContent = String(counter());
             });
-          };
+          });
+          createElement("button", (elt) => {
+            elt.textContent = "Stop Effects";
+            elt.onclick = () => stopEffects();
+          });
+        });
+      };
 
-          html.button = (props) => {
-            props.textContent = "Stop Effects";
-            props.onClick = () => stopEffects();
-          };
-        };
+      const stopEffects = render(document.body, () => {
+        App();
       });
     </script>
   </head>
