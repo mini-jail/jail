@@ -78,23 +78,24 @@
       <script type="module">
         import { createSignal, createEffect, createScope } from "signal";
 
-        const elt = getNode("my-counter");
+        const elt = getNode("my-counter"); // always do this!
 
         const signal = createSignal(Number(elt.textContent) || 0);
 
         elt.onclick = () => signal(signal() + 1);
 
-        createScope(() =>
+        createScope(() => {
           createEffect(() => {
             elt.textContent = String(signal());
-          })
-        );
+          });
+        });
       </script>
       Current value: <slot></slot>
     </template>
 
     <h1>signal/templates</h1>
-    <my-counter id="main">0</my-counter>
-    <my-counter id="not-main">1</my-counter>
+    <my-counter>0</my-counter>
+    <my-counter>1</my-counter>
+    <my-counter>2</my-counter>
   </body>
 </html>

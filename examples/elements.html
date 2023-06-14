@@ -34,7 +34,7 @@
         const elt = document.createElement(tagName);
         if (modify) {
           parentElement = elt;
-          modify(modify?.length ? elt : undefined);
+          modify(modify.length ? elt : undefined);
           parentElement = parent;
         }
         parent?.appendChild(elt);
