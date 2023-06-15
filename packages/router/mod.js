@@ -74,7 +74,7 @@ function createRoutes(routeMap) {
 /**
  * @template [T = any]
  * @param {RouteMap<T>} routeMap
- * @returns {() => T}
+ * @returns {() => T | undefined}
  */
 export function createRouter(routeMap) {
   const routes = createRoutes(routeMap);
