@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>signal/hashrouter</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "signal": "https://cdn.jsdelivr.net/gh/mini-jail/signal/packages/signal/mod.js",
+          "signal/router": "https://cdn.jsdelivr.net/gh/mini-jail/signal/packages/router/mod.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import { createSignal, createScope, createEffect } from "signal";
+      import { setPathListener, getParams, createRouter } from "signal/router";
+
+      const routerRoot = document.getElementById("router-root");
+
+      const Home = () => {
+        routerRoot.innerHTML = `
+          <h1>Home</h1>
+          Welcome Home
+        `;
+      };
+
+      const About = () => {
+        routerRoot.innerHTML = `
+          <h1>About</h1>
+          About me: ...
+        `;
+      };
+
+      const User = () => {
+        const { username } = getParams();
+        routerRoot.innerHTML = `
+          <h1>User/${username}</h1>
+        `;
+      };
+
+      const NotFound = () => {
+        routerRoot.innerHTML = `
+          <h1>Page not found :(</h1>
+        `;
+      };
+
+      setPathListener((path) => {
+        addEventListener("hashchange", () => {
+          path(location.hash === "" ? "/" : location.hash.slice(1));
+        });
+      });
+
+      createRouter({
+        "/#/": Home,
+        "/#/about": About,
+        "/#/user/:username": User,
+        "*": NotFound,
+      });
+    </script>
+  </head>
+  <body>
+    <h1>signal/hashrouter</h1>
+    <ul>
+      <li><a href="/#/">home</a></li>
+      <li><a href="/#/about">about</a></li>
+      <li><a href="/#/user/mini-jail">mini-jail</a></li>
+      <li><a href="/#/random">random</a></li>
+    </ul>
+    <div id="router-root"></div>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 {
   "imports": {
     "signal": "https://cdn.jsdelivr.net/gh/mini-jail/signal/packages/signal/mod.js",
-    "signal/hashrouter": "https://cdn.jsdelivr.net/gh/mini-jail/signal/packages/hashrouter/mod.js"
+    "signal/router": "https://cdn.jsdelivr.net/gh/mini-jail/signal/packages/router/mod.js"
   }
 }
