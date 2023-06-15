@@ -62,14 +62,12 @@ function createUrlMatcher(path) {
  * @param {RouteMap} routeMap
  * @returns {Iterable<Route>}
  */
-function* createRoutes(routeMap) {
-  for (const path of routeMap) {
-    yield {
-      path,
-      regexp: createUrlMatcher(path),
-      handler: routeMap[path],
-    };
-  }
+function createRoutes(routeMap) {
+  return Object.keys(routeMap).map((path) => ({
+    path,
+    regexp: createUrlMatcher(path),
+    handler: routeMap[path],
+  }));
 }
 
 /**

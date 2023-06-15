@@ -7,8 +7,8 @@
     <script type="importmap">
       {
         "imports": {
-          "signal": "https://cdn.jsdelivr.net/gh/mini-jail/signal/packages/signal/mod.js",
-          "signal/router": "https://cdn.jsdelivr.net/gh/mini-jail/signal/packages/router/mod.js"
+          "signal": "../packages/signal/mod.js",
+          "signal/router": "../packages/router/mod.js"
         }
       }
     </script>
@@ -40,32 +40,40 @@
       };
 
       const NotFound = () => {
+        const { url } = getParams();
         routerRoot.innerHTML = `
           <h1>Page not found :(</h1>
+          <i>
+            There is no content for "${url}""
+          </i>
         `;
       };
 
+      const getHash = () =>
+        location.hash === "" ? "/" : location.hash.slice(1);
+
       setPathListener((path) => {
-        addEventListener("hashchange", () => {
-          path(location.hash === "" ? "/" : location.hash.slice(1));
-        });
+        // set initial value
+        path(getHash());
+        // set the actual event listener
+        addEventListener("hashchange", () => path(getHash()));
       });
 
       createRouter({
-        "/#/": Home,
-        "/#/about": About,
-        "/#/user/:username": User,
-        "*": NotFound,
+        "/": Home,
+        "/about": About,
+        "/user/:username": User,
+        "/:url": NotFound,
       });
     </script>
   </head>
   <body>
     <h1>signal/hashrouter</h1>
     <ul>
-      <li><a href="/#/">home</a></li>
-      <li><a href="/#/about">about</a></li>
-      <li><a href="/#/user/mini-jail">mini-jail</a></li>
-      <li><a href="/#/random">random</a></li>
+      <li><a href="#/">home</a></li>
+      <li><a href="#/about">about</a></li>
+      <li><a href="#/user/mini-jail">mini-jail</a></li>
+      <li><a href="#/random">random</a></li>
     </ul>
     <div id="router-root"></div>
   </body>
