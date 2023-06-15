@@ -13,39 +13,37 @@
       }
     </script>
     <script type="module">
-      import { createSignal, createScope, createEffect } from "signal";
+      import { createScope, createEffect } from "signal";
       import { setPathListener, getParams, createRouter } from "signal/router";
 
       const routerRoot = document.getElementById("router-root");
 
       const Home = () => {
-        routerRoot.innerHTML = `
-          <h1>Home</h1>
-          Welcome Home
+        return /*html*/ `
+          <h2>Home</h2>
+          <p>Welcome Home</p>
         `;
       };
 
       const About = () => {
-        routerRoot.innerHTML = `
-          <h1>About</h1>
-          About me: ...
+        return /*html*/ `
+          <h2>About</h2>
+          <p>About me: ...</p>
         `;
       };
 
       const User = () => {
         const { username } = getParams();
-        routerRoot.innerHTML = `
-          <h1>User/${username}</h1>
+        return /*html*/ `
+          <h2>User/${username}</h2>
         `;
       };
 
       const NotFound = () => {
         const { url } = getParams();
-        routerRoot.innerHTML = `
-          <h1>Page not found :(</h1>
-          <i>
-            There is no content for "${url}""
-          </i>
+        return /*html*/ `
+          <h2>Page not found :(</h2>
+          <p>There is no content for "${url}"</p>
         `;
       };
 
@@ -59,11 +57,17 @@
         addEventListener("hashchange", () => path(getHash()));
       });
 
-      createRouter({
+      const computedRoute = createRouter({
         "/": Home,
         "/about": About,
         "/user/:username": User,
         "/:url": NotFound,
+      });
+
+      createScope(() => {
+        createEffect(() => {
+          routerRoot.innerHTML = computedRoute();
+        });
       });
     </script>
   </head>

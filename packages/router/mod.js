@@ -1,5 +1,5 @@
 import {
-  createEffect,
+  createComputed,
   createInjection,
   createScope,
   createSignal,
@@ -28,7 +28,8 @@ import {
  */
 
 /**
- * @typedef {{ [path: string]: RouteHandler}} RouteMap
+ * @template [T = any]
+ * @typedef {{ [path: string]: RouteHandler<T>}} RouteMap
  */
 
 /** @type {import("signal").Signal<string>} */
@@ -71,13 +72,14 @@ function createRoutes(routeMap) {
 }
 
 /**
- * @param {RouteMap} routeMap
- * @returns {void}
+ * @template [T = any]
+ * @param {RouteMap<T>} routeMap
+ * @returns {() => T}
  */
 export function createRouter(routeMap) {
   const routes = createRoutes(routeMap);
-  createScope(() => {
-    createEffect(() => {
+  return createScope(() => {
+    return createComputed(() => {
       const nextPath = pathSignal();
       for (const route of routes) {
         if (route.regexp.test(nextPath)) {
