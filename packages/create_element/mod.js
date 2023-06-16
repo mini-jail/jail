@@ -129,14 +129,11 @@ function modifyCharacterData(node, data) {
  */
 export function createDynamic(modify) {
   const anchor = parentElt.appendChild(new Text());
-
   createEffect((currentNodes) => {
     const previousNodes = dynamicFragment;
     const nextNodes = dynamicFragment = [];
-    parentElt = anchor.parentElement;
     modify();
     dynamicFragment = previousNodes;
-    parentElt = null;
     union(anchor, currentNodes, nextNodes);
     if (nextNodes.length === 0) {
       return null;
