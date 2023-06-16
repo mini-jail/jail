@@ -8,25 +8,32 @@
       {
         "imports": {
           "signal": "../packages/signal/mod.js",
-          "signal/router": "../packages/router/mod.js"
+          "signal/router": "../packages/router/mod.js",
+          "signal/html": "../packages/html/mod.js"
         }
       }
     </script>
     <script type="module">
-      import { createScope, createEffect } from "signal";
+      import {
+        createScope,
+        createEffect,
+        createSignal,
+        onDestroy,
+      } from "signal";
       import { setPathListener, getParams, createRouter } from "signal/router";
+      import { html } from "signal/html";
 
       const routerRoot = document.getElementById("router-root");
 
       const Home = () => {
-        return /*html*/ `
+        return html`
           <h2>Home</h2>
           <p>Welcome Home</p>
         `;
       };
 
       const About = () => {
-        return /*html*/ `
+        return html`
           <h2>About</h2>
           <p>About me: ...</p>
         `;
@@ -34,16 +41,23 @@
 
       const User = () => {
         const { username } = getParams();
-        return /*html*/ `
-          <h2>User/${username}</h2>
-        `;
+        return html`<h2>User/${username}</h2>`;
       };
 
       const NotFound = () => {
         const { url } = getParams();
-        return /*html*/ `
+        const counter = createSignal(0);
+        const id = setInterval(() => counter(counter() + 1), 1000);
+        const onClick = () => counter(counter() + 1);
+        const coolClass = () => "cool_" + counter();
+
+        onDestroy(() => clearInterval(id));
+
+        return html`
           <h2>Page not found :(</h2>
-          <p>There is no content for "${url}"</p>
+          <p onclick="${onClick}" class="${coolClass}">
+            There is no content for "${url}". ${counter} ${"dick"}
+          </p>
         `;
       };
 
@@ -57,7 +71,7 @@
         addEventListener("hashchange", () => path(getHash()));
       });
 
-      const computedRoute = createRouter({
+      const route = createRouter({
         "/": Home,
         "/about": About,
         "/user/:username": User,
@@ -66,7 +80,7 @@
 
       createScope(() => {
         createEffect(() => {
-          routerRoot.innerHTML = computedRoute();
+          routerRoot.replaceChildren(route());
         });
       });
     </script>

@@ -1,5 +1,6 @@
 {
   "deno.enable": true,
   "deno.config": "./deno.json",
-  "deno.importMap": "./import_map.json"
+  "deno.importMap": "./import_map.json",
+  "html.hover.references": true
 }
