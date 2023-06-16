@@ -7,7 +7,8 @@
     <script type="importmap">
       {
         "imports": {
-          "signal": "../packages/signal/mod.js"
+          "signal": "../packages/signal/mod.js",
+          "signal/create_element": "../packages/create_element/mod.js"
         }
       }
     </script>
@@ -19,43 +20,14 @@
         onCleanup,
         onMount,
       } from "signal";
-
-      /** @type {Element | null} */
-      let parentElement = null;
-
-      /**
-       * @template T
-       * @param {T & keyof HTMLElementTagNameMap} tagName
-       * @param {(elt: HTMLElementTagNameMap[T]) => void} [modify]
-       * @returns {HTMLElementTagNameMap[T]}
-       */
-      const createElement = (tagName, modify) => {
-        const parent = parentElement;
-        const elt = document.createElement(tagName);
-        if (modify) {
-          parentElement = elt;
-          modify(modify.length ? elt : undefined);
-          parentElement = parent;
-        }
-        parent?.appendChild(elt);
-        return elt;
-      };
-
-      /**
-       * @template T
-       * @param {T & Element} rootElement
-       * @param {(elt: T) => void} modify
-       * @returns {() => void}
-       */
-      const render = (rootElement, modify) => {
-        return createScope((dispose) => {
-          const previousParentElement = parentElement;
-          parentElement = rootElement;
-          modify(parentElement);
-          parentElement = previousParentElement;
-          return dispose;
-        });
-      };
+      import {
+        createElement,
+        createListener,
+        createFragment,
+        createDynamic,
+        createText,
+        render,
+      } from "signal/create_element";
 
       const App = () => {
         const counter = createSignal(0);
@@ -67,24 +39,33 @@
         });
         onCleanup(() => clearInterval(id));
 
-        createElement("h1", (elt) => {
-          elt.textContent = "signal/elements";
-        });
-        createElement("main", () => {
-          createElement("div", (elt) => {
-            createEffect(() => {
-              elt.textContent = String(counter());
+        createFragment(() => {
+          createElement("h1", (elt) => {
+            elt.textContent = "signal/elements";
+          });
+          createElement("main", () => {
+            createElement("div", (elt) => {
+              elt.textContent = () => String(counter());
+              createListener("click", () => counter(counter() + 1));
+            });
+            createElement("button", (elt) => {
+              elt.textContent = "Stop Effects";
+              createListener("click", () => stopEffects());
             });
           });
-          createElement("button", (elt) => {
-            elt.textContent = "Stop Effects";
-            elt.onclick = () => stopEffects();
-          });
+        });
+
+        createDynamic(() => {
+          if (counter() % 2 === 0) {
+            createText("even");
+          }
         });
       };
 
       const stopEffects = render(document.body, () => {
-        App();
+        createElement("main", () => {
+          App();
+        });
       });
     </script>
   </head>

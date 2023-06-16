@@ -1,6 +1,7 @@
 {
   "imports": {
     "signal": "./packages/signal/mod.js",
-    "signal/router": "./packages/router/mod.js"
+    "signal/router": "./packages/router/mod.js",
+    "signal/create_element": "./packages/create_element/mod.js"
   }
 }
