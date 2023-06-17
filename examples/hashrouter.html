@@ -69,17 +69,17 @@
         addEventListener("hashchange", () => path(getHash()));
       });
 
-      const App = () => {
-        const Router = createRouter({
-          "/": Home,
-          "/about": About,
-          "/user/:username": User,
-          "/:url": NotFound,
-        });
+      const Router = createRouter({
+        "/": Home,
+        "/about": About,
+        "/user/:username": User,
+        "/:url": NotFound,
+      });
 
+      const App = () => {
         return template`
           <div id="app">
-            ${Router}
+            ${Router()}
           </div>
         `;
       };
