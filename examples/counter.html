@@ -18,12 +18,21 @@
 
       const Counter = () => {
         const counter = createSignal(0);
+        const h1Ref = createSignal();
         const add = () => counter(counter() + 1);
         const sub = () => counter(counter() - 1);
         const reset = () => counter(0);
 
+        createEffect(() => {
+          console.log("current value is", counter());
+        });
+
+        createEffect(() => {
+          console.log(h1Ref());
+        });
+
         return template`
-          <h1>signal/counter</h1>
+          <h1 ref="${h1Ref}">signal/counter</h1>
           ${counter}
           <div>
             <button onclick="${add}">+</button>

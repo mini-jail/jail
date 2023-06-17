@@ -108,7 +108,9 @@ function setProperties(fragment, args) {
       const index = Number(data.replace("__key__", ""));
       const property = getAttribute.call(elt, null, `data-__key__${index}`);
       const value = args[getAttribute.call(elt, null, `data-__arg__${index}`)];
-      if (property.startsWith("on")) {
+      if (property === "ref") {
+        value(elt);
+      } else if (property.startsWith("on")) {
         elt.addEventListener(createEventName(property), value);
       } else if (typeof value === "function") {
         if (dynamicProperties === null) {
