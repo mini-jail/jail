@@ -2,6 +2,6 @@
   "imports": {
     "signal": "./packages/signal/mod.js",
     "signal/router": "./packages/router/mod.js",
-    "signal/html": "./packages/html/mod.js"
+    "signal/dom": "./packages/dom/mod.js"
   }
 }

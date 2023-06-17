@@ -1,74 +1,62 @@
-import { createEffect } from "signal";
+import { createEffect, createScope } from "signal";
 
-const Property = /([@.-_:\w\d]+)="$/;
-
-const Placeholder = "__placeholder__";
-
-/**
- * @param {TemplateStringsArray} strings
- * @param  {...any} args
- * @returns {DocumentFragment}
- */
-export function html(strings, ...args) {
-  const { fragment, replacement, properties } = createFragment(strings, args);
-  if (replacement) {
-    replaceChildren(fragment, args);
-  }
-  if (properties) {
-    setProperties(fragment, args);
-  }
-  return fragment;
-}
+const Attribute = /([@-_:\w\d]+)="$/;
+/** @type {{ [key: string]: DocumentFragment }} */
+const Cache = Object.create(null);
+const replaceChild = Node.prototype.replaceChild;
+const insertBefore = Node.prototype.insertBefore;
+const testAttribute = Attribute.test.bind(Attribute);
+const getAttribute = Element.prototype.getAttributeNS;
+const setAttribute = Element.prototype.setAttributeNS;
+const removeAttribute = Element.prototype.removeAttributeNS;
 
 /**
  * @param {TemplateStringsArray} strings
  * @param {any[]} args
- * @returns {{
- *   fragment: DocumentFragment,
- *   replacement: boolean,
- *   properties: boolean
- * }}
+ * @returns {DocumentFragment}
  */
-function createFragment(strings, args) {
-  const template = document.createElement("template");
-  let result = "";
-  let i = -1;
+export function template(strings, ...args) {
   const length = args.length;
-  let replacement = false;
-  let properties = false;
-
+  let data = "", i = -1, hasReplacement = false, hasProps = false;
   while (++i < length) {
-    const string = strings.raw[i];
-    let nose = string;
+    let nose = strings.raw[i];
     let tail = args[i];
-    const isProperty = Property.test(string);
-
-    if (isProperty) {
-      nose = string.replace(
-        Property,
-        `data-__prop__ data-__key__${i}="$1" data-__arg__${i}="`,
+    if (testAttribute(nose)) {
+      nose = nose.replace(
+        Attribute,
+        `data-__att__ data-__key__${i}="$1" data-__arg__${i}="`,
       );
       tail = i;
-      properties = true;
-    } else if (isInsertable(tail)) {
-      tail = `<!--${Placeholder}${i}-->`;
-      replacement = true;
-    }
-
-    if (tail == null || typeof tail === "boolean") {
+      hasProps = true;
+    } else if (tail != null && typeof tail !== "boolean") {
+      tail = `<!--__arg__${i}-->`;
+      hasReplacement = true;
+    } else {
       tail = "";
     }
-
-    result += nose + tail;
+    data += nose + tail;
   }
+  const content = getTemplateContent(data += strings.at(-1));
+  if (hasProps) {
+    setProperties(content, args);
+  }
+  if (hasReplacement) {
+    replaceChildren(content, args);
+  }
+  return content;
+}
 
-  template.innerHTML = result += strings.at(-1);
-
-  return {
-    fragment: template.content,
-    replacement,
-    properties,
-  };
+/**
+ * @param {string} data
+ * @returns {DocumentFragment}
+ */
+function getTemplateContent(data) {
+  if (data in Cache === false) {
+    const template = document.createElement("template");
+    template.innerHTML = data.replaceAll("\n", "").replaceAll("  ", "");
+    Cache[data] = template.content;
+  }
+  return Cache[data].cloneNode(true);
 }
 
 /**
@@ -77,23 +65,30 @@ function createFragment(strings, args) {
  * @returns {void}
  */
 function replaceChildren(fragment, args) {
-  const walker = document.createTreeWalker(fragment, 128);
+  const iterator = document.createNodeIterator(fragment, 0x80);
+  /** @type {Comment | null} */
   let node = null;
-  while ((node = walker.nextNode())) {
-    if (node.data.startsWith(Placeholder) === false) {
+  while ((node = iterator.nextNode())) {
+    if (node.data.startsWith("__arg__") === false) {
       continue;
     }
-    const replacement = args[Number(node.data.replace(Placeholder, ""))];
-    if (replacement instanceof Node) {
-      node.parentNode.replaceChild(replacement, node);
-    } else {
+    const index = Number(node.data.replace("__arg__", ""));
+    const value = args[index];
+    if (value == null || typeof value === "boolean") {
+      continue;
+    }
+    if (value instanceof Node) {
+      replaceChild.call(node.parentNode, value, node);
+    } else if (Array.isArray(value) || typeof value === "function") {
       const anchor = new Text();
-      node.parentNode.replaceChild(anchor, node);
+      replaceChild.call(node.parentNode, anchor, node);
       createEffect((currentNodes) => {
-        const nextNodes = createNodeArray(() => replacement);
+        const nextNodes = createNodeArray(() => value);
         reconcileNodes(anchor, currentNodes, nextNodes);
         return nextNodes;
       }, []);
+    } else {
+      replaceChild.call(node.parentNode, new Text(String(value)), node);
     }
   }
 }
@@ -104,23 +99,17 @@ function replaceChildren(fragment, args) {
  * @returns {void}
  */
 function setProperties(fragment, args) {
-  for (const elt of fragment.querySelectorAll("[data-__prop__]")) {
+  for (const elt of fragment.querySelectorAll("[data-__att__]")) {
     let dynamicProperties = null;
-
     for (const data in elt.dataset) {
       if (data.startsWith("__key__") === false) {
         continue;
       }
-
-      const index = data.replace("__key__", "");
-      const property = elt.getAttribute(`data-__key__${index}`);
-      const value = args[Number(elt.getAttribute(`data-__arg__${index}`))];
-
+      const index = Number(data.replace("__key__", ""));
+      const property = getAttribute.call(elt, null, `data-__key__${index}`);
+      const value = args[getAttribute.call(elt, null, `data-__arg__${index}`)];
       if (property.startsWith("on")) {
-        const name = property.startsWith("on:")
-          ? property.slice("2")
-          : property.slice("2").toLowerCase();
-        elt.addEventListener(name, value);
+        elt.addEventListener(createEventName(property), value);
       } else if (typeof value === "function") {
         if (dynamicProperties === null) {
           dynamicProperties = {};
@@ -129,13 +118,10 @@ function setProperties(fragment, args) {
       } else {
         setProperty(elt, property, value);
       }
-
-      elt.removeAttribute(`data-__arg__${index}`);
-      elt.removeAttribute(`data-__key__${index}`);
+      removeAttribute.call(elt, null, `data-__arg__${index}`);
+      removeAttribute.call(elt, null, `data-__key__${index}`);
     }
-
-    elt.removeAttribute("data-__prop__");
-
+    removeAttribute.call(elt, null, "data-__att__");
     if (dynamicProperties) {
       createEffect((values) => {
         for (const prop in dynamicProperties) {
@@ -165,7 +151,7 @@ function setProperty(elt, property, value) {
     .replace(/([A-Z])/g, (str) => "-" + str[0])
     .toLowerCase();
   if (value !== null) {
-    elt.setAttributeNS(null, name, String(value));
+    setAttribute.call(elt, null, name, String(value));
   } else {
     elt.removeAttributeNS(null, name);
   }
@@ -197,6 +183,16 @@ export function createNodeArray(...elements) {
 }
 
 /**
+ * @param {string} name
+ * @returns {string}
+ */
+function createEventName(name) {
+  return name.startsWith("on:")
+    ? name.slice("2")
+    : name.slice("2").toLowerCase();
+}
+
+/**
  * @param {Node} anchor
  * @param {Node[]} currentNodes
  * @param {Node[]} nextNodes
@@ -206,7 +202,6 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
   const parentNode = anchor.parentNode,
     nextLength = nextNodes.length,
     currentLength = currentNodes.length;
-
   if (nextLength) {
     let i = -1;
     next:
@@ -231,23 +226,33 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
           break;
         }
       }
-      parentNode.insertBefore(nextNodes[i], currentNode?.nextSibling || anchor);
+      insertBefore.call(
+        parentNode,
+        nextNodes[i],
+        currentNode?.nextSibling || anchor,
+      );
     }
   }
-
   while (currentNodes.length) {
     currentNodes.pop()?.remove();
   }
 }
 
 /**
- * @param {any} value
- * @returns {boolean}
+ * @param {Node} rootElement
+ * @param {() => Node} application
+ * @returns {import("signal").Cleanup}
  */
-function isInsertable(value) {
-  return typeof value === "function" ||
-    value instanceof Node ||
-    Array.isArray(value);
+export function render(rootElement, application) {
+  return createScope((cleanup) => {
+    const anchor = rootElement.appendChild(new Text());
+    createEffect((currentNodes) => {
+      const nextNodes = createNodeArray(application());
+      reconcileNodes(anchor, currentNodes, nextNodes);
+      return nextNodes;
+    }, []);
+    return cleanup;
+  });
 }
 
-export default html;
+export default template;

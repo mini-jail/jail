@@ -9,7 +9,7 @@
         "imports": {
           "signal": "../packages/signal/mod.js",
           "signal/router": "../packages/router/mod.js",
-          "signal/html": "../packages/html/mod.js"
+          "signal/dom": "../packages/dom/mod.js"
         }
       }
     </script>
@@ -21,19 +21,17 @@
         onDestroy,
       } from "signal";
       import { setPathListener, getParams, createRouter } from "signal/router";
-      import { html } from "signal/html";
-
-      const routerRoot = document.getElementById("router-root");
+      import { template, render } from "signal/dom";
 
       const Home = () => {
-        return html`
+        return template`
           <h2>Home</h2>
           <p>Welcome Home</p>
         `;
       };
 
       const About = () => {
-        return html`
+        return template`
           <h2>About</h2>
           <p>About me: ...</p>
         `;
@@ -41,7 +39,7 @@
 
       const User = () => {
         const { username } = getParams();
-        return html`<h2>User/${username}</h2>`;
+        return template`<h2>User/${username}</h2>`;
       };
 
       const NotFound = () => {
@@ -53,10 +51,10 @@
 
         onDestroy(() => clearInterval(id));
 
-        return html`
+        return template`
           <h2>Page not found :(</h2>
           <p onclick="${onClick}" class="${coolClass}">
-            There is no content for "${url}". ${counter} ${"dick"}
+            There is no content for "${url}". ${counter}
           </p>
         `;
       };
@@ -71,18 +69,14 @@
         addEventListener("hashchange", () => path(getHash()));
       });
 
-      const route = createRouter({
+      const Router = createRouter({
         "/": Home,
         "/about": About,
         "/user/:username": User,
         "/:url": NotFound,
       });
 
-      createScope(() => {
-        createEffect(() => {
-          routerRoot.replaceChildren(route());
-        });
-      });
+      render(document.getElementById("router-root"), Router);
     </script>
   </head>
   <body>
