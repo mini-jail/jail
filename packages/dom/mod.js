@@ -147,13 +147,11 @@ function setProperty(elt, property, value) {
     elt[property] = value;
     return;
   }
-  const name = property
-    .replace(/([A-Z])/g, (str) => "-" + str[0])
-    .toLowerCase();
+  const name = createAttributeName(property);
   if (value !== null) {
     setAttribute.call(elt, null, name, String(value));
   } else {
-    elt.removeAttributeNS(null, name);
+    removeAttribute.call(elt, null, name);
   }
 }
 
@@ -190,6 +188,16 @@ function createEventName(name) {
   return name.startsWith("on:")
     ? name.slice("2")
     : name.slice("2").toLowerCase();
+}
+
+/**
+ * @param {string} name
+ * @returns {string}
+ */
+function createAttributeName(name) {
+  return name
+    .replace(/([A-Z])/g, (str) => "-" + str[0])
+    .toLowerCase();
 }
 
 /**
