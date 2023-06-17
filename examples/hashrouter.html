@@ -69,14 +69,22 @@
         addEventListener("hashchange", () => path(getHash()));
       });
 
-      const Router = createRouter({
-        "/": Home,
-        "/about": About,
-        "/user/:username": User,
-        "/:url": NotFound,
-      });
+      const App = () => {
+        const Router = createRouter({
+          "/": Home,
+          "/about": About,
+          "/user/:username": User,
+          "/:url": NotFound,
+        });
 
-      render(document.getElementById("router-root"), Router);
+        return template`
+          <div id="app">
+            ${Router}
+          </div>
+        `;
+      };
+
+      render(document.body, App);
     </script>
   </head>
   <body>
@@ -87,6 +95,5 @@
       <li><a href="#/user/mini-jail">mini-jail</a></li>
       <li><a href="#/random">random</a></li>
     </ul>
-    <div id="router-root"></div>
   </body>
 </html>
