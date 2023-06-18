@@ -1,0 +1,83 @@
+* {
+  padding: 0;
+  margin: 0;
+  word-break: break-all;
+}
+
+html {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  width: inherit;
+  height: inherit;
+  overflow: auto;
+  background-color: deepskyblue;
+  display: flex;
+  flex-direction: column;
+  transition: 250ms;
+}
+
+header {
+  background-color: steelblue;
+  color: white;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+header h1 {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+main {
+  padding: 10px;
+  flex: auto;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+nav {
+  display: flex;
+  gap: 20px;
+  margin: 0 auto;
+}
+
+a {
+  text-decoration: none;
+  color: hotpink;
+}
+
+a:hover {
+  color: plum;
+}
+
+article {
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.75);
+}
+
+button {
+  background-color: white;
+  padding: 5px 20px;
+  border: 0;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: plum;
+}
+
+pre {
+  white-space: break-spaces;
+}

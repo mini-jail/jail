@@ -1,0 +1,46 @@
+@font-face {
+  font-family: "ark-pixel-font";
+  src: url("ark-pixel-10px-monospaced-ja.woff2") format("woff2"),
+    url("ark-pixel-10px-monospaced-ko.woff2") format("woff2"),
+    url("ark-pixel-10px-monospaced-latin.woff2") format("woff2"),
+    url("ark-pixel-10px-monospaced-zh_cn.woff2") format("woff2"),
+    url("ark-pixel-10px-monospaced-zh_hk.woff2") format("woff2"),
+    url("ark-pixel-10px-monospaced-zh_tr.woff2") format("woff2"),
+    url("ark-pixel-10px-monospaced-zh_tw.woff2") format("woff2");
+}
+
+*,
+* * {
+  font-family: "ark-pixel-font";
+  font-size: 20px;
+  image-rendering: crisp-edges;
+  font-weight: normal;
+}
+
+h1 {
+  font-size: 60px;
+}
+
+h2 {
+  font-size: 50px;
+}
+
+h3 {
+  font-size: 40px;
+}
+
+h4 {
+  font-size: 30px;
+}
+
+h5 {
+  font-size: 20px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  margin-bottom: 10px;
+}

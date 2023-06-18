@@ -1,12 +1,12 @@
 import { createEffect, createScope, onDestroy, onMount } from "signal";
 
-const Attribute = /([@.:-_\w\d]+)="$/;
+const Attribute = /([^\-\_\ ][\@\-\_\.\:a-z0-9]+)="$/; // before: /([@.:a-z0-9]+)="$/
 const EventAndOptions = /(\w+)(\.?.*)/;
 
 const testAttribute = Attribute.test.bind(Attribute);
 
 const { replace, slice, includes, startsWith, toLowerCase } = String.prototype;
-const { replaceChild, insertBefore } = Node.prototype;
+const { replaceChild, insertBefore, removeChild } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
 
 /** @type {{ [key: string]: DocumentFragment }} */
@@ -90,11 +90,12 @@ function getTemplateContent(data) {
     markup = replace.call(markup, /^\n+/, "");
     template.innerHTML = markup;
     Cache[data] = template.content;
-  } else {
-    console.log("cached", Cache[data]);
   }
   return Cache[data].cloneNode(true);
 }
+
+/** @type {NodeFilter} */
+const nodeFilter = (node) => startsWith.call(node.data, "__placeholder__");
 
 /**
  * @param {DocumentFragment} root
@@ -102,20 +103,15 @@ function getTemplateContent(data) {
  * @returns {void}
  */
 function insertChildren(root, args) {
-  const iterator = document.createNodeIterator(root, 0x80);
-
+  const iterator = document.createNodeIterator(root, 0x80, nodeFilter);
   /** @type {Comment | null} */
   let node = null;
 
   while ((node = iterator.nextNode())) {
-    if (startsWith.call(node.data, "__placeholder__") === false) {
-      continue;
-    }
-
-    const index = Number(replace.call(node.data, "__placeholder__", ""));
-    const value = args[index];
+    const value = args[Number(replace.call(node.data, "__placeholder__", ""))];
 
     if (value == null || typeof value === "boolean") {
+      removeChild.call(node.parentNode, node);
       continue;
     }
 
@@ -128,7 +124,7 @@ function insertChildren(root, args) {
       const anchor = new Text();
       replaceChild.call(node.parentNode, anchor, node);
       createEffect((currentNodes) => {
-        const nextNodes = createNodeArray([], () => value);
+        const nextNodes = createNodeArray([], value?.() || value);
         reconcileNodes(anchor, currentNodes, nextNodes);
         return nextNodes;
       }, null);
@@ -156,8 +152,7 @@ function insertAttributes(root, args) {
       }
 
       const prop = elt.dataset[data];
-      const index = Number(replace.call(data, "__attribute__", ""));
-      const value = args[index];
+      const value = args[Number(replace.call(data, "__attribute__", ""))];
 
       if (startsWith.call(prop, "use:")) {
         onMount(() => DirectiveMap[slice.call(prop, 4)]?.(elt, value));
@@ -222,7 +217,7 @@ function setProperty(elt, property, value) {
  */
 function createNodeArray(nodeArray = [], ...elements) {
   for (const elt of elements) {
-    if (elt == null) {
+    if (elt == null || typeof elt === "boolean") {
       continue;
     }
 
@@ -252,8 +247,8 @@ function createAttributeName(name) {
 
 /**
  * @param {Node} anchor
- * @param {(Node | null)[] | null} currentNodes
- * @param {Node[]} nextNodes
+ * @param {(ChildNode | null)[] | null} currentNodes
+ * @param {(Node | ChildNode)[]} nextNodes
  * @returns {void}
  */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
@@ -267,40 +262,38 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
   const nextLength = nextNodes.length,
     currentLength = currentNodes.length;
 
-  if (nextLength) {
-    let i = -1;
-    next:
-    while (++i < nextLength) {
-      const currentNode = currentNodes[i];
-      let j = -1;
+  let i = -1;
+  next:
+  while (++i < nextLength) {
+    const currentNode = currentNodes[i];
+    let j = -1;
 
-      while (++j < currentLength) {
-        if (currentNodes[j] === null) {
-          continue;
-        }
-
-        if (currentNodes[j].nodeType === 3 && nextNodes[i].nodeType === 3) {
-          currentNodes[j].data = nextNodes[i].data;
-          nextNodes[i] = currentNodes[j];
-        } else if (currentNodes[j].isEqualNode(nextNodes[i])) {
-          nextNodes[i] = currentNodes[j];
-        }
-
-        if (nextNodes[i] === currentNodes[j]) {
-          currentNodes[j] = null;
-          if (i === j) {
-            continue next;
-          }
-          break;
-        }
+    while (++j < currentLength) {
+      if (currentNodes[j] === null) {
+        continue;
       }
 
-      insertBefore.call(
-        anchor.parentNode,
-        nextNodes[i],
-        currentNode?.nextSibling || anchor,
-      );
+      if (currentNodes[j].nodeType === 3 && nextNodes[i].nodeType === 3) {
+        currentNodes[j].data = nextNodes[i].data;
+        nextNodes[i] = currentNodes[j];
+      } else if (currentNodes[j].isEqualNode(nextNodes[i])) {
+        nextNodes[i] = currentNodes[j];
+      }
+
+      if (nextNodes[i] === currentNodes[j]) {
+        currentNodes[j] = null;
+        if (i === j) {
+          continue next;
+        }
+        break;
+      }
     }
+
+    insertBefore.call(
+      anchor.parentNode,
+      nextNodes[i],
+      currentNode?.nextSibling || anchor,
+    );
   }
 
   while (currentNodes?.length) {

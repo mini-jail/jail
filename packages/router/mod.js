@@ -33,17 +33,9 @@ import {
  */
 
 /** @type {import("signal").Signal<string>} */
-const pathSignal = createSignal();
+export const pathSignal = createSignal();
 /** @type {import("signal").Injection<Params>} */
 const Params = createInjection();
-
-/**
- * @param {(callback: (setter: string) => void) => void} listener
- * @returns {void}
- */
-export function setPathListener(listener) {
-  listener((path) => pathSignal(path));
-}
 
 export function getParams() {
   return inject(Params);

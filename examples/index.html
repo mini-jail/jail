@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>signal/</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "signal": "../packages/signal/mod.js",
+          "signal/router": "../packages/router/mod.js",
+          "signal/dom": "../packages/dom/mod.js",
+          "route/home": "./home.js",
+          "route/counter": "./counter.js",
+          "route/notfound": "./notfound.js"
+        }
+      }
+    </script>
+    <link href="./assets/ark-pixel-font.css" media="all" rel="stylesheet" />
+    <link href="./assets/app.css" media="all" rel="stylesheet" />
+    <script type="module">
+      import { createEffect, onMount } from "signal";
+      import { pathSignal, createRouter } from "signal/router";
+      import { template, render } from "signal/dom";
+
+      import Home from "route/home";
+      import Counter from "route/counter";
+      import NotFound from "route/notfound";
+
+      const App = () => {
+        const getHash = () => location.hash.slice(1) || "/";
+
+        onMount(() => {
+          pathSignal(getHash());
+          addEventListener("hashchange", () => pathSignal(getHash()));
+        });
+
+        createEffect(() => {
+          document.title = `signal${pathSignal()}`;
+        });
+
+        const Router = createRouter({
+          "/": Home,
+          "/counter": Counter,
+          "/:url": NotFound,
+        });
+
+        return template`
+          <header>
+            <h3>signal${pathSignal}</h3>
+            <nav>
+              <a href="#/">home</a>
+              <a href="#/counter">counter</a>
+              <a href="#/error">error</a>
+            </nav>
+          </header>
+          <main>
+            ${Router}
+          </main>
+        `;
+      };
+
+      render(document.body, App);
+    </script>
+  </head>
+  <body></body>
+</html>
