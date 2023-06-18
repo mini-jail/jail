@@ -32,8 +32,7 @@
 
       const About = () => {
         return template`
-          <h2>About</h2>
-          <p>About me: ...</p>
+          <h2 aria-cool="${true}">${"About"}</h2>
         `;
       };
 
@@ -44,17 +43,10 @@
 
       const NotFound = () => {
         const { url } = getParams();
-        const counter = createSignal(0);
-        const id = setInterval(() => counter(counter() + 1), 1000);
-        const onClick = () => counter(counter() + 1);
-        const coolClass = () => "cool_" + counter();
-
-        onDestroy(() => clearInterval(id));
-
         return template`
           <h2>Page not found :(</h2>
-          <p onclick="${onClick}" class="${coolClass}">
-            There is no content for "${url}". ${counter}
+          <p>
+            There is no content for "${url}".
           </p>
         `;
       };
@@ -76,13 +68,11 @@
         "/:url": NotFound,
       });
 
-      const App = () => {
-        return template`
-          <div id="app">
-            ${Router()}
-          </div>
-        `;
-      };
+      const App = () => template`
+        <div id="app">
+          ${Router()}
+        </div>
+      `;
 
       render(document.body, App);
     </script>

@@ -13,32 +13,23 @@
       }
     </script>
     <script type="module">
-      import { createSignal, createScope, createEffect } from "signal";
+      import { createSignal, createScope } from "signal";
       import { template, render } from "signal/dom";
 
       const Counter = () => {
         const counter = createSignal(0);
-        const h1Ref = createSignal();
         const add = () => counter(counter() + 1);
         const sub = () => counter(counter() - 1);
         const reset = () => counter(0);
 
-        createEffect(() => {
-          console.log("current value is", counter());
-        });
-
-        createEffect(() => {
-          console.log(h1Ref());
-        });
-
         return template`
-          <h1 ref="${h1Ref}">signal/counter</h1>
+          <h1>signal/counter</h1>
           ${counter}
           <div>
-            <button onclick="${add}">+</button>
-            <button onclick="${sub}">-</button>
+            <button @click.delegate="${add}">+</button>
+            <button @click.delegate="${sub}">-</button>
           </div>
-          <button onclick="${reset}">Set counter to 0</button>
+          <button @click.delegate="${reset}">Set counter to 0</button>
         `;
       };
 
