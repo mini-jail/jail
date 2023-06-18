@@ -84,10 +84,14 @@ export function template(strings, ...args) {
 function getTemplateContent(data) {
   if (data in Cache === false) {
     const template = document.createElement("template");
-    let markup = replace.call(data, /^ +/gm, "");
-    markup = replace.call(markup, /^\n+/gm, "");
+    let markup = data;
+    markup = replace.call(markup, /^ +/gm, "");
+    markup = replace.call(markup, /\n+$/, "");
+    markup = replace.call(markup, /^\n+/, "");
     template.innerHTML = markup;
     Cache[data] = template.content;
+  } else {
+    console.log("cached", Cache[data]);
   }
   return Cache[data].cloneNode(true);
 }
@@ -216,7 +220,7 @@ function setProperty(elt, property, value) {
  * @param  {...any} elements
  * @returns {Node[]}
  */
-export function createNodeArray(nodeArray = [], ...elements) {
+function createNodeArray(nodeArray = [], ...elements) {
   for (const elt of elements) {
     if (elt == null) {
       continue;
