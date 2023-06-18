@@ -21,7 +21,7 @@
         onDestroy,
       } from "signal";
       import { setPathListener, getParams, createRouter } from "signal/router";
-      import { template, render } from "signal/dom";
+      import { template, render, directive } from "signal/dom";
 
       const Home = () => {
         return template`
@@ -32,7 +32,10 @@
 
       const About = () => {
         return template`
-          <h2 aria-cool="${true}">${"About"}</h2>
+          <h2>${"About"}</h2>
+          <p>
+            Hello, my name is...
+          </p>
         `;
       };
 
@@ -68,11 +71,13 @@
         "/:url": NotFound,
       });
 
-      const App = () => template`
-        <div id="app">
-          ${Router()}
-        </div>
+      const App = () => {
+        return template`
+          <div id="app">
+            ${Router}
+          </div>
       `;
+      };
 
       render(document.body, App);
     </script>
