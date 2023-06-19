@@ -12,6 +12,7 @@
           "signal/dom": "../packages/dom/mod.js",
           "route/home": "./home.js",
           "route/counter": "./counter.js",
+          "route/sierpinski": "./sierpinski.js",
           "route/notfound": "./notfound.js"
         }
       }
@@ -25,6 +26,7 @@
 
       import Home from "route/home";
       import Counter from "route/counter";
+      import Sierpinski from "route/sierpinski";
       import NotFound from "route/notfound";
 
       const App = () => {
@@ -42,6 +44,7 @@
         const Router = createRouter({
           "/": Home,
           "/counter": Counter,
+          "/sierpinski": Sierpinski,
           "/:url": NotFound,
         });
 
@@ -51,6 +54,7 @@
             <nav>
               <a href="#/">home</a>
               <a href="#/counter">counter</a>
+              <a href="#/sierpinski">sierpinski</a>
               <a href="#/error">error</a>
             </nav>
           </header>

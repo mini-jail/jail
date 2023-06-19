@@ -1,12 +1,10 @@
 import { createEffect, createScope, onDestroy, onMount } from "signal";
 
-const Attribute = /([^\-\_\ ][\@\-\_\.\:a-z0-9]+)="$/; // before: /([@.:a-z0-9]+)="$/
+const Attribute = /([^\-\_\ ][\*\@\-\_\.\:a-zA-Z0-9]+)="$/;
 const EventAndOptions = /(\w+)(\.?.*)/;
 
-const testAttribute = Attribute.test.bind(Attribute);
-
 const { replace, slice, includes, startsWith, toLowerCase } = String.prototype;
-const { replaceChild, insertBefore, removeChild } = Node.prototype;
+const { replaceChild, insertBefore } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
 
 /** @type {{ [key: string]: DocumentFragment }} */
@@ -16,12 +14,12 @@ const Events = Symbol("Events");
 /** @type {{ [name: string]: boolean }} */
 const EventMap = Object.create(null);
 
-/** @type {{ [name: string]: (elt: Element, value: unknown) => void}} */
+/** @type {{ [name: string]: (elt: HTMLElement | SVGElement, value: unknown) => void}} */
 const DirectiveMap = Object.create(null);
 
 /**
  * @param {string} name
- * @param {(elt: Element) => void}} handler
+ * @param {(elt: HTMLElement | SVGElement, value: unknown) => void} handler
  * @returns {() => void}
  */
 export function directive(name, handler) {
@@ -42,23 +40,25 @@ export function template(strings, ...args) {
     return getTemplateContent(strings[0]);
   }
 
-  let data = "", i = -1, hasPlaceholders = false, hasAttributes = false;
+  let data = "", i = -1;
+  /** @type {{ [id: string]: any } | null} */
+  let insertMap = null;
+  /** @type {{ [id: string]: any } | null} */
+  let attributeMap = null;
 
   while (++i < length) {
     let nose = strings[i];
     let tail = args[i];
 
-    if (testAttribute(nose)) {
-      nose = replace.call(
-        nose,
-        Attribute,
-        `data-__attribute__${i}="$1" __attribute__="`,
-      );
-      tail = i;
-      hasAttributes = true;
+    if (Attribute.test(nose)) {
+      nose = replace.call(nose, Attribute, `data-_att_${i}="$1" _att="`);
+      attributeMap = attributeMap || {};
+      attributeMap[i] = tail;
+      tail = "";
     } else {
-      tail = `<!--__placeholder__${i}-->`;
-      hasPlaceholders = true;
+      insertMap = insertMap || {};
+      insertMap["_ins_" + i] = tail;
+      tail = `<br id=_ins_${i} />`;
     }
 
     data += nose + tail;
@@ -66,12 +66,12 @@ export function template(strings, ...args) {
 
   const content = getTemplateContent(data += strings.at(-1));
 
-  if (hasAttributes) {
-    insertAttributes(content, args);
+  if (attributeMap) {
+    insertAttributes(content, attributeMap);
   }
 
-  if (hasPlaceholders) {
-    insertChildren(content, args);
+  if (insertMap !== null) {
+    insertChildren(content, insertMap);
   }
 
   return content;
@@ -86,81 +86,77 @@ function getTemplateContent(data) {
     const template = document.createElement("template");
     let markup = data;
     markup = replace.call(markup, /^ +/gm, "");
-    markup = replace.call(markup, /\n+$/, "");
     markup = replace.call(markup, /^\n+/, "");
+    markup = replace.call(markup, /\n+$/, "");
     template.innerHTML = markup;
     Cache[data] = template.content;
   }
   return Cache[data].cloneNode(true);
 }
 
-/** @type {NodeFilter} */
-const nodeFilter = (node) => startsWith.call(node.data, "__placeholder__");
-
 /**
  * @param {DocumentFragment} root
- * @param {any[]} args
+ * @param {{ [id: string]: any }} insertMap
  * @returns {void}
  */
-function insertChildren(root, args) {
-  const iterator = document.createNodeIterator(root, 0x80, nodeFilter);
-  /** @type {Comment | null} */
-  let node = null;
-
-  while ((node = iterator.nextNode())) {
-    const value = args[Number(replace.call(node.data, "__placeholder__", ""))];
-
+function insertChildren(root, insertMap) {
+  /** @type {Iterable<HTMLBRElement>} */
+  const elements = root.querySelectorAll("br[id]");
+  for (const elt of elements) {
+    const value = insertMap[elt.id];
     if (value == null || typeof value === "boolean") {
-      removeChild.call(node.parentNode, node);
+      elt.remove();
       continue;
     }
-
     if (value instanceof Node) {
-      replaceChild.call(node.parentNode, value, node);
+      replaceChild.call(elt.parentNode, value, elt);
     } else if (
       (Array.isArray(value) && value.length) ||
       typeof value === "function"
     ) {
       const anchor = new Text();
-      replaceChild.call(node.parentNode, anchor, node);
+      replaceChild.call(elt.parentNode, anchor, elt);
       createEffect((currentNodes) => {
-        const nextNodes = createNodeArray([], value?.() || value);
+        const nextNodes = createNodeArray([], () => value);
         reconcileNodes(anchor, currentNodes, nextNodes);
         return nextNodes;
       }, null);
     } else {
-      replaceChild.call(node.parentNode, new Text(String(value)), node);
+      replaceChild.call(elt.parentNode, new Text(String(value)), elt);
     }
   }
 }
 
 /**
  * @param {DocumentFragment} root
- * @param {any[]} args
+ * @param {{ [id: string]: any }} attributeMap
  * @returns {void}
  */
-function insertAttributes(root, args) {
+function insertAttributes(root, attributeMap) {
   /** @type {Iterable<HTMLElement | SVGElement>} */
-  const elements = root.querySelectorAll("[__attribute__]");
+  const elements = root.querySelectorAll("[_att]");
 
   for (const elt of elements) {
-    let dynamicProperties = null;
-
     for (const data in elt.dataset) {
-      if (startsWith.call(data, "__attribute__") === false) {
+      if (startsWith.call(data, "_att_") === false) {
         continue;
       }
 
       const prop = elt.dataset[data];
-      const value = args[Number(replace.call(data, "__attribute__", ""))];
+      const value = attributeMap[replace.call(data, "_att_", "")];
 
-      if (startsWith.call(prop, "use:")) {
-        onMount(() => DirectiveMap[slice.call(prop, 4)]?.(elt, value));
-      } else if (startsWith.call(prop, "@") || startsWith.call(prop, "on")) {
+      if (startsWith.call(prop, "*")) {
+        DirectiveMap[slice.call(prop, 1)]?.(elt, value);
+      } else if (startsWith.call(prop, "@")) {
         setEventListener(elt, prop, value);
       } else if (typeof value === "function") {
-        dynamicProperties = dynamicProperties || {};
-        dynamicProperties[prop] = value;
+        createEffect((currentValue) => {
+          const nextValue = value();
+          if (nextValue !== currentValue) {
+            setProperty(elt, prop, nextValue);
+          }
+          return nextValue;
+        });
       } else {
         setProperty(elt, prop, value);
       }
@@ -168,20 +164,7 @@ function insertAttributes(root, args) {
       removeAttribute.call(elt, `data-${data}`);
     }
 
-    removeAttribute.call(elt, "__attribute__");
-
-    if (dynamicProperties) {
-      createEffect((values) => {
-        for (const prop in dynamicProperties) {
-          const nextValue = dynamicProperties[prop]();
-          if (nextValue !== values[prop]) {
-            values[prop] = nextValue;
-            setProperty(elt, prop, nextValue);
-          }
-        }
-        return values;
-      }, {});
-    }
+    removeAttribute.call(elt, "_att");
   }
 }
 
@@ -192,7 +175,7 @@ function insertAttributes(root, args) {
  */
 function setProperty(elt, property, value) {
   let forceProperty = false;
-  if (startsWith.call(property, ":")) {
+  if (startsWith.call(property, ".")) {
     property = slice.call(property, 1);
     forceProperty = true;
   }
@@ -337,14 +320,7 @@ function eventLoop(ev) {
  * @param {(ev: Event) => any} listener
  */
 function setEventListener(elt, property, listener) {
-  if (startsWith.call(property, "@")) {
-    property = slice.call(property, 1);
-  } else if (startsWith.call(property, "on:")) {
-    property = slice.call(property, 3);
-  } else if (startsWith.call(property, "on")) {
-    property = slice.call(toLowerCase.call(property), 2);
-  }
-
+  property = property.slice(1);
   const name = replace.call(property, EventAndOptions, "$1");
   const options = replace.call(property, EventAndOptions, "$2");
 

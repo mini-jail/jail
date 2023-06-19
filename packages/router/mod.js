@@ -35,10 +35,10 @@ import {
 /** @type {import("signal").Signal<string>} */
 export const pathSignal = createSignal();
 /** @type {import("signal").Injection<Params>} */
-const Params = createInjection();
+const ParamsInjection = createInjection();
 
 export function getParams() {
-  return inject(Params);
+  return inject(ParamsInjection);
 }
 
 /**
@@ -76,7 +76,7 @@ export function createRouter(routeMap) {
       for (const route of routes) {
         if (route.regexp.test(nextPath)) {
           const params = route.regexp.exec(nextPath)?.groups;
-          return Params.provide(params, route.handler);
+          return ParamsInjection.provide(params, route.handler);
         }
       }
     });
