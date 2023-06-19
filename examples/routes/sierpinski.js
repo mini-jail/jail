@@ -30,7 +30,7 @@ const Dot = component((x, y, target, counterSignal) => {
     width: ${target}px;
     height: ${target}px;
     line-height: ${target}px;
-    background-color: ${hover() === true ? "cornflowerblue" : "thistle"};
+    background-color: ${hover() === true ? "lightpink" : "white"};
     left: ${x}px;
     top: ${y}px;
     font-size: ${(target / 2.5)}px;
