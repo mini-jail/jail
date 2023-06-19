@@ -11,8 +11,8 @@ import { template } from "signal/dom";
 
 /** @type {import("signal").Signal<TodoItem[]>} */
 const list = createSignal([
-  { id: 0, done: false, text: "buy soymilk" },
-  { id: 1, done: true, text: "eat cornflakes without soymilk" },
+  { id: 0, done: true, text: "eat cornflakes without soymilk" },
+  { id: 1, done: false, text: "buy soymilk" },
 ]);
 
 const Item = (props) => {
