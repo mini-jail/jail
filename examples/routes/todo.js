@@ -72,6 +72,7 @@ export default () => {
       }
       .todo-item-text {
         text-align: left;
+        flex: 1;
       }
       .todo-items {
         display: flex;
