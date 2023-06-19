@@ -101,7 +101,7 @@ function getTemplateContent(data) {
  */
 function insertChildren(root, insertMap) {
   /** @type {Iterable<HTMLBRElement>} */
-  const elements = root.querySelectorAll("br[id]");
+  const elements = root.querySelectorAll("br[id^=_ins_]");
   for (const elt of elements) {
     const value = insertMap[elt.id];
     if (value == null || typeof value === "boolean") {

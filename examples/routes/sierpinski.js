@@ -7,6 +7,7 @@ import {
   onMount,
 } from "signal";
 import { directive, template } from "signal/dom";
+import { getParams } from "signal/router";
 
 /**
  * @template T
@@ -41,8 +42,7 @@ const Dot = component((x, y, target, counterSignal) => {
         .textContent="${text}"
         *style="${style}"
         @mouseover.delegate="${onMouseOver}" 
-        @mouseout.delegate="${onMouseOut}"
-    ></div>
+        @mouseout.delegate="${onMouseOut}"></div>
   `;
 });
 
@@ -59,6 +59,7 @@ const Triangle = component((x, y, target, size, counterSignal) => {
 });
 
 export default () => {
+  const { target = "750", size = "25" } = getParams() || {};
   let id;
   const elapsed = createSignal(0);
   const count = createSignal(0);
@@ -101,7 +102,7 @@ export default () => {
       }
     </style>
     <div class="triangle-demo" *style="${style}">
-      ${Triangle(0, 0, 750, 25, count)}
+      ${Triangle(0, 0, Number(target), Number(size), count)}
     </div>
   `;
 };

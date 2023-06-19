@@ -1,7 +1,5 @@
-import { createComputed, createEffect, createSignal, untrack } from "signal";
+import { createComputed, createSignal } from "signal";
 import { template } from "signal/dom";
-
-const totalCounter = createSignal(-1);
 
 export default () => {
   const counter = createSignal(0);
@@ -12,11 +10,6 @@ export default () => {
     return currentValue + 1;
   }, -1);
 
-  createEffect(() => {
-    clicked();
-    untrack(() => totalCounter(totalCounter() + 1));
-  });
-
   return template`
     <article>
       <h4>
@@ -26,7 +19,7 @@ export default () => {
       <button @click.delegate="${sub}">-</button>
       <span>current value: ${counter}</span>
       <button @click.delegate="${add}">+</button>
-      <div>> you have clicked ${clicked} times. (${totalCounter} in total, because this one is global)</div>
+      <div>> you have clicked ${clicked} times.</div>
       ${() => clicked() > 10 && template`<div>> why do you do this?????</div>`}
       ${() => clicked() > 20 && template`<div>> pls stop T_T</div>`}
       ${() => clicked() > 30 && template`<div>> enough :(</div>`}
