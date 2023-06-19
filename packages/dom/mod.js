@@ -3,25 +3,20 @@ import { createEffect, createScope, onDestroy, onMount } from "signal";
 /**
  * @typedef {{
  *   fragment: DocumentFragment
- *   attributes: number[] | null
- *   insertions: number[] | null
+ *   attributes: string[] | null
+ *   insertions: string[] | null
  * }} Template
  */
 
-const Attribute = /([^\-\_\ ][\*\@\-\_\.\:a-zA-Z0-9]+)="$/;
 const EventAndOptions = /(\w+)(\.?.*)/;
-
 const { replace, slice, includes, startsWith, toLowerCase } = String.prototype;
 const { replaceChild, insertBefore } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
-
 /** @type {Map<TemplateStringsArray, Template>} */
 const TemplateCache = new Map();
-
 const Events = Symbol("Events");
 /** @type {{ [name: string]: boolean }} */
 const EventMap = Object.create(null);
-
 /** @type {{ [name: string]: (elt: HTMLElement | SVGElement, value: unknown) => void}} */
 const DirectiveMap = Object.create(null);
 
@@ -70,32 +65,35 @@ export function template(strings, ...args) {
  * @returns {Template}
  */
 function createTemplate(strings) {
-  const length = strings.length - 1;
-  let result = "", i = -1;
-  /** @type {number[] | null} */
+  /** @type {string[] | null} */
   let insertions = null;
-  /** @type {number[] | null} */
+  /** @type {string[] | null} */
   let attributes = null;
-  while (++i < length) {
-    let nose = strings[i];
-    let tail = "";
-    if (Attribute.test(nose)) {
-      nose = replace.call(nose, Attribute, `data-_att_${i}="$1" _att="`);
-      if (attributes === null) attributes = [i];
-      else attributes.push(i);
-    } else {
-      tail = `<br id=_ins_${i} />`;
-      if (insertions === null) insertions = [i];
-      else insertions.push(i);
-    }
-    result += nose + tail;
+  let data = "", i = 0;
+  while (i < strings.length - 1) {
+    data = data + strings[i] + `<!--${i++}-->`;
   }
+  data = data + strings[i];
+  data = replace.call(
+    data,
+    /([a-z\@\-\_\*\.\:]+)=("|')<!--(\d+)-->("|')/gi,
+    (_match, name, _delimiter, id) => {
+      if (attributes === null) attributes = [id];
+      else attributes.push(id);
+      return `data-_att_${id}="${name}"`;
+    },
+  );
+  data = replace.call(data, /(data-_att_(\d+)="([\n\S])+")+/g, "$1 _att");
+  data = replace.call(data, /<!--(\d+)-->/g, (_match, id) => {
+    if (insertions === null) insertions = [id];
+    else insertions.push(id);
+    return `<slot name=_ins_${id}></slot>`;
+  });
+  data = replace.call(data, /^ +/gm, "");
+  data = replace.call(data, /^\n+/, "");
+  data = replace.call(data, /\n+$/, "");
   const template = document.createElement("template");
-  let markup = result + strings.at(-1);
-  markup = replace.call(markup, /^ +/gm, "");
-  markup = replace.call(markup, /^\n+/, "");
-  markup = replace.call(markup, /\n+$/, "");
-  template.innerHTML = markup;
+  template.innerHTML = data;
   /** @type {Template} */
   const cacheItem = { fragment: template.content, attributes, insertions };
   TemplateCache.set(strings, cacheItem);
@@ -108,10 +106,10 @@ function createTemplate(strings) {
  * @returns {void}
  */
 function insertChildren(root, insertMap) {
-  /** @type {Iterable<HTMLBRElement>} */
-  const elements = root.querySelectorAll("br[id^=_ins_]");
+  /** @type {Iterable<HTMLSlotElement>} */
+  const elements = root.querySelectorAll("slot[name^=_ins_]");
   for (const elt of elements) {
-    const value = insertMap[elt.id];
+    const value = insertMap[elt.name];
     if (value == null || typeof value === "boolean") {
       elt.remove();
       continue;
@@ -143,16 +141,13 @@ function insertChildren(root, insertMap) {
 function insertAttributes(root, attributeMap) {
   /** @type {Iterable<HTMLElement | SVGElement>} */
   const elements = root.querySelectorAll("[_att]");
-
   for (const elt of elements) {
     for (const data in elt.dataset) {
       if (startsWith.call(data, "_att_") === false) {
         continue;
       }
-
       const prop = elt.dataset[data];
       const value = attributeMap[replace.call(data, "_att_", "")];
-
       if (startsWith.call(prop, "*")) {
         DirectiveMap[slice.call(prop, 1)]?.(elt, value);
       } else if (startsWith.call(prop, "@")) {
@@ -168,10 +163,8 @@ function insertAttributes(root, attributeMap) {
       } else {
         setProperty(elt, prop, value);
       }
-
       removeAttribute.call(elt, `data-${data}`);
     }
-
     removeAttribute.call(elt, "_att");
   }
 }
@@ -187,12 +180,10 @@ function setProperty(elt, property, value) {
     property = slice.call(property, 1);
     forceProperty = true;
   }
-
   if (forceProperty || property in elt) {
     elt[property] = value;
     return;
   }
-
   const name = createAttributeName(property);
   if (value != null) {
     setAttribute.call(elt, name, String(value));
@@ -211,7 +202,6 @@ function createNodeArray(nodeArray = [], ...elements) {
     if (elt == null || typeof elt === "boolean") {
       continue;
     }
-
     if (elt instanceof DocumentFragment) {
       nodeArray.push(...elt.childNodes);
     } else if (elt instanceof Node) {
@@ -224,7 +214,6 @@ function createNodeArray(nodeArray = [], ...elements) {
       createNodeArray(nodeArray, ...elt);
     }
   }
-
   return nodeArray;
 }
 
@@ -249,28 +238,23 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
     }
     return;
   }
-
   const nextLength = nextNodes.length,
     currentLength = currentNodes.length;
-
   let i = -1;
   next:
   while (++i < nextLength) {
     const currentNode = currentNodes[i];
     let j = -1;
-
     while (++j < currentLength) {
       if (currentNodes[j] === null) {
         continue;
       }
-
       if (currentNodes[j].nodeType === 3 && nextNodes[i].nodeType === 3) {
         currentNodes[j].data = nextNodes[i].data;
         nextNodes[i] = currentNodes[j];
       } else if (currentNodes[j].isEqualNode(nextNodes[i])) {
         nextNodes[i] = currentNodes[j];
       }
-
       if (nextNodes[i] === currentNodes[j]) {
         currentNodes[j] = null;
         if (i === j) {
@@ -279,14 +263,12 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
         break;
       }
     }
-
     insertBefore.call(
       anchor.parentNode,
       nextNodes[i],
       currentNode?.nextSibling || anchor,
     );
   }
-
   while (currentNodes?.length) {
     currentNodes.pop()?.remove();
   }
@@ -331,7 +313,6 @@ function setEventListener(elt, property, listener) {
   property = property.slice(1);
   const name = replace.call(property, EventAndOptions, "$1");
   const options = replace.call(property, EventAndOptions, "$2");
-
   if (includes.call(options, ".delegate")) {
     elt[Events] = elt[Events] || {};
     elt[Events][name] = listener;
@@ -339,25 +320,20 @@ function setEventListener(elt, property, listener) {
     EventMap[name] = true;
     return;
   }
-
   /** @type {AddEventListenerOptions} */
   let eventOptions = undefined;
-
   if (includes.call(options, ".once")) {
     eventOptions = eventOptions || {};
     eventOptions.once = true;
   }
-
   if (includes.call(options, ".capture")) {
     eventOptions = eventOptions || {};
     eventOptions.capture = true;
   }
-
   if (includes.call(options, ".passive")) {
     eventOptions = eventOptions || {};
     eventOptions.passive = true;
   }
-
   if (includes.call(options, ".prevent")) {
     const listenerCopy = listener;
     listener = function (event) {
@@ -365,7 +341,6 @@ function setEventListener(elt, property, listener) {
       listenerCopy.call(elt, event);
     };
   }
-
   if (includes.call(options, ".stop")) {
     const listenerCopy = listener;
     listener = function (event) {
@@ -373,6 +348,5 @@ function setEventListener(elt, property, listener) {
       listenerCopy.call(elt, event);
     };
   }
-
   elt.addEventListener(name, listener, eventOptions);
 }
