@@ -81,12 +81,12 @@ function createTemplate(strings) {
     let tail = "";
     if (Attribute.test(nose)) {
       nose = replace.call(nose, Attribute, `data-_att_${i}="$1" _att="`);
-      attributes = attributes || [];
-      attributes.push(i);
+      if (attributes === null) attributes = [i];
+      else attributes.push(i);
     } else {
-      insertions = insertions || [];
-      insertions.push(i);
       tail = `<br id=_ins_${i} />`;
+      if (insertions === null) insertions = [i];
+      else insertions.push(i);
     }
     result += nose + tail;
   }
