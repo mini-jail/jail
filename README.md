@@ -1,6 +1,8 @@
 # signal
 deez signals
 
+look at some [examples](https://mini-jail-signal.deno.dev/)
+
 ## signal
 ## signal/dom
 ## signal/router
