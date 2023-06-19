@@ -1,5 +1,13 @@
 import { createEffect, createScope, onDestroy, onMount } from "signal";
 
+/**
+ * @typedef {{
+ *   fragment: DocumentFragment
+ *   attributes: number[] | null
+ *   insertions: number[] | null
+ * }} Template
+ */
+
 const Attribute = /([^\-\_\ ][\*\@\-\_\.\:a-zA-Z0-9]+)="$/;
 const EventAndOptions = /(\w+)(\.?.*)/;
 
@@ -7,8 +15,8 @@ const { replace, slice, includes, startsWith, toLowerCase } = String.prototype;
 const { replaceChild, insertBefore } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
 
-/** @type {{ [key: string]: DocumentFragment }} */
-const Cache = Object.create(null);
+/** @type {Map<TemplateStringsArray, Template>} */
+const TemplateCache = new Map();
 
 const Events = Symbol("Events");
 /** @type {{ [name: string]: boolean }} */
@@ -34,64 +42,64 @@ export function directive(name, handler) {
  * @returns {DocumentFragment}
  */
 export function template(strings, ...args) {
-  const length = args.length;
-
-  if (length === 0) {
-    return getTemplateContent(strings[0]);
+  const template = TemplateCache.get(strings) || createTemplate(strings);
+  const fragment = template.fragment.cloneNode(true);
+  if (template.attributes) {
+    insertAttributes(
+      fragment,
+      template.attributes.reduce((attributeMap, id) => {
+        attributeMap[id] = args[id];
+        return attributeMap;
+      }, {}),
+    );
   }
-
-  let data = "", i = -1;
-  /** @type {{ [id: string]: any } | null} */
-  let insertMap = null;
-  /** @type {{ [id: string]: any } | null} */
-  let attributeMap = null;
-
-  while (++i < length) {
-    let nose = strings[i];
-    let tail = args[i];
-
-    if (Attribute.test(nose)) {
-      nose = replace.call(nose, Attribute, `data-_att_${i}="$1" _att="`);
-      attributeMap = attributeMap || {};
-      attributeMap[i] = tail;
-      tail = "";
-    } else {
-      insertMap = insertMap || {};
-      insertMap["_ins_" + i] = tail;
-      tail = `<br id=_ins_${i} />`;
-    }
-
-    data += nose + tail;
+  if (template.insertions) {
+    insertChildren(
+      fragment,
+      template.insertions.reduce((insertMap, id) => {
+        insertMap["_ins_" + id] = args[id];
+        return insertMap;
+      }, {}),
+    );
   }
-
-  const content = getTemplateContent(data += strings.at(-1));
-
-  if (attributeMap) {
-    insertAttributes(content, attributeMap);
-  }
-
-  if (insertMap !== null) {
-    insertChildren(content, insertMap);
-  }
-
-  return content;
+  return fragment;
 }
 
 /**
- * @param {string} data
- * @returns {DocumentFragment}
+ * @param {TemplateStringsArray} strings
+ * @returns {Template}
  */
-function getTemplateContent(data) {
-  if (data in Cache === false) {
-    const template = document.createElement("template");
-    let markup = data;
-    markup = replace.call(markup, /^ +/gm, "");
-    markup = replace.call(markup, /^\n+/, "");
-    markup = replace.call(markup, /\n+$/, "");
-    template.innerHTML = markup;
-    Cache[data] = template.content;
+function createTemplate(strings) {
+  const length = strings.length - 1;
+  let result = "", i = -1;
+  /** @type {number[] | null} */
+  let insertions = null;
+  /** @type {number[] | null} */
+  let attributes = null;
+  while (++i < length) {
+    let nose = strings[i];
+    let tail = "";
+    if (Attribute.test(nose)) {
+      nose = replace.call(nose, Attribute, `data-_att_${i}="$1" _att="`);
+      attributes = attributes || [];
+      attributes.push(i);
+    } else {
+      insertions = insertions || [];
+      insertions.push(i);
+      tail = `<br id=_ins_${i} />`;
+    }
+    result += nose + tail;
   }
-  return Cache[data].cloneNode(true);
+  const template = document.createElement("template");
+  let markup = result + strings.at(-1);
+  markup = replace.call(markup, /^ +/gm, "");
+  markup = replace.call(markup, /^\n+/, "");
+  markup = replace.call(markup, /\n+$/, "");
+  template.innerHTML = markup;
+  /** @type {Template} */
+  const cacheItem = { fragment: template.content, attributes, insertions };
+  TemplateCache.set(strings, cacheItem);
+  return cacheItem;
 }
 
 /**
@@ -129,7 +137,7 @@ function insertChildren(root, insertMap) {
 
 /**
  * @param {DocumentFragment} root
- * @param {{ [id: string]: any }} attributeMap
+ * @param {{ [id: number]: any }} attributeMap
  * @returns {void}
  */
 function insertAttributes(root, attributeMap) {
