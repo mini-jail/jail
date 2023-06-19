@@ -4,18 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>signal/</title>
-    <script type="importmap">
+    <!-- for developing
+      <script type="importmap">
       {
         "imports": {
           "signal": "./packages/signal/mod.js",
           "signal/router": "./packages/router/mod.js",
-          "signal/dom": "./packages/dom/mod.js",
-          "route/home": "./routes/home.js",
-          "route/counter": "./routes/counter.js",
-          "route/sierpinski": "./routes/sierpinski.js",
-          "route/about": "./routes/about.js",
-          "route/todo": "./routes/todo.js",
-          "route/notfound": "./routes/notfound.js"
+          "signal/dom": "./packages/dom/mod.js"
+        }
+      }
+    </script>-->
+    <script type="importmap">
+      {
+        "imports": {
+          "signal": "https://cdn.jsdelivr.net/gh/mini-jail/signal@main/packages/signal/mod.js",
+          "signal/router": "https://cdn.jsdelivr.net/gh/mini-jail/signal@main/packages/router/mod.js",
+          "signal/dom": "https://cdn.jsdelivr.net/gh/mini-jail/signal@main/packages/dom/mod.js"
         }
       }
     </script>
@@ -26,12 +30,12 @@
       import { pathSignal, createRouter } from "signal/router";
       import { template, render } from "signal/dom";
 
-      import Home from "route/home";
-      import Counter from "route/counter";
-      import Sierpinski from "route/sierpinski";
-      import About from "route/about";
-      import Todo from "route/todo";
-      import NotFound from "route/notfound";
+      import Home from "./routes/home.js";
+      import Counter from "./routes/counter.js";
+      import Sierpinski from "./routes/sierpinski.js";
+      import About from "./routes/about.js";
+      import Todo from "./routes/todo.js";
+      import NotFound from "./routes/notfound.js";
 
       const App = () => {
         const getHash = () => location.hash.slice(1) || "/";
