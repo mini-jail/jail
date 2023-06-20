@@ -146,10 +146,10 @@ function insertAttributes(root, attributeMap) {
         continue;
       }
       const prop = elt.dataset[data];
-      const value = attributeMap[replace.call(data, "_att_", "")];
-      if (startsWith.call(prop, "*")) {
+      const value = attributeMap[slice.call(data, 4)];
+      if (prop[0] === "*") {
         DirectiveMap[slice.call(prop, 1)]?.(elt, value);
-      } else if (startsWith.call(prop, "@")) {
+      } else if (prop[0] === "@") {
         setEventListener(elt, prop, value);
       } else if (typeof value === "function") {
         createEffect((currentValue) => {
@@ -175,7 +175,7 @@ function insertAttributes(root, attributeMap) {
  */
 function setProperty(elt, property, value) {
   let forceProperty = false;
-  if (startsWith.call(property, ".")) {
+  if (property[0] === ".") {
     property = slice.call(property, 1);
     forceProperty = true;
   }
