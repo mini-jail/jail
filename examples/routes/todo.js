@@ -26,10 +26,10 @@ const Item = (props) => {
 
   return template`
     <div class="todo-item" id="${"item_id_" + props.id}">
-      <div
+      <div 
         class="todo-item-text" 
-        style="${props.done ? "color: green; font-style: italic;" : ""}"
-        @click.delegate="${toggleItem}"
+        style="${props.done ? "color: green; font-style: italic;" : null}"
+        @click.delegate.debounce[0]="${toggleItem}"
       >
         ${list().indexOf(props) + 1}. ${props.text}
       </div>

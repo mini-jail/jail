@@ -1,33 +1,48 @@
 import { createEffect, createScope, onDestroy, onMount } from "signal";
 
 /**
- * @typedef {{
- *   fragment: DocumentFragment
- *   attributes: string[] | null
- *   insertions: string[] | null
- * }} Template
+ * @typedef {object} Template
+ * @property {DocumentFragment} Template.fragment
+ * @property {string[] | null} Template.attributes
+ * @property {string[] | null} Template.insertions
  */
 
-const EventAndOptions = /(\w+)(\.?.*)/;
-const { replace, slice, includes, startsWith, toLowerCase } = String.prototype;
+/**
+ * @callback Directive
+ * @param {HTMLElement | SVGElement} elt
+ * @param {unknown} value
+ * @returns {void}
+ */
+
+/**
+ * @typedef {{ [id: string]: any }} ArgumentMap
+ */
+
+const EventAndOptions = /(\w+)(.*)/;
+const { replace, slice, includes, startsWith, toLowerCase, match } =
+  String.prototype;
 const { replaceChild, insertBefore } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
+
+const Events = Symbol("Events");
+
 /** @type {Map<TemplateStringsArray, Template>} */
 const TemplateCache = new Map();
-const Events = Symbol("Events");
+
 /** @type {{ [name: string]: boolean }} */
 const EventMap = Object.create(null);
-/** @type {{ [name: string]: (elt: HTMLElement | SVGElement, value: unknown) => void}} */
+
+/** @type {{ [name: string]: Directive }} */
 const DirectiveMap = Object.create(null);
 
 /**
  * @param {string} name
- * @param {(elt: HTMLElement | SVGElement, value: unknown) => void} handler
- * @returns {() => void}
+ * @param {Directive} directive
+ * @returns {void}
  */
-export function directive(name, handler) {
+export function createDirective(name, directive) {
   const originalDirective = DirectiveMap[name];
-  onMount(() => DirectiveMap[name] = handler);
+  onMount(() => DirectiveMap[name] = directive);
   onDestroy(() => DirectiveMap[name] = originalDirective);
 }
 
@@ -71,26 +86,34 @@ function createTemplate(strings) {
   let attributes = null;
   let data = "", i = 0;
   while (i < strings.length - 1) {
-    data = data + strings[i] + `<!--${i++}-->`;
+    data = data + strings[i] + `{{ arg_${i++} }}`;
   }
   data = data + strings[i];
+  data = replace.call(data, /^\n+/, "");
+  data = replace.call(data, /\n+$/, "");
+  data = replace.call(data, /^ +/gm, "");
+  data = replace.call(data, /<(\w+)([^>]+)>/gm, (_match, tag, attributes) => {
+    return `<${tag}${attributes.replace(/(\n| )+/g, " ")}>`;
+  });
   data = replace.call(
     data,
-    /([a-z\@\-\_\*\.\:]+)=("|')<!--(\d+)-->("|')/gi,
-    (_match, name, _delimiter, id) => {
+    /([\.|\@|\:|\w|\*]?[\w\-\_][\.\w\d\[\]+]+)=("|'){{ arg_(\d+) }}("|')/gi,
+    (_match, name, open, id, close) => {
+      if (open !== close) {
+        throw new SyntaxError(
+          `expected ${open} but got ${close} at (${name}=${open}···${close})`,
+        );
+      }
       if (attributes === null) attributes = [id];
       else attributes.push(id);
       return `data-_att_${id}="${name}" _att`;
     },
   );
-  data = replace.call(data, /<!--(\d+)-->/g, (_match, id) => {
+  data = replace.call(data, /{{ arg_(\d+) }}/g, (_match, id) => {
     if (insertions === null) insertions = [id];
     else insertions.push(id);
     return `<slot name=_ins_${id}></slot>`;
   });
-  data = replace.call(data, /^ +/gm, "");
-  data = replace.call(data, /^\n+/, "");
-  data = replace.call(data, /\n+$/, "");
   const template = document.createElement("template");
   template.innerHTML = data;
   /** @type {Template} */
@@ -146,7 +169,7 @@ function insertAttributes(root, attributeMap) {
         continue;
       }
       const prop = elt.dataset[data];
-      const value = attributeMap[slice.call(data, 4)];
+      const value = attributeMap[slice.call(data, 5)];
       if (prop[0] === "*") {
         DirectiveMap[slice.call(prop, 1)]?.(elt, value);
       } else if (prop[0] === "@") {
@@ -291,14 +314,14 @@ export function render(rootElement, application) {
 }
 
 /**
- * @param {Event} ev
+ * @param {Event} event
  * @returns {void}
  */
-function eventLoop(ev) {
-  const type = ev.type;
-  let elt = ev.target;
+function eventLoop(event) {
+  const type = event.type;
+  let elt = event.target;
   while (elt !== null) {
-    elt?.[Events]?.[type]?.call?.(elt, ev);
+    elt?.[Events]?.[type]?.forEach((fn) => fn.call(elt, event));
     elt = elt.parentNode;
   }
 }
@@ -312,12 +335,32 @@ function setEventListener(elt, property, listener) {
   property = property.slice(1);
   const name = replace.call(property, EventAndOptions, "$1");
   const options = replace.call(property, EventAndOptions, "$2");
-  if (includes.call(options, ".delegate")) {
-    elt[Events] = elt[Events] || {};
-    elt[Events][name] = listener;
-    !EventMap[name] && addEventListener(name, eventLoop);
-    EventMap[name] = true;
-    return;
+  if (includes.call(options, ".prevent")) {
+    console.log("decorate prevent");
+    const listenerCopy = listener;
+    listener = function (event) {
+      event.preventDefault();
+      listenerCopy.call(elt, event);
+    };
+  }
+  if (includes.call(options, ".stop")) {
+    console.log("decorate stop");
+    const listenerCopy = listener;
+    listener = function (event) {
+      event.stopPropagation();
+      listenerCopy.call(elt, event);
+    };
+  }
+  if (includes.call(options, ".debounce[")) {
+    const listenerCopy = listener;
+    let timer;
+    listener = function (event) {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        listenerCopy.call(elt, event);
+      }, Number(match.call(options, /debounce\[(\d+)\]/)[1]));
+    };
+    property = replace.call(property, /(\.debounce)\[\d+\]/, "$1");
   }
   /** @type {AddEventListenerOptions} */
   let eventOptions = undefined;
@@ -333,19 +376,14 @@ function setEventListener(elt, property, listener) {
     eventOptions = eventOptions || {};
     eventOptions.passive = true;
   }
-  if (includes.call(options, ".prevent")) {
-    const listenerCopy = listener;
-    listener = function (event) {
-      event.preventDefault();
-      listenerCopy.call(elt, event);
-    };
+  if (includes.call(options, ".delegate")) {
+    elt[Events] = elt[Events] || {};
+    elt[Events][name] = elt[Events][name] || [];
+    elt[Events][name].push(listener);
+    property = replace.call(property, ".delegate", "");
+    !EventMap[property] && addEventListener(name, eventLoop, eventOptions);
+    EventMap[property] = true;
+  } else {
+    elt.addEventListener(name, listener, eventOptions);
   }
-  if (includes.call(options, ".stop")) {
-    const listenerCopy = listener;
-    listener = function (event) {
-      event.stopPropagation();
-      listenerCopy.call(elt, event);
-    };
-  }
-  elt.addEventListener(name, listener, eventOptions);
 }
