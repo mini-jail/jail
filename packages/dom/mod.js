@@ -80,10 +80,9 @@ function createTemplate(strings) {
     (_match, name, _delimiter, id) => {
       if (attributes === null) attributes = [id];
       else attributes.push(id);
-      return `data-_att_${id}="${name}"`;
+      return `data-_att_${id}="${name}" _att`;
     },
   );
-  data = replace.call(data, /(data-_att_(\d+)="([\n\S])+")+/g, "$1 _att");
   data = replace.call(data, /<!--(\d+)-->/g, (_match, id) => {
     if (insertions === null) insertions = [id];
     else insertions.push(id);
