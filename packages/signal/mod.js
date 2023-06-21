@@ -79,7 +79,7 @@
  * @typedef {{
  *   readonly id: symbol
  *   readonly defaultValue: T | undefined
- *   provide<R>(value: T, callback: () => R): R | void
+ *   provide<R>(value: T, callback: (cleanup: Cleanup) => R): R | void
  * }} Injection
  */
 
@@ -158,8 +158,14 @@ export function nodeRef() {
 export function withNode(node, callback) {
   const previousNode = activeNode;
   activeNode = node;
-  const result = callback();
-  activeNode = previousNode;
+  let result;
+  try {
+    result = callback();
+  } catch (error) {
+    handleError(error);
+  } finally {
+    activeNode = previousNode;
+  }
   return result;
 }
 
@@ -685,9 +691,9 @@ export function createInjection(defaultValue) {
     id: Symbol(),
     defaultValue,
     provide(value, callback) {
-      return createScope(() => {
+      return createScope((cleanup) => {
         activeNode.injections = { [this.id]: value };
-        return callback();
+        return callback(cleanup);
       });
     },
   };

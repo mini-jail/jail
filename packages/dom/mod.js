@@ -1,49 +1,152 @@
-import { createEffect, createScope, onDestroy, onMount } from "signal";
+import {
+  createEffect,
+  createInjection,
+  inject,
+  nodeRef,
+  onCleanup,
+  withNode,
+} from "signal";
 
 /**
- * @typedef {object} Template
- * @property {DocumentFragment} Template.fragment
- * @property {number[] | null} Template.attributes
- * @property {number[] | null} Template.insertions
+ * @typedef {{
+ *   directive(name: string): Directive | undefined
+ *   directive(name: string, directive: Directive): Application
+ *   method(name: string): ((...args: any[]) => any) | undefined
+ *   method(name: string, method: (...args: any[]) => any): Application
+ *   mount(rootElement: Node): Application
+ *   unmount(): Application
+ *   run<T>(callback: () => T): T
+ * }} Application
  */
 
 /**
+ * @template [P = any], [R = any]
+ * @typedef {{ (params: P): R }} Component
+ */
+
+const App = createInjection({
+  /** @type {import("signal").Node | null} */
+  node: null,
+  /** @type {boolean} */
+  mounted: false,
+  /** @type {Node | null} */
+  anchor: null,
+  /** @type {{ [name: string]: (...args: any[]) => any }} */
+  methods: {},
+  /** @type {{ [name: string]: Directive }} */
+  directives: {},
+  /** @type {Node[] | null} */
+  currentNodes: [],
+});
+
+/**
+ * @param {Component} rootComponent
+ * @returns {Application}
+ */
+export function createApp(rootComponent) {
+  return App.provide({
+    node: null,
+    mounted: false,
+    anchor: null,
+    methods: {},
+    directives: {},
+    currentNodes: null,
+  }, (cleanup) => {
+    const app = inject(App);
+    app.node = nodeRef();
+
+    return {
+      directive(name, directive) {
+        if (arguments.length === 1) {
+          return app.directives[name];
+        }
+        app.directives[name] = directive;
+        return this;
+      },
+      method(name, callback) {
+        if (arguments.length === 1) {
+          return app.methods[name];
+        }
+        app.methods[name] = callback;
+        return this;
+      },
+      mount(rootElement) {
+        if (app.mounted === true) {
+          return this;
+        }
+        app.mounted = true;
+        app.anchor = rootElement.appendChild(new Text());
+        withNode(app.node, () => {
+          createEffect(() => {
+            const nextNodes = createNodeArray([], rootComponent());
+            reconcileNodes(app.anchor, app.currentNodes, nextNodes);
+            app.currentNodes = nextNodes;
+          });
+        });
+        return this;
+      },
+      unmount() {
+        cleanup();
+        reconcileNodes(app.anchor, app.currentNodes, []);
+        app.anchor?.remove();
+        app.anchor = null;
+        app.currentNodes = null;
+        app.mounted = false;
+        return this;
+      },
+      run(callback) {
+        return withNode(app.node, callback);
+      },
+    };
+  });
+}
+
+/**
+ * @typedef {{
+ *   fragment: DocumentFragment
+ *   attributes: number[] | null
+ *   staticAttributes: { [id: number]: string } | null
+ *   insertions: number[]
+ * }} Template
+ */
+
+/**
+ * @template [T = any]
  * @callback Directive
  * @param {HTMLElement | SVGElement} elt
- * @param {unknown} value
+ * @param {T} value
  * @returns {void}
- */
-
-/**
- * @typedef {{ [id: string]: any }} ArgumentMap
  */
 
 const EventAndOptions = /(\w+)(.*)/;
-const { replace, slice, includes, startsWith, toLowerCase, match, trim } =
+const { replace, slice, includes, startsWith, toLowerCase, match } =
   String.prototype;
-const { replaceChild, insertBefore } = Node.prototype;
+const { replaceChild, insertBefore, isEqualNode } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
-
 const Events = Symbol("Events");
-
 /** @type {Map<TemplateStringsArray, Template>} */
 const TemplateCache = new Map();
-
 /** @type {{ [name: string]: boolean }} */
-const EventMap = Object.create(null);
-
-/** @type {{ [name: string]: Directive }} */
-const DirectiveMap = Object.create(null);
+const EventMap = {};
 
 /**
+ * @template [T = any]
  * @param {string} name
- * @param {Directive} directive
+ * @param {Directive<T>} directive
  * @returns {void}
  */
-export function createDirective(name, directive) {
-  const originalDirective = DirectiveMap[name];
-  onMount(() => DirectiveMap[name] = directive);
-  onDestroy(() => DirectiveMap[name] = originalDirective);
+export function directive(name, directive) {
+  inject(App).directives[name] = directive;
+}
+
+/**
+ * @template T
+ * @param {string} name
+ * @param {T & (...args: any[]) => any} method
+ * @returns {void}
+ */
+export function method(name, method) {
+  inject(App).methods[name] = method;
 }
 
 /**
@@ -58,7 +161,9 @@ export function template(strings, ...args) {
     insertAttributes(
       fragment,
       template.attributes.reduce((attributeMap, id) => {
-        attributeMap[id] = args[id];
+        attributeMap[id] = id in args
+          ? args[id]
+          : template.staticAttributes[id];
         return attributeMap;
       }, {}),
     );
@@ -84,44 +189,39 @@ function createTemplate(strings) {
   let insertions = null;
   /** @type {number[] | null} */
   let attributes = null;
-  let data = "", i = 0;
-  while (i < strings.length - 1) {
-    data = data + strings[i] + `{{__arg__${i++}}}`;
+  /** @type {{ [id: number]: string } | null} */
+  let staticAttributes = null;
+  let data = "", id = 0;
+  while (id < strings.length - 1) {
+    data = data + strings[id] + `{{__arg__${id++}}}`;
   }
-  data = data + strings[i];
+  data = data + strings[id];
   data = replace.call(data, /^\n+/, "");
   data = replace.call(data, /\n+$/, "");
   data = replace.call(data, /^ +/gm, "");
   data = replace.call(data, /<(\w+)([^>]+)>/gm, (_match, tag, attributes) => {
-    return `<${tag} ${trim.call(replace.call(attributes, /(\n| )+/g, " "))}>`;
+    return `<${tag}${replace.call(attributes, /(\n| )+/g, " ")}>`;
   });
   data = replace.call(
     data,
-    / ([.|@|:|*]?[\w\-]+[.\w\-\d\[\]]+)=(["']{{__arg__(\d+)}}["'])/gi,
-    (_match, name, value, id) => {
-      if (value[0] !== value.at(-1)) {
-        throw new SyntaxError(
-          `expected ${value[0]} but got ${value.at(-1)} at (${name}=${value[0]}···${value.at(-1)})`,
-        );
-      }
+    / ([.|@|:|*]?[\w\-]+[.\w\-\d\[\]]+)=(["']){{__arg__(\d+)}}["']/gi,
+    (_match, name, delimiter, id) => {
       attributes = attributes || [];
       attributes.push(Number(id));
-      return ` data-__arg__${id}="${name}" __arg__`;
+      return ` data-__arg__${id}=${delimiter}${name}${delimiter} __arg__ `;
     },
   );
-  /** 
-  for statically..dynamic values?!? idk
-  let valueId = 0;
-  let values: { [id: number]: string } | null = null;
-  data = replace.call(data, 
-    / ([.|@|:|*][\w\-]?[.\w\-\d\[\]]+)=["']([^"'<>]+)["']/gi,
-    (_match, name, value) => {
-      values = values || {};
-      values[valueId++] = value;
-      return ` data-__fix__${fixId}="${name}" __arg__`;
+  data = replace.call(
+    data,
+    / ([.|@|:|*][\w\-]?[.\w\-\d\[\]]+)=(["'])([^"'<>]+)["']/gi,
+    (_match, name, delimiter, value) => {
+      attributes = attributes || [];
+      attributes.push(id);
+      staticAttributes = staticAttributes || {};
+      staticAttributes[id] = value;
+      return ` data-__arg__${id++}=${delimiter}${name}${delimiter} __arg__ `;
     },
   );
-  */
   data = replace.call(data, /{{__arg__(\d+)}}/g, (_match, id) => {
     insertions = insertions || [];
     insertions.push(Number(id));
@@ -130,11 +230,11 @@ function createTemplate(strings) {
   const template = document.createElement("template");
   template.innerHTML = data;
   /** @type {Template} */
-  const cacheItem = { 
-    fragment: template.content, 
-    attributes, 
+  const cacheItem = {
+    fragment: template.content,
+    attributes,
     insertions,
-    /** values */
+    staticAttributes,
   };
   TemplateCache.set(strings, cacheItem);
   return cacheItem;
@@ -156,10 +256,10 @@ function insertChildren(root, insertMap) {
     }
     if (value instanceof Node) {
       replaceChild.call(elt.parentNode, value, elt);
-    } else if (
-      (Array.isArray(value) && value.length) ||
-      typeof value === "function"
-    ) {
+    } else if ((Array.isArray(value)) || typeof value === "function") {
+      if (Array.isArray(value) && value.length === 0) {
+        continue;
+      }
       const anchor = new Text();
       replaceChild.call(elt.parentNode, anchor, elt);
       createEffect((currentNodes) => {
@@ -182,22 +282,17 @@ function insertAttributes(root, attributeMap) {
   /** @type {Iterable<HTMLElement | SVGElement>} */
   const elements = root.querySelectorAll("[__arg__]");
   for (const elt of elements) {
+    removeAttribute.call(elt, "__arg__");
     for (const data in elt.dataset) {
-      /**
-      let prop = null;
-      let value = null;
-      if (startsWith.call(data, "__fix__") === true) {
-        prop = elt.dataset[data];
-        value = ??? 
-      } else 
-      */
       if (startsWith.call(data, "__arg__") === false) {
         continue;
       }
       const prop = elt.dataset[data];
       const value = attributeMap[slice.call(data, 7)];
+      removeAttribute.call(elt, `data-${data}`);
       if (prop[0] === "*") {
-        DirectiveMap[slice.call(prop, 1)]?.(elt, value);
+        const directive = inject(App).directives[slice.call(prop, 1)];
+        directive?.(elt, value);
       } else if (prop[0] === "@") {
         setEventListener(elt, prop, value);
       } else if (typeof value === "function") {
@@ -211,28 +306,29 @@ function insertAttributes(root, attributeMap) {
       } else {
         setProperty(elt, prop, value);
       }
-      removeAttribute.call(elt, `data-${data}`);
     }
-    removeAttribute.call(elt, "__arg__");
   }
 }
 
 /**
  * @param {Element} elt
- * @param {string} property
+ * @param {string} prop
  * @param {any} value
  */
-function setProperty(elt, property, value) {
-  let forceProperty = false;
-  if (property[0] === ".") {
-    property = slice.call(property, 1);
-    forceProperty = true;
+function setProperty(elt, prop, value) {
+  let mode = 0;
+  if (prop[0] === ".") {
+    mode = 1;
+    prop = slice.call(prop, 1);
+  } else if (prop[0] === ":") {
+    mode = 2;
+    prop = slice.call(prop, 1);
   }
-  if (forceProperty || property in elt) {
-    elt[property] = value;
+  if (mode !== 2 && prop in elt) {
+    elt[prop] = value;
     return;
   }
-  const name = createAttributeName(property);
+  const name = createAttributeName(prop);
   if (value != null) {
     setAttribute.call(elt, name, String(value));
   } else {
@@ -241,11 +337,11 @@ function setProperty(elt, property, value) {
 }
 
 /**
- * @this {Node[]} nodeArray
+ * @param {Node[]} nodeArray
  * @param  {...any} elements
  * @returns {Node[]}
  */
-function createNodeArray(nodeArray = [], ...elements) {
+export function createNodeArray(nodeArray, ...elements) {
   for (const elt of elements) {
     if (elt == null || typeof elt === "boolean") {
       continue;
@@ -279,7 +375,7 @@ function createAttributeName(name) {
  * @param {(Node | ChildNode)[]} nextNodes
  * @returns {void}
  */
-function reconcileNodes(anchor, currentNodes, nextNodes) {
+export function reconcileNodes(anchor, currentNodes, nextNodes) {
   if (currentNodes === null) {
     for (const nextNode of nextNodes) {
       insertBefore.call(anchor.parentNode, nextNode, anchor);
@@ -300,7 +396,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
       if (currentNodes[j].nodeType === 3 && nextNodes[i].nodeType === 3) {
         currentNodes[j].data = nextNodes[i].data;
         nextNodes[i] = currentNodes[j];
-      } else if (currentNodes[j].isEqualNode(nextNodes[i])) {
+      } else if (isEqualNode.call(currentNodes[j], nextNodes[i])) {
         nextNodes[i] = currentNodes[j];
       }
       if (nextNodes[i] === currentNodes[j]) {
@@ -323,23 +419,6 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
 }
 
 /**
- * @param {Node} rootElement
- * @param {() => Node} application
- * @returns {import("signal").Cleanup}
- */
-export function render(rootElement, application) {
-  return createScope((cleanup) => {
-    const anchor = rootElement.appendChild(new Text());
-    createEffect((currentNodes) => {
-      const nextNodes = createNodeArray([], application());
-      reconcileNodes(anchor, currentNodes, nextNodes);
-      return nextNodes;
-    }, null);
-    return cleanup;
-  });
-}
-
-/**
  * @param {Event} event
  * @returns {void}
  */
@@ -355,9 +434,12 @@ function eventLoop(event) {
 /**
  * @param {Element} elt
  * @param {string} property
- * @param {(ev: Event) => any} listener
+ * @param {EventListener | string} listener
  */
 function setEventListener(elt, property, listener) {
+  if (typeof listener === "string") {
+    listener = inject(App).methods[listener];
+  }
   property = property.slice(1);
   const name = replace.call(property, EventAndOptions, "$1");
   const options = replace.call(property, EventAndOptions, "$2");

@@ -1,6 +1,6 @@
 import { createEffect, onMount } from "signal";
 import { createRouter, pathSignal } from "signal/router";
-import { render, template } from "signal/dom";
+import { createApp, template } from "signal/dom";
 
 import Home from "./routes/home.js";
 import Counter from "./routes/counter.js";
@@ -50,4 +50,5 @@ const App = () => {
   `;
 };
 
-render(document.body, App);
+const app = createApp(App)
+  .mount(document.body);

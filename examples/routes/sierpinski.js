@@ -6,7 +6,7 @@ import {
   onDestroy,
   onMount,
 } from "signal";
-import { createDirective, template } from "signal/dom";
+import { directive, template } from "signal/dom";
 import { getParams } from "signal/router";
 
 /**
@@ -16,7 +16,7 @@ import { getParams } from "signal/router";
  */
 const component = (fn) => (...args) => createScope(() => fn(...args));
 
-createDirective("style", (elt, styles) => {
+directive("style", (elt, styles) => {
   createEffect(() => elt.setAttribute("style", styles()));
 });
 
