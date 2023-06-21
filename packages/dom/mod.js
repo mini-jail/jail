@@ -285,16 +285,16 @@ function insertChildren(root, insertMap) {
   const elements = root.querySelectorAll("slot[name^=__arg__]");
   for (const elt of elements) {
     const value = insertMap[elt.name];
-    if (value == null || typeof value === "boolean") {
+    if (
+      value == null || typeof value === "boolean" ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
       elt.remove();
       continue;
     }
     if (value instanceof Node) {
       replaceChild.call(elt.parentNode, value, elt);
     } else if ((Array.isArray(value)) || typeof value === "function") {
-      if (Array.isArray(value) && value.length === 0) {
-        continue;
-      }
       const anchor = new Text();
       replaceChild.call(elt.parentNode, anchor, elt);
       createEffect((currentNodes) => {
