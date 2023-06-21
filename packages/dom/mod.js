@@ -67,7 +67,7 @@ export function template(strings, ...args) {
     insertChildren(
       fragment,
       template.insertions.reduce((insertMap, id) => {
-        insertMap["_ins_" + id] = args[id];
+        insertMap["__arg__" + id] = args[id];
         return insertMap;
       }, {}),
     );
@@ -86,18 +86,18 @@ function createTemplate(strings) {
   let attributes = null;
   let data = "", i = 0;
   while (i < strings.length - 1) {
-    data = data + strings[i] + `{{ arg_${i++} }}`;
+    data = data + strings[i] + `{{__arg__${i++}}}`;
   }
   data = data + strings[i];
   data = replace.call(data, /^\n+/, "");
   data = replace.call(data, /\n+$/, "");
   data = replace.call(data, /^ +/gm, "");
   data = replace.call(data, /<(\w+)([^>]+)>/gm, (_match, tag, attributes) => {
-    return `<${tag}${attributes.replace(/(\n| )+/g, " ")}>`;
+    return `<${tag}${replace.call(attributes, /(\n| )+/g, " ")}>`;
   });
   data = replace.call(
     data,
-    /([\.|\@|\:|\w|\*]?[\w\-\_][\.\w\d\[\]+]+)=("|'){{ arg_(\d+) }}("|')/gi,
+    / ([.|@|:|\w|*]?[\w\-_][.\w\-\d\[\]]+)=("|'){{__arg__(\d+)}}("|')/gi,
     (_match, name, open, id, close) => {
       if (open !== close) {
         throw new SyntaxError(
@@ -106,13 +106,14 @@ function createTemplate(strings) {
       }
       if (attributes === null) attributes = [id];
       else attributes.push(id);
-      return `data-_att_${id}="${name}" _att`;
+      return ` data-__arg__${id}="${name}" __arg__`;
     },
   );
-  data = replace.call(data, /{{ arg_(\d+) }}/g, (_match, id) => {
+
+  data = replace.call(data, /{{__arg__(\d+)}}/g, (_match, id) => {
     if (insertions === null) insertions = [id];
     else insertions.push(id);
-    return `<slot name=_ins_${id}></slot>`;
+    return `<slot name="__arg__${id}"></slot>`;
   });
   const template = document.createElement("template");
   template.innerHTML = data;
@@ -129,7 +130,7 @@ function createTemplate(strings) {
  */
 function insertChildren(root, insertMap) {
   /** @type {Iterable<HTMLSlotElement>} */
-  const elements = root.querySelectorAll("slot[name^=_ins_]");
+  const elements = root.querySelectorAll("slot[name^=__arg__]");
   for (const elt of elements) {
     const value = insertMap[elt.name];
     if (value == null || typeof value === "boolean") {
@@ -162,14 +163,14 @@ function insertChildren(root, insertMap) {
  */
 function insertAttributes(root, attributeMap) {
   /** @type {Iterable<HTMLElement | SVGElement>} */
-  const elements = root.querySelectorAll("[_att]");
+  const elements = root.querySelectorAll("[__arg__]");
   for (const elt of elements) {
     for (const data in elt.dataset) {
-      if (startsWith.call(data, "_att_") === false) {
+      if (startsWith.call(data, "__arg__") === false) {
         continue;
       }
       const prop = elt.dataset[data];
-      const value = attributeMap[slice.call(data, 5)];
+      const value = attributeMap[slice.call(data, 7)];
       if (prop[0] === "*") {
         DirectiveMap[slice.call(prop, 1)]?.(elt, value);
       } else if (prop[0] === "@") {
@@ -187,7 +188,7 @@ function insertAttributes(root, attributeMap) {
       }
       removeAttribute.call(elt, `data-${data}`);
     }
-    removeAttribute.call(elt, "_att");
+    removeAttribute.call(elt, "__arg__");
   }
 }
 

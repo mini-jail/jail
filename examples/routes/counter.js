@@ -16,10 +16,7 @@ export default () => {
         counter example
         <sub>(...what else?)</sub>
       </h4>
-      <button 
-        data-clicked="${clicked}"
-        @click.delegate="${sub}"
-      >-</button>
+      <button data-clicked="${clicked}" @click.delegate="${sub}">-</button>
       <span>current value: ${counter}</span>
       <button @click.delegate="${add}">+</button>
       <div>> you have clicked ${clicked} times.</div>
