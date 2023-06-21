@@ -109,7 +109,6 @@ function createTemplate(strings) {
       return ` data-__arg__${id}="${name}" __arg__`;
     },
   );
-
   data = replace.call(data, /{{__arg__(\d+)}}/g, (_match, id) => {
     if (insertions === null) insertions = [id];
     else insertions.push(id);
@@ -337,7 +336,6 @@ function setEventListener(elt, property, listener) {
   const name = replace.call(property, EventAndOptions, "$1");
   const options = replace.call(property, EventAndOptions, "$2");
   if (includes.call(options, ".prevent")) {
-    console.log("decorate prevent");
     const listenerCopy = listener;
     listener = function (event) {
       event.preventDefault();
@@ -345,7 +343,6 @@ function setEventListener(elt, property, listener) {
     };
   }
   if (includes.call(options, ".stop")) {
-    console.log("decorate stop");
     const listenerCopy = listener;
     listener = function (event) {
       event.stopPropagation();
