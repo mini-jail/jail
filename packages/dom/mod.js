@@ -109,6 +109,19 @@ function createTemplate(strings) {
       return ` data-__arg__${id}="${name}" __arg__`;
     },
   );
+  /** 
+  for statically..dynamic values?!? idk
+  let valueId = 0;
+  let values: { [id: number]: string } | null = null;
+  data = replace.call(data, 
+    / ([.|@|:|*][\w\-]?[.\w\-\d\[\]]+)=["']([^"'<>]+)["']/gi,
+    (_match, name, value) => {
+      values = values || {};
+      values[valueId++] = value;
+      return ` data-__fix__${fixId}="${name}" __arg__`;
+    },
+  );
+  */
   data = replace.call(data, /{{__arg__(\d+)}}/g, (_match, id) => {
     insertions = insertions || [];
     insertions.push(Number(id));
@@ -117,7 +130,12 @@ function createTemplate(strings) {
   const template = document.createElement("template");
   template.innerHTML = data;
   /** @type {Template} */
-  const cacheItem = { fragment: template.content, attributes, insertions };
+  const cacheItem = { 
+    fragment: template.content, 
+    attributes, 
+    insertions,
+    /** values */
+  };
   TemplateCache.set(strings, cacheItem);
   return cacheItem;
 }
@@ -165,6 +183,14 @@ function insertAttributes(root, attributeMap) {
   const elements = root.querySelectorAll("[__arg__]");
   for (const elt of elements) {
     for (const data in elt.dataset) {
+      /**
+      let prop = null;
+      let value = null;
+      if (startsWith.call(data, "__fix__") === true) {
+        prop = elt.dataset[data];
+        value = ??? 
+      } else 
+      */
       if (startsWith.call(data, "__arg__") === false) {
         continue;
       }
