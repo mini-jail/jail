@@ -97,7 +97,7 @@ function createTemplate(strings) {
   });
   data = replace.call(
     data,
-    / ([.|@|:|*]?[\w\-_]+[.\w\-\d\[\]]+)=(["']{{__arg__(\d+)}}["'])/gi,
+    / ([.|@|:|*]?[\w\-]+[.\w\-\d\[\]]+)=(["']{{__arg__(\d+)}}["'])/gi,
     (_match, name, value, id) => {
       if (value[0] !== value.at(-1)) {
         throw new SyntaxError(
