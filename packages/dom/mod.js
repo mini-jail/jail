@@ -3,8 +3,8 @@ import { createEffect, createScope, onDestroy, onMount } from "signal";
 /**
  * @typedef {object} Template
  * @property {DocumentFragment} Template.fragment
- * @property {string[] | null} Template.attributes
- * @property {string[] | null} Template.insertions
+ * @property {number[] | null} Template.attributes
+ * @property {number[] | null} Template.insertions
  */
 
 /**
@@ -80,9 +80,9 @@ export function template(strings, ...args) {
  * @returns {Template}
  */
 function createTemplate(strings) {
-  /** @type {string[] | null} */
+  /** @type {number[] | null} */
   let insertions = null;
-  /** @type {string[] | null} */
+  /** @type {number[] | null} */
   let attributes = null;
   let data = "", i = 0;
   while (i < strings.length - 1) {
@@ -97,21 +97,21 @@ function createTemplate(strings) {
   });
   data = replace.call(
     data,
-    / ([.|@|:|\w|*]?[\w\-_][.\w\-\d\[\]]+)=("|'){{__arg__(\d+)}}("|')/gi,
-    (_match, name, open, id, close) => {
-      if (open !== close) {
+    / ([.|@|:|*]?[\w\-_]+[.\w\-\d\[\]]+)=(["']{{__arg__(\d+)}}["'])/gi,
+    (_match, name, value, id) => {
+      if (value[0] !== value.at(-1)) {
         throw new SyntaxError(
-          `expected ${open} but got ${close} at (${name}=${open}···${close})`,
+          `expected ${value[0]} but got ${value.at(-1)} at (${name}=${value[0]}···${value.at(-1)})`,
         );
       }
-      if (attributes === null) attributes = [id];
-      else attributes.push(id);
+      attributes = attributes || [];
+      attributes.push(Number(id));
       return ` data-__arg__${id}="${name}" __arg__`;
     },
   );
   data = replace.call(data, /{{__arg__(\d+)}}/g, (_match, id) => {
-    if (insertions === null) insertions = [id];
-    else insertions.push(id);
+    insertions = insertions || [];
+    insertions.push(Number(id));
     return `<slot name="__arg__${id}"></slot>`;
   });
   const template = document.createElement("template");
