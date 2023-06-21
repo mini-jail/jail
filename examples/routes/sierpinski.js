@@ -1,19 +1,6 @@
-import {
-  createComputed,
-  createScope,
-  createSignal,
-  onDestroy,
-  onMount,
-} from "signal";
-import { template } from "signal/dom";
+import { createComputed, createSignal, onDestroy, onMount } from "signal";
+import { component, template } from "signal/dom";
 import { getParams } from "signal/router";
-
-/**
- * @template T
- * @param {T & (fn: (...args: any[]) => any)} fn
- * @returns {T}
- */
-const component = (fn) => (...args) => createScope(() => fn(...args));
 
 const Dot = component((x, y, target, counterSignal) => {
   const hover = createSignal(false);
@@ -64,7 +51,6 @@ export default () => {
   });
 
   onMount(() => {
-    console.log("mount: TriangleDemo");
     id = setInterval(() => count((count() % 10) + 1), 1000);
     const start = Date.now();
     const frame = () => {
@@ -75,7 +61,6 @@ export default () => {
   });
 
   onDestroy(() => {
-    console.log("destroy:TriangleDemo");
     clearInterval(id);
   });
 

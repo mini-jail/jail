@@ -22,7 +22,7 @@ import {
 
 /**
  * @template [P = any], [R = any]
- * @typedef {{ (params: P): R }} Component
+ * @typedef {{ (...params: P): R }} Component
  */
 
 const App = createInjection({
@@ -129,6 +129,17 @@ const Events = Symbol("Events");
 const TemplateCache = new Map();
 /** @type {{ [name: string]: boolean }} */
 const EventMap = {};
+
+/**
+ * @template T, [P = Parameters<T>], [R = ReturnType<T>]
+ * @param {T & Component<P, R>} component
+ * @returns {Component<P, R>}
+ */
+export function component(component) {
+  return function Component(...args) {
+    return createScope(() => component(...args));
+  };
+}
 
 /**
  * @template [T = any]
