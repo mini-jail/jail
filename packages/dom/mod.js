@@ -1,8 +1,10 @@
 import {
   createEffect,
   createInjection,
+  createScope,
   inject,
   nodeRef,
+  onCleanup,
   withNode,
 } from "signal";
 
@@ -146,6 +148,29 @@ export function directive(name, directive) {
  */
 export function method(name, method) {
   inject(App).methods[name] = method;
+}
+
+/**
+ * @param {Node} rootElement
+ * @param {Component} rootComponent
+ * @returns {import("signal").Cleanup}
+ */
+export function mount(rootElement, rootComponent) {
+  return createScope((cleanup) => {
+    const anchor = rootElement.appendChild(new Text());
+    let currentNodes = null;
+    onCleanup(() => {
+      anchor?.remove();
+      reconcileNodes(anchor, currentNodes, []);
+      currentNodes = null;
+    });
+    createEffect(() => {
+      const nextNodes = createNodeArray([], rootComponent());
+      reconcileNodes(anchor, currentNodes, nextNodes);
+      currentNodes = nextNodes;
+    });
+    return cleanup;
+  });
 }
 
 /**
@@ -340,7 +365,7 @@ function setProperty(elt, prop, value) {
  * @param  {...any} elements
  * @returns {Node[]}
  */
-export function createNodeArray(nodeArray, ...elements) {
+function createNodeArray(nodeArray, ...elements) {
   for (const elt of elements) {
     if (elt == null || typeof elt === "boolean") {
       continue;
@@ -374,7 +399,7 @@ function createAttributeName(name) {
  * @param {(Node | ChildNode)[]} nextNodes
  * @returns {void}
  */
-export function reconcileNodes(anchor, currentNodes, nextNodes) {
+function reconcileNodes(anchor, currentNodes, nextNodes) {
   if (currentNodes === null) {
     for (const nextNode of nextNodes) {
       insertBefore.call(anchor.parentNode, nextNode, anchor);

@@ -1,12 +1,11 @@
 import {
   createComputed,
-  createEffect,
   createScope,
   createSignal,
   onDestroy,
   onMount,
 } from "signal";
-import { directive, template } from "signal/dom";
+import { template } from "signal/dom";
 import { getParams } from "signal/router";
 
 /**
@@ -15,10 +14,6 @@ import { getParams } from "signal/router";
  * @returns {T}
  */
 const component = (fn) => (...args) => createScope(() => fn(...args));
-
-directive("style", (elt, styles) => {
-  createEffect(() => elt.setAttribute("style", styles()));
-});
 
 const Dot = component((x, y, target, counterSignal) => {
   const hover = createSignal(false);

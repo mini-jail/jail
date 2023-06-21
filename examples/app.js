@@ -51,4 +51,7 @@ const App = () => {
 };
 
 const app = createApp(App)
+  .directive("style", (elt, styles) => {
+    createEffect(() => elt.setAttribute("style", styles()));
+  })
   .mount(document.body);
