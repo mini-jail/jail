@@ -19,7 +19,7 @@ import { createEffect, createScope, onDestroy, onMount } from "signal";
  */
 
 const EventAndOptions = /(\w+)(.*)/;
-const { replace, slice, includes, startsWith, toLowerCase, match } =
+const { replace, slice, includes, startsWith, toLowerCase, match, trim } =
   String.prototype;
 const { replaceChild, insertBefore } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
@@ -93,7 +93,7 @@ function createTemplate(strings) {
   data = replace.call(data, /\n+$/, "");
   data = replace.call(data, /^ +/gm, "");
   data = replace.call(data, /<(\w+)([^>]+)>/gm, (_match, tag, attributes) => {
-    return `<${tag}${replace.call(attributes, /(\n| )+/g, " ")}>`;
+    return `<${tag} ${trim.call(replace.call(attributes, /(\n| )+/g, " "))}>`;
   });
   data = replace.call(
     data,
