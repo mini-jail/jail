@@ -3,7 +3,6 @@ import {
   createInjection,
   inject,
   nodeRef,
-  onCleanup,
   withNode,
 } from "signal";
 
