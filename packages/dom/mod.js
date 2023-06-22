@@ -302,6 +302,7 @@ function createTemplate(strings) {
   data = replace.call(data, /^\n+/, "");
   data = replace.call(data, /\n+$/, "");
   data = replace.call(data, /^ +/gm, "");
+  data = replace.call(data, /<(\w+-\w+)[\s]+?\/>/gm, "<$1></$1>");
   data = replace.call(data, /<(\w+)([^>]+)>/gm, (_match, tag, attributes) => {
     return `<${tag}${replace.call(attributes, /(\n| )+/g, " ")}>`;
   });

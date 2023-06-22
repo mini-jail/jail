@@ -61,10 +61,10 @@ const App = () => {
   return template`
     <header>
       <h3>signal${pathSignal}</h3>
-      <app-navigation></app-navigation>
+      <app-navigation />
     </header>
     <main>
-      <app-router></app-router>
+      <app-router />
     </main>
   `;
 };
