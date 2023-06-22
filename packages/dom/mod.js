@@ -364,7 +364,7 @@ function insertChildren(root, insertMap) {
     }
     if (value instanceof Node) {
       replaceChild.call(elt.parentNode, value, elt);
-    } else if ((Array.isArray(value)) || typeof value === "function") {
+    } else if (Array.isArray(value) || typeof value === "function") {
       const anchor = new Text();
       replaceChild.call(elt.parentNode, anchor, elt);
       createEffect((currentNodes) => {
@@ -604,6 +604,7 @@ function setEventListener(elt, prop, listener) {
       app.registeredEvents[prop] = true;
       withNode(app.node, () => {
         onCleanup(() => removeEventListener(name, eventLoop, eventOptions));
+        app.registeredEvents[prop] = undefined;
       });
     }
   } else {
