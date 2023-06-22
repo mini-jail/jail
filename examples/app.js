@@ -1,6 +1,6 @@
 import { createEffect, onCleanup, onMount } from "signal";
 import { createRouter, pathSignal } from "signal/router";
-import { createApp, directive, mount, template } from "signal/dom";
+import { createApp, template } from "signal/dom";
 
 import Home from "./routes/home.js";
 import Counter from "./routes/counter.js";
