@@ -21,7 +21,7 @@ const Dot = (x, y, target, counterSignal) => {
 
   return template`
     <div class="dot"
-        .textContent="${text}"
+        *text="${text}"
         *style="${style}"
         @mouseover.delegate="${onMouseOver}" 
         @mouseout.delegate="${onMouseOut}"></div>

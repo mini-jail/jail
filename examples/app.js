@@ -10,6 +10,7 @@ import Todo from "./routes/todo.js";
 import NotFound from "./routes/notfound.js";
 
 import StylePlugin from "@plugins/style";
+import TextPlugin from "@plugins/text";
 
 const Navigation = () => {
   return template`
@@ -73,4 +74,5 @@ createApp(App)
   .component("app-navigation", Navigation, { shadow: true })
   .component("app-router", HashRouter)
   .use(StylePlugin)
+  .use(TextPlugin)
   .mount(document.body);
