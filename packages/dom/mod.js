@@ -70,7 +70,6 @@ import {
  * @returns {void}
  */
 
-const EventAndOptions = /(\w+)(.*)/;
 const { replace, slice, includes, startsWith, toLowerCase, match, trim } =
   String.prototype;
 const { replaceChild, insertBefore, isEqualNode, cloneNode } = Node.prototype;
@@ -170,7 +169,7 @@ export function createApp(rootComponent) {
       app.mounted = true;
       app.rootElement = rootElement;
       app.anchor = rootElement.appendChild(new Text());
-      this.run(() => {
+      withNode(app.node, () => {
         createEffect(() => {
           const nextNodes = createNodeArray([], rootComponent());
           reconcileNodes(app.anchor, app.currentNodes, nextNodes);
@@ -317,7 +316,7 @@ function createTemplate(strings) {
   );
   data = replace.call(
     data,
-    / ([.|@|:|*][\w\-]?[.\w\-\d\[\]]+)=(["'])([^"'<>]+)["']/gi,
+    / ([.|@|:|*]+[\w\-]+[.\w\-\d\[\]]+)=(["'])([^"'<>]+)["']/gi,
     (_match, name, delimiter, value) => {
       attributes = attributes || [];
       push.call(attributes, id);
@@ -331,15 +330,6 @@ function createTemplate(strings) {
     push.call(insertions, Number(id));
     return `<slot name="__arg__${id}"></slot>`;
   });
-  /*
-  need to fix that for e.g. <pre>-tags
-  data = replace.call(
-    data,
-    /( ?<[ \/]?[\w\-]+>|\/|>|>)[\s]+(<[/]?[\w\-][>]?)/gm,
-    "$1$2",
-  );
-  */
-  data = replace.call(data, /(__arg__)[ ]+(>)/g, "$1$2");
   data = trim.call(data);
   const template = document.createElement("template");
   template.innerHTML = data;
@@ -562,8 +552,8 @@ function setEventListener(elt, prop, listener) {
     listener = app.methods[listener];
   }
   prop = slice.call(prop, 1);
-  const name = replace.call(prop, EventAndOptions, "$1");
-  const options = replace.call(prop, EventAndOptions, "$2");
+  const name = replace.call(prop, /(\w+)(.*)/, "$1");
+  const options = replace.call(prop, /(\w+)(.*)/, "$2");
   if (includes.call(options, ".prevent")) {
     const listenerCopy = listener;
     listener = function (event) {
