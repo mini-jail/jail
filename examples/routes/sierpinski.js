@@ -1,8 +1,8 @@
 import { createComputed, createSignal, onDestroy, onMount } from "signal";
-import { component, template } from "signal/dom";
+import { template } from "signal/dom";
 import { getParams } from "signal/router";
 
-const Dot = component((x, y, target, counterSignal) => {
+const Dot = (x, y, target, counterSignal) => {
   const hover = createSignal(false);
   const onMouseOut = () => hover(false);
   const onMouseOver = () => hover(true);
@@ -26,9 +26,9 @@ const Dot = component((x, y, target, counterSignal) => {
         @mouseover.delegate="${onMouseOver}" 
         @mouseout.delegate="${onMouseOut}"></div>
   `;
-});
+};
 
-const Triangle = component((x, y, target, size, counterSignal) => {
+const Triangle = (x, y, target, size, counterSignal) => {
   if (target <= size) {
     return Dot(x, y, target, counterSignal);
   }
@@ -38,7 +38,7 @@ const Triangle = component((x, y, target, size, counterSignal) => {
     ${Triangle(x - target, y + target / 2, target, size, counterSignal)}
     ${Triangle(x + target, y + target / 2, target, size, counterSignal)}
   `;
-});
+};
 
 export default () => {
   const { target = "750", size = "25" } = getParams() || {};

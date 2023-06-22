@@ -11,13 +11,29 @@ import {
 /**
  * @typedef {{
  *   directive(name: string): Directive | undefined
- *   directive(name: string, directive: Directive): Application
+ *   directive(name: string, directive: Directive): App
  *   method(name: string): ((...args: any[]) => any) | undefined
- *   method(name: string, method: (...args: any[]) => any): Application
- *   mount(rootElement: Node): Application
- *   unmount(): Application
+ *   method(name: string, method: (...args: any[]) => any): App
+ *   component(name: `${string}-${string}`, rootComponent: Component, options?: ComponentOptions): App
+ *   mount(rootElement: Element): App
+ *   unmount(): App
  *   run<T>(callback: () => T): T
- * }} Application
+ *   use(plugin: Plugin): App
+ * }} App
+ */
+
+/**
+ * @typedef {{
+ *   node: import("signal").Node | null
+ *   cleanup: import("signal").Cleanup | null
+ *   mounted: boolean
+ *   anchor: Node | null
+ *   rootElement: Document | Element | null
+ *   currentNodes: Node[] | null
+ *   methods: { [name: string]: (...args: any[]) => any }
+ *   directives: { [name: string]: Directive }
+ *   registeredEvents: { [name: string]: boolean }
+ * }} AppInjection
  */
 
 /**
@@ -25,82 +41,17 @@ import {
  * @typedef {{ (...params: P): R }} Component
  */
 
-const App = createInjection({
-  /** @type {import("signal").Node | null} */
-  node: null,
-  /** @type {boolean} */
-  mounted: false,
-  /** @type {Node | null} */
-  anchor: null,
-  /** @type {{ [name: string]: (...args: any[]) => any }} */
-  methods: {},
-  /** @type {{ [name: string]: Directive }} */
-  directives: {},
-  /** @type {Node[] | null} */
-  currentNodes: [],
-});
+/**
+ * @typedef {{
+ *   shadow?: boolean
+ * }} ComponentOptions
+ */
 
 /**
- * @param {Component} rootComponent
- * @returns {Application}
+ * @typedef {{
+ *   install(app: App): void
+ * }} Plugin
  */
-export function createApp(rootComponent) {
-  return App.provide({
-    node: null,
-    mounted: false,
-    anchor: null,
-    methods: {},
-    directives: {},
-    currentNodes: null,
-  }, (cleanup) => {
-    const app = inject(App);
-    app.node = nodeRef();
-
-    return {
-      directive(name, directive) {
-        if (arguments.length === 1) {
-          return app.directives[name];
-        }
-        app.directives[name] = directive;
-        return this;
-      },
-      method(name, callback) {
-        if (arguments.length === 1) {
-          return app.methods[name];
-        }
-        app.methods[name] = callback;
-        return this;
-      },
-      mount(rootElement) {
-        if (app.mounted === true) {
-          return this;
-        }
-        app.mounted = true;
-        app.anchor = rootElement.appendChild(new Text());
-        withNode(app.node, () => {
-          createEffect(() => {
-            const nextNodes = createNodeArray([], rootComponent());
-            reconcileNodes(app.anchor, app.currentNodes, nextNodes);
-            app.currentNodes = nextNodes;
-          });
-        });
-        return this;
-      },
-      unmount() {
-        cleanup();
-        reconcileNodes(app.anchor, app.currentNodes, []);
-        app.anchor?.remove();
-        app.anchor = null;
-        app.currentNodes = null;
-        app.mounted = false;
-        return this;
-      },
-      run(callback) {
-        return withNode(app.node, callback);
-      },
-    };
-  });
-}
 
 /**
  * @typedef {{
@@ -120,15 +71,133 @@ export function createApp(rootComponent) {
  */
 
 const EventAndOptions = /(\w+)(.*)/;
-const { replace, slice, includes, startsWith, toLowerCase, match } =
+const { replace, slice, includes, startsWith, toLowerCase, match, trim } =
   String.prototype;
-const { replaceChild, insertBefore, isEqualNode } = Node.prototype;
+const { replaceChild, insertBefore, isEqualNode, cloneNode } = Node.prototype;
 const { setAttribute, removeAttribute } = Element.prototype;
+const { preventDefault, stopPropagation } = Event.prototype;
+const { push } = Array.prototype;
+
 const Events = Symbol("Events");
 /** @type {Map<TemplateStringsArray, Template>} */
 const TemplateCache = new Map();
-/** @type {{ [name: string]: boolean }} */
-const EventMap = {};
+
+/** @type {import("signal").Injection<AppInjection>} */
+const App = createInjection({
+  node: null,
+  cleanup: null,
+  mounted: false,
+  anchor: null,
+  rootElement: document,
+  methods: {},
+  directives: {},
+  registeredEvents: {},
+  currentNodes: null,
+});
+
+/**
+ * @returns {AppInjection}
+ */
+function useApp() {
+  return inject(App);
+}
+
+/**
+ * @template T
+ * @param {(app: AppInjection) => T} callback
+ * @returns {T}
+ */
+function createAppInjection(callback) {
+  return App.provide({}, (cleanup) => {
+    const app = useApp();
+    app.node = nodeRef();
+    app.mounted = false;
+    app.anchor = null;
+    app.currentNodes = null;
+    app.methods = {};
+    app.directives = {};
+    app.registeredEvents = {};
+    app.cleanup = cleanup;
+    return callback(app);
+  });
+}
+
+/**
+ * @param {Component} rootComponent
+ * @returns {App}
+ */
+export function createApp(rootComponent) {
+  return createAppInjection((app) => ({
+    directive(name, directive) {
+      if (arguments.length === 1) {
+        return app.directives[name];
+      }
+      app.directives[name] = directive;
+      return this;
+    },
+    method(name, callback) {
+      if (arguments.length === 1) {
+        return app.methods[name];
+      }
+      app.methods[name] = callback;
+      return this;
+    },
+    component(name, rootComponent, options) {
+      customElements.define(
+        name,
+        class Component extends HTMLElement {
+          #onDestroy = null;
+          constructor() {
+            super();
+            withNode(app.node, () => {
+              this.#onDestroy = mount(
+                options?.shadow ? this.attachShadow({ mode: "open" }) : this,
+                rootComponent,
+              );
+            });
+          }
+          disconnectedCallback() {
+            this.#onDestroy?.();
+          }
+        },
+      );
+      return this;
+    },
+    mount(rootElement) {
+      if (app.mounted === true) {
+        return this;
+      }
+      app.mounted = true;
+      app.rootElement = rootElement;
+      app.anchor = rootElement.appendChild(new Text());
+      this.run(() => {
+        createEffect(() => {
+          const nextNodes = createNodeArray([], rootComponent());
+          reconcileNodes(app.anchor, app.currentNodes, nextNodes);
+          app.currentNodes = nextNodes;
+        });
+      });
+      return this;
+    },
+    unmount() {
+      app.cleanup();
+      reconcileNodes(app.anchor, app.currentNodes, []);
+      app.anchor?.remove();
+      app.anchor = null;
+      app.rootElement = null;
+      app.currentNodes = null;
+      app.mounted = false;
+      return this;
+    },
+    run(callback) {
+      return withNode(app.node, callback);
+    },
+    use(plugin) {
+      plugin.install(this);
+      return this;
+    },
+  }));
+}
 
 /**
  * @template T, [P = Parameters<T>], [R = ReturnType<T>]
@@ -148,21 +217,21 @@ export function component(component) {
  * @returns {void}
  */
 export function directive(name, directive) {
-  inject(App).directives[name] = directive;
+  useApp().directives[name] = directive;
 }
 
 /**
  * @template T
  * @param {string} name
- * @param {T & (...args: any[]) => any} method
+ * @param {T & (...args: any[]) => any} [method]
  * @returns {void}
  */
 export function method(name, method) {
-  inject(App).methods[name] = method;
+  useApp().methods[name] = method;
 }
 
 /**
- * @param {Node} rootElement
+ * @param {Element} rootElement
  * @param {Component} rootComponent
  * @returns {import("signal").Cleanup}
  */
@@ -170,15 +239,15 @@ export function mount(rootElement, rootComponent) {
   return createScope((cleanup) => {
     const anchor = rootElement.appendChild(new Text());
     let currentNodes = null;
-    onCleanup(() => {
-      anchor?.remove();
-      reconcileNodes(anchor, currentNodes, []);
-      currentNodes = null;
-    });
     createEffect(() => {
       const nextNodes = createNodeArray([], rootComponent());
       reconcileNodes(anchor, currentNodes, nextNodes);
       currentNodes = nextNodes;
+    });
+    onCleanup(() => {
+      reconcileNodes(anchor, currentNodes, []);
+      anchor?.remove();
+      currentNodes = null;
     });
     return cleanup;
   });
@@ -191,7 +260,7 @@ export function mount(rootElement, rootComponent) {
  */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings);
-  const fragment = template.fragment.cloneNode(true);
+  const fragment = cloneNode.call(template.fragment, true);
   if (template.attributes) {
     insertAttributes(
       fragment,
@@ -242,7 +311,7 @@ function createTemplate(strings) {
     / ([.|@|:|*]?[\w\-]+[.\w\-\d\[\]]+)=(["']){{__arg__(\d+)}}["']/gi,
     (_match, name, delimiter, id) => {
       attributes = attributes || [];
-      attributes.push(Number(id));
+      push.call(attributes, Number(id));
       return ` data-__arg__${id}=${delimiter}${name}${delimiter} __arg__ `;
     },
   );
@@ -251,7 +320,7 @@ function createTemplate(strings) {
     / ([.|@|:|*][\w\-]?[.\w\-\d\[\]]+)=(["'])([^"'<>]+)["']/gi,
     (_match, name, delimiter, value) => {
       attributes = attributes || [];
-      attributes.push(id);
+      push.call(attributes, id);
       staticAttributes = staticAttributes || {};
       staticAttributes[id] = value;
       return ` data-__arg__${id++}=${delimiter}${name}${delimiter} __arg__ `;
@@ -259,9 +328,19 @@ function createTemplate(strings) {
   );
   data = replace.call(data, /{{__arg__(\d+)}}/g, (_match, id) => {
     insertions = insertions || [];
-    insertions.push(Number(id));
+    push.call(insertions, Number(id));
     return `<slot name="__arg__${id}"></slot>`;
   });
+  /*
+  need to fix that for e.g. <pre>-tags
+  data = replace.call(
+    data,
+    /( ?<[ \/]?[\w\-]+>|\/|>|>)[\s]+(<[/]?[\w\-][>]?)/gm,
+    "$1$2",
+  );
+  */
+  data = replace.call(data, /(__arg__)[ ]+(>)/g, "$1$2");
+  data = trim.call(data);
   const template = document.createElement("template");
   template.innerHTML = data;
   /** @type {Template} */
@@ -326,7 +405,7 @@ function insertAttributes(root, attributeMap) {
       const value = attributeMap[slice.call(data, 7)];
       removeAttribute.call(elt, `data-${data}`);
       if (prop[0] === "*") {
-        const directive = inject(App).directives[slice.call(prop, 1)];
+        const directive = useApp().directives[slice.call(prop, 1)];
         directive?.(elt, value);
       } else if (prop[0] === "@") {
         setEventListener(elt, prop, value);
@@ -359,7 +438,7 @@ function setProperty(elt, prop, value) {
     mode = 2;
     prop = slice.call(prop, 1);
   }
-  if (mode !== 2 && prop in elt) {
+  if (mode === 1 || (mode !== 2 && prop in elt)) {
     elt[prop] = value;
     return;
   }
@@ -382,11 +461,11 @@ function createNodeArray(nodeArray, ...elements) {
       continue;
     }
     if (elt instanceof DocumentFragment) {
-      nodeArray.push(...elt.childNodes);
+      push.call(nodeArray, ...elt.childNodes);
     } else if (elt instanceof Node) {
-      nodeArray.push(elt);
+      push.call(nodeArray, elt);
     } else if (typeof elt === "string" || typeof elt === "number") {
-      nodeArray.push(new Text(String(elt)));
+      push.call(nodeArray, new Text(String(elt)));
     } else if (typeof elt === "function") {
       createNodeArray(nodeArray, elt());
     } else if (Symbol.iterator in elt) {
@@ -417,18 +496,14 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
     }
     return;
   }
-  const nextLength = nextNodes.length,
-    currentLength = currentNodes.length;
-  let i = -1;
   next:
-  while (++i < nextLength) {
+  for (let i = 0; i < nextNodes.length; i++) {
     const currentNode = currentNodes[i];
-    let j = -1;
-    while (++j < currentLength) {
+    for (let j = 0; j < currentNodes.length; j++) {
       if (currentNodes[j] === null) {
         continue;
       }
-      if (currentNodes[j].nodeType === 3 && nextNodes[i].nodeType === 3) {
+      if (isAlsoCharacterData.call(currentNodes[j], nextNodes[i])) {
         currentNodes[j].data = nextNodes[i].data;
         nextNodes[i] = currentNodes[j];
       } else if (isEqualNode.call(currentNodes[j], nextNodes[i])) {
@@ -454,6 +529,16 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
 }
 
 /**
+ * @this {Node}
+ * @param {Node} node
+ * @returns {node is CharacterData}
+ */
+function isAlsoCharacterData(node) {
+  const type = this.nodeType;
+  return (type === 3 || type === 8) && node.nodeType === type;
+}
+
+/**
  * @param {Event} event
  * @returns {void}
  */
@@ -468,27 +553,28 @@ function eventLoop(event) {
 
 /**
  * @param {Element} elt
- * @param {string} property
+ * @param {string} prop
  * @param {EventListener | string} listener
  */
-function setEventListener(elt, property, listener) {
+function setEventListener(elt, prop, listener) {
+  const app = useApp();
   if (typeof listener === "string") {
-    listener = inject(App).methods[listener];
+    listener = app.methods[listener];
   }
-  property = property.slice(1);
-  const name = replace.call(property, EventAndOptions, "$1");
-  const options = replace.call(property, EventAndOptions, "$2");
+  prop = slice.call(prop, 1);
+  const name = replace.call(prop, EventAndOptions, "$1");
+  const options = replace.call(prop, EventAndOptions, "$2");
   if (includes.call(options, ".prevent")) {
     const listenerCopy = listener;
     listener = function (event) {
-      event.preventDefault();
+      preventDefault.call(event);
       listenerCopy.call(elt, event);
     };
   }
   if (includes.call(options, ".stop")) {
     const listenerCopy = listener;
     listener = function (event) {
-      event.stopPropagation();
+      stopPropagation.call(event);
       listenerCopy.call(elt, event);
     };
   }
@@ -501,7 +587,7 @@ function setEventListener(elt, property, listener) {
         listenerCopy.call(elt, event);
       }, Number(match.call(options, /debounce\[(\d+)\]/)[1]));
     };
-    property = replace.call(property, /(\.debounce)\[\d+\]/, "$1");
+    prop = replace.call(prop, /(\.debounce)\[\d+\]/, "$1");
   }
   /** @type {AddEventListenerOptions} */
   let eventOptions = undefined;
@@ -520,10 +606,15 @@ function setEventListener(elt, property, listener) {
   if (includes.call(options, ".delegate")) {
     elt[Events] = elt[Events] || {};
     elt[Events][name] = elt[Events][name] || [];
-    elt[Events][name].push(listener);
-    property = replace.call(property, ".delegate", "");
-    !EventMap[property] && addEventListener(name, eventLoop, eventOptions);
-    EventMap[property] = true;
+    push.call(elt[Events][name], listener);
+    prop = replace.call(prop, ".delegate", "");
+    if (app.registeredEvents[prop] === undefined) {
+      addEventListener(name, eventLoop, eventOptions);
+      app.registeredEvents[prop] = true;
+      withNode(app.node, () => {
+        onCleanup(() => removeEventListener(name, eventLoop, eventOptions));
+      });
+    }
   } else {
     elt.addEventListener(name, listener, eventOptions);
   }

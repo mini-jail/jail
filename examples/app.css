@@ -1,3 +1,5 @@
+@import url("/examples/assets/ark-pixel-font.css");
+
 * {
   padding: 0;
   margin: 0;
@@ -21,7 +23,6 @@ body {
   background-color: deepskyblue;
   display: flex;
   flex-direction: column;
-  transition: 250ms;
 }
 
 header {

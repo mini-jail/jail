@@ -29,7 +29,7 @@ const Item = (props) => {
       <div 
         class="todo-item-text" 
         style="${props.done ? "color: green; font-style: italic;" : null}"
-        @click.delegate.debounce[0]="${toggleItem}"
+        @click.delegate="${toggleItem}"
       >
         ${list().indexOf(props) + 1}. ${props.text}
       </div>
