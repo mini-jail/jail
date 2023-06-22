@@ -3,8 +3,10 @@ import {
   createInjection,
   createScope,
   inject,
+  isReactive,
   nodeRef,
   onCleanup,
+  toValue,
   withNode,
 } from "signal";
 
@@ -364,11 +366,11 @@ function insertChildren(root, insertMap) {
     }
     if (value instanceof Node) {
       replaceChild.call(elt.parentNode, value, elt);
-    } else if (Array.isArray(value) || typeof value === "function") {
+    } else if (Array.isArray(value) || isReactive(value)) {
       const anchor = new Text();
       replaceChild.call(elt.parentNode, anchor, elt);
       createEffect((currentNodes) => {
-        const nextNodes = createNodeArray([], () => value);
+        const nextNodes = createNodeArray([], toValue(value));
         reconcileNodes(anchor, currentNodes, nextNodes);
         return nextNodes;
       }, null);
@@ -457,8 +459,8 @@ function createNodeArray(nodeArray, ...elements) {
       push.call(nodeArray, elt);
     } else if (typeof elt === "string" || typeof elt === "number") {
       push.call(nodeArray, new Text(String(elt)));
-    } else if (typeof elt === "function") {
-      createNodeArray(nodeArray, elt());
+    } else if (isReactive(elt)) {
+      createNodeArray(nodeArray, toValue(elt));
     } else if (Symbol.iterator in elt) {
       createNodeArray(nodeArray, ...elt);
     }

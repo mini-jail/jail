@@ -63,7 +63,7 @@
  */
 
 /**
- * #### Node\<T\>
+ * #### Ref\<T\>
  * A object which contains the reactive property **value**.
  *
  * @template [T = any]
@@ -373,6 +373,30 @@ function setValue(value) {
   }
   this.value = value;
   queueNodes.call(this);
+}
+
+/**
+ * @template [T = any]
+ * @param {T} data
+ * @returns {data is Ref<T> | Signal<T>}
+ */
+export function isReactive(data) {
+  if (typeof data === "function") {
+    return true;
+  }
+  if (typeof data === "object" && "value" in data) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @template [T = any]
+ * @param {Ref<T> | Signal<T> | T} data
+ * @returns {T}
+ */
+export function toValue(data) {
+  return typeof data === "function" ? data() : data?.value || data;
 }
 
 /**
