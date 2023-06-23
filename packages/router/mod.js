@@ -12,10 +12,6 @@ import {
  */
 
 /**
- * @typedef {() => string} PathListener
- */
-
-/**
  * @typedef {{ [param: string]: string }} Params
  */
 
@@ -66,7 +62,7 @@ function createRoutes(routeMap) {
 /**
  * @template [T = any]
  * @param {RouteMap<T>} routeMap
- * @returns {() => T | undefined}
+ * @returns {RouteHandler<T | undefined>}
  */
 export function createRouter(routeMap) {
   const routes = createRoutes(routeMap);

@@ -1,9 +1,7 @@
 /**
  * #### Cleanup
  * A function that runs before a **Node** updates.
- *
  * Can be used to manually reset timer, intervals, etc.
- *
  * @typedef {() => void} Cleanup
  */
 
@@ -13,7 +11,6 @@
  * * returns value `signal()`
  * * sets a new value `signal(value)`
  * * modifies current value `signal((currentValue) => nextValue)`
- *
  * @template [T = any]
  * @typedef {{
  *   () : T
@@ -28,7 +25,6 @@
  * * a value
  * * an array of Nodes
  * * an array of Slots from the corresponding Nodes
- *
  * @template [T = any]
  * @typedef {{
  *   value: T | undefined | null
@@ -40,7 +36,6 @@
 /**
  * #### Node\<T\>
  * A reactive object.
- *
  * If the Node will be triggered for an update, it will:
  * * remove all unused **Sources**
  * * run all **cleanup** functions
@@ -48,7 +43,6 @@
  * * run its **onupdate**
  * * update its **value**
  * * resets its **injections**
- *
  * @template [T = any]
  * @typedef {{
  *   value: T | undefined | null
@@ -65,7 +59,6 @@
 /**
  * #### Ref\<T\>
  * A object which contains the reactive property **value**.
- *
  * @template [T = any]
  * @typedef {{ value: T }} Ref
  */
@@ -74,7 +67,6 @@
  * #### Injection\<T\>
  * An object containing a default value and a provider,
  * the provided value can be injected by calling **inject**.
- *
  * @template [T = any]
  * @typedef {{
  *   readonly id: symbol
@@ -340,7 +332,7 @@ function createSource(initialValue) {
  * @returns {T | null | undefined}
  */
 function getValue() {
-  if (activeNode && activeNode.onupdate) {
+  if (activeNode !== null && activeNode.onupdate !== null) {
     const sourceSlot = this.nodes?.length || 0,
       nodeSlot = activeNode.sources?.length || 0;
     if (activeNode.sources === null) {
@@ -381,6 +373,9 @@ function setValue(value) {
  * @returns {data is Ref<T> | Signal<T>}
  */
 export function isReactive(data) {
+  if (data == null) {
+    return false;
+  }
   if (typeof data === "function") {
     return true;
   }

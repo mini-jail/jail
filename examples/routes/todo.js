@@ -29,11 +29,13 @@ const Item = (props) => {
       <div 
         class="todo-item-text" 
         style="${props.done ? "color: green; font-style: italic;" : null}"
-        @click.delegate="${toggleItem}"
+        d-on:click="${toggleItem}"
       >
         ${list().indexOf(props) + 1}. ${props.text}
       </div>
-      <div class="todo-item-delete" @click.delegate="${deleteItem}">delete</div>
+      <div class="todo-item-delete" d-on:click="${deleteItem}">
+        delete
+      </div>
     </div>
   `;
 };
@@ -54,6 +56,27 @@ export default () => {
   const done = () => list().filter((item) => item.done).length;
 
   return template`
+    <article class="todo-app">
+      <h4>
+        todo
+        <sub>(no-one ever have done that, i promise!)</sub>
+      </h4>
+      <div class="todo-app-container">
+        <input type="text"
+               placeholder="...milk?"
+               required
+               class="todo_input"
+               value="${textValue}" 
+               d-on:keyup.delegate="${addItem}" 
+               d-on:input.delegate="${onInput}"/>
+        <div class="todo-items">
+          ${() => list().map((item) => Item(item))}
+        </div>
+        <label>progress: ${done}/${length}</label>
+        <progress max="${length}" value="${done}"></progress>
+      </div>
+    </article>
+
     <style>
       .todo-app-container {
         width: 500px;
@@ -95,25 +118,5 @@ export default () => {
         margin: 0 auto;
       }
     </style>
-    <article class="todo-app">
-      <h4>
-        todo
-        <sub>(no-one ever have done that, i promise!)</sub>
-      </h4>
-      <div class="todo-app-container">
-        <input type="text"
-               placeholder="...milk?"
-               required
-               class="todo_input"
-               .value="${textValue}" 
-               @keyup.delegate="${addItem}" 
-               @input.delegate="${onInput}"/>
-        <div class="todo-items">
-          ${() => list().map((item) => Item(item))}
-        </div>
-        <label>progress: ${done}/${length}</label>
-        <progress max="${length}" value="${done}"></progress>
-      </div>
-    </article>
   `;
 };

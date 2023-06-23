@@ -9,12 +9,11 @@ import About from "./routes/about.js";
 import Todo from "./routes/todo.js";
 import NotFound from "./routes/notfound.js";
 
-import StylePlugin from "@plugins/style";
-import TextPlugin from "@plugins/text";
+import TextPlugin from "./plugins/text.js";
 
 const Navigation = () => {
   return template`
-    <link href="/examples/app.css" rel="stylesheet" />
+    <link href="/examples/app.css" rel="stylesheet"/>
     <nav path-signal="${pathSignal}">
       <a href="#/">home</a>
       <a href="#/counter">counter</a>
@@ -62,10 +61,12 @@ const App = () => {
   return template`
     <header>
       <h3>signal${pathSignal}</h3>
-      <app-navigation />
+      <app-navigation>
+      </app-navigation>
     </header>
     <main>
-      <app-router />
+      <app-router>
+      </app-router>
     </main>
   `;
 };
@@ -73,6 +74,5 @@ const App = () => {
 createApp(App)
   .component("app-navigation", Navigation, { shadow: true })
   .component("app-router", HashRouter)
-  .use(StylePlugin)
   .use(TextPlugin)
   .mount(document.body);

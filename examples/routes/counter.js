@@ -16,9 +16,9 @@ export default () => {
         counter example
         <sub>(...what else?)</sub>
       </h4>
-      <button data-clicked="${clicked}" @click.delegate="${sub}">-</button>
+      <button d-on:click.delegate="${sub}">-</button>
       <span>current value: ${counter}</span>
-      <button @click.delegate="${add}">+</button>
+      <button d-on:click.delegate="${add}">+</button>
       <div>> you have clicked ${clicked} times.</div>
       ${() => clicked() > 10 && template`<div>> why do you do this?????</div>`}
       ${() => clicked() > 20 && template`<div>> pls stop T_T</div>`}
