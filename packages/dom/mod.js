@@ -2,7 +2,6 @@ import {
   createEffect,
   createInjection,
   createScope,
-  createSignal,
   inject,
   isReactive,
   nodeRef,
