@@ -14,7 +14,7 @@ import TextPlugin from "./plugins/text.js";
 
 const Navigation = () => {
   return template`
-    <nav d-event:click.delegate="${console.log}">
+    <nav d-on:click.delegate="${console.log}">
       <a href="#/">home</a>
       <a href="#/counter">counter</a>
       <a href="#/sierpinski">sierpinski</a>
