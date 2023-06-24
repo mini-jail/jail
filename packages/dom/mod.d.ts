@@ -49,9 +49,12 @@ declare global {
     shadow?: boolean;
   }
 
-  interface Component<P extends unknown[] = unknown[], R = unknown> {
-    new (): HTMLElement;
+  interface FunctionalComponent<P extends unknown[] = unknown[], R = unknown> {
     (...params: P): R;
+  }
+
+  interface Component {
+    new (): HTMLElement;
   }
 
   interface Binding<T> {
@@ -69,7 +72,7 @@ declare global {
     rootElement: Element | null;
     currentNodes: Node[] | null;
     directives: { [name: string]: Directive };
-    components: { [name: string]: { new (): HTMLElement } };
+    components: { [name: string]: Component };
   }
 
   interface DirectiveRegistry {
@@ -77,7 +80,7 @@ declare global {
   }
 
   interface ComponentRegistry {
-    [name: `${string}-${string}`]: Component<any[], any>;
+    [name: `${string}-${string}`]: Component;
   }
 }
 
@@ -87,7 +90,7 @@ export function component<
   T extends (...args: unknown[]) => unknown,
   P extends Parameters<T>,
   R extends ReturnType<T>,
->(component: Component<P, R>): Component<P, R>;
+>(component: FunctionalComponent<P, R>): FunctionalComponent<P, R>;
 
 export function directive<T>(name: string, directive: Directive<T>): void;
 
