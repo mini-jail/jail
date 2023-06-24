@@ -261,18 +261,18 @@ export function template(strings, ...args) {
   if (template.attributes) {
     insertAttributes(
       fragment,
-      template.attributes.reduce((attributeMap, id) => {
-        attributeMap[id] = args[id];
-        return attributeMap;
+      template.attributes.reduce((values, arg) => {
+        values[arg] = args[arg];
+        return values;
       }, {}),
     );
   }
   if (template.insertions) {
     insertChildren(
       fragment,
-      template.insertions.reduce((insertMap, id) => {
-        insertMap[hash + id] = args[id];
-        return insertMap;
+      template.insertions.reduce((values, arg) => {
+        values[hash + arg] = args[arg];
+        return values;
       }, {}),
     );
   }
@@ -328,14 +328,14 @@ function createTemplate(strings) {
 
 /**
  * @param {DocumentFragment} root
- * @param {{ [id: string]: any }} args
+ * @param {{ [id: string]: any }} values
  * @returns {void}
  */
-function insertChildren(root, args) {
+function insertChildren(root, values) {
   /** @type {Iterable<HTMLSlotElement>} */
   const elements = root.querySelectorAll(insertChildQuery);
   for (const elt of elements) {
-    insertChild(elt, args[elt.name]);
+    insertChild(elt, values[elt.name]);
   }
 }
 
@@ -365,10 +365,10 @@ function insertChild(elt, value) {
 
 /**
  * @param {DocumentFragment} root
- * @param {{ [id: number]: any }} args
+ * @param {{ [id: number]: any }} values
  * @returns {void}
  */
-function insertAttributes(root, args) {
+function insertAttributes(root, values) {
   /** @type {Iterable<HTMLElement | SVGElement>} */
   const elements = root.querySelectorAll(insertAttrQuery);
   for (const elt of elements) {
@@ -379,7 +379,7 @@ function insertAttributes(root, args) {
       }
       const prop = getAttribute.call(elt, `data-${data}`);
       removeAttribute.call(elt, `data-${data}`);
-      insertAttribute(elt, prop, args[slice.call(data, hash.length)]);
+      insertAttribute(elt, prop, values[slice.call(data, hash.length)]);
     }
   }
 }
@@ -394,7 +394,7 @@ function insertAttribute(elt, prop, data) {
     prop = slice.call(prop, 2);
     if (startsWith.call(prop, "on")) {
       setEventListener(elt, prop, data);
-    } else if (startsWith.call(prop, "ref")) {
+    } else if (prop === "ref") {
       data?.(elt);
     } else {
       useApp().directives[prop]?.(elt, data);
