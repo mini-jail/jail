@@ -1,48 +1,67 @@
 declare global {
   interface App {
+    directive<K extends keyof DirectiveRegistry>(
+      name: K,
+    ): DirectiveRegistry[K] | undefined;
+    directive<K extends keyof DirectiveRegistry>(
+      name: K,
+      directive: DirectiveRegistry[K],
+    ): App;
     directive(name: string): Directive | undefined;
     directive(name: string, directive: Directive): App;
+
+    component<K extends keyof ComponentRegistry>(
+      name: K,
+      rootComponent: ComponentRegistry[K],
+      options?: ComponentOptions,
+    ): App;
     component(
       name: `${string}-${string}`,
       rootComponent: Component,
       options?: ComponentOptions,
     ): App;
+    component<K extends keyof ComponentRegistry>(
+      name: K,
+    ): ComponentRegistry[K] | undefined;
+    component(name: `${string}-${string}`): Component | undefined;
+
     mount(rootElement: Element): App;
     unmount(): App;
     run<T>(callback: () => T): T;
     use(plugin: AppPlugin): App;
   }
 
-  type Directive<T = unknown> = {
+  interface Directive<T = unknown> {
     (elt: Element, binding: Binding<T>): Cleanup;
-  };
+  }
 
-  type AppPlugin = {
+  interface AppPlugin {
     install(app: App): void;
-  };
+  }
 
-  type Template = {
+  interface Template {
     fragment: DocumentFragment;
     attributes: number[] | null;
     insertions: number[] | null;
-  };
+  }
 
-  type ComponentOptions = {
+  interface ComponentOptions {
     shadow?: boolean;
-  };
+  }
 
-  type Component<P extends unknown[] = unknown[], R = unknown> = {
+  interface Component<P extends unknown[] = unknown[], R = unknown> {
+    new (): HTMLElement;
     (...params: P): R;
-  };
+  }
 
-  type Binding<T> = {
+  interface Binding<T> {
     readonly value: T;
     readonly rawValue: Signal<T> | Ref<T> | T;
     readonly arg: string | null;
     readonly modifiers: { [name: string]: boolean } | null;
-  };
+  }
 
-  type AppInjection = {
+  interface AppInjection {
     branch: Branch | null;
     cleanup: Cleanup | null;
     mounted: boolean;
@@ -51,7 +70,15 @@ declare global {
     currentNodes: Node[] | null;
     directives: { [name: string]: Directive };
     components: { [name: string]: { new (): HTMLElement } };
-  };
+  }
+
+  interface DirectiveRegistry {
+    [name: string]: Directive<any>;
+  }
+
+  interface ComponentRegistry {
+    [name: `${string}-${string}`]: Component<any[], any>;
+  }
 }
 
 export function createApp(rootComponent: Component): App;

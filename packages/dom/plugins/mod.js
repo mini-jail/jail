@@ -3,6 +3,9 @@ import { cleaned, effect } from "signal";
 
 const Events = Symbol("Events");
 
+/**
+ * @param {Event} event
+ */
 function eventLoop(event) {
   const type = event.type;
   let elt = event.target;
@@ -12,23 +15,26 @@ function eventLoop(event) {
   }
 }
 
+/**
+ * @type {AppPlugin}
+ */
 export default {
   install(app) {
     const RegisteredEvents = {};
-    app.directive("ref", (elt, binding) => {
-      if (binding.rawValue == null || typeof binding.rawValue === "boolean") {
+    app.directive("ref", (elt, { rawValue }) => {
+      if (rawValue == null || typeof rawValue === "boolean") {
         return;
       }
-      if (typeof binding.rawValue === "function") {
+      if (typeof rawValue === "function") {
         effect(() => {
-          const cleanup = binding.rawValue(elt);
+          const cleanup = rawValue(elt);
           if (typeof cleanup === "function") {
             cleaned(cleanup);
           }
         });
       }
-      if ("value" in binding.rawValue) {
-        binding.rawValue.value = elt;
+      if ("value" in rawValue) {
+        rawValue.value = elt;
       }
     });
 

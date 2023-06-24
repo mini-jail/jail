@@ -2,35 +2,52 @@
 import { computed, inject, injection, signal, tree } from "signal";
 
 export const path = signal("");
-const ParamsInjection = injection();
+/**
+ * @type {Injection<Params>}
+ */
+const Params = injection();
 
 export function params() {
-  return inject(ParamsInjection);
+  return inject(Params);
 }
 
-function createUrlMatcher(path) {
-  return new RegExp(
-    "^" + path.replace(/:(\w+)/g, (_, name) => `(?<${name}>[^\\/]+)`) + "$",
+/**
+ * @param {string} path
+ * @returns {RegExp}
+ */
+function matcher(path) {
+  return RegExp(
+    "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
   );
 }
 
-function createRoutes(routeMap) {
+/**
+ * @template T
+ * @param {RouteMap<T>} routeMap
+ * @returns {Route[]}
+ */
+function routes(routeMap) {
   return Object.keys(routeMap).map((path) => ({
     path,
-    regexp: createUrlMatcher(path),
+    regexp: matcher(path),
     handler: routeMap[path],
   }));
 }
 
+/**
+ * @template T
+ * @param {RouteMap<T>} routeMap
+ * @returns {() => T | undefined}
+ */
 export function routed(routeMap) {
-  const routes = createRoutes(routeMap);
+  const routeArray = routes(routeMap);
   return tree(() => {
     return computed(() => {
       const nextPath = path();
-      for (const route of routes) {
+      for (const route of routeArray) {
         if (route.regexp.test(nextPath)) {
           const params = route.regexp.exec(nextPath)?.groups;
-          return ParamsInjection.provide(params, () => {
+          return Params.provide(params, () => {
             return route.handler();
           });
         }

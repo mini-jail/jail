@@ -29,7 +29,13 @@ const AttrRegExp = / ([^"'<>]+)=["']###(\d+)###["']/g;
 const OnlyLastAttr = RegExp(`( ${hash})(?=.*[.])`, "g");
 const ChildQuery = `slot[name^=${hash}]`;
 const AttrQuery = `[${hash}]`;
+/**
+ * @type {Map<TemplateStringsArray, Template>}
+ */
 const TemplateCache = new Map();
+/**
+ * @type {Injection<AppInjection>}
+ */
 const App = injection({
   branch: null,
   cleanup: null,
@@ -44,6 +50,11 @@ function useApp() {
   return inject(App);
 }
 
+/**
+ * @template T
+ * @param {(app: AppInjection) => T} callback
+ * @returns {T}
+ */
 function createAppInjection(callback) {
   return App.provide({}, (cleanup) => {
     const app = useApp();
@@ -58,6 +69,10 @@ function createAppInjection(callback) {
   });
 }
 
+/**
+ * @param {Component} rootComponent
+ * @returns {App}
+ */
 export function createApp(rootComponent) {
   return createAppInjection((app) => ({
     directive(name, directive) {
@@ -68,6 +83,9 @@ export function createApp(rootComponent) {
       return this;
     },
     component(name, rootComponent, options) {
+      if (arguments.length === 1) {
+        return app.components[name];
+      }
       app.components[name] = class extends HTMLElement {
         #onDestroy = null;
         constructor() {
@@ -122,16 +140,31 @@ export function createApp(rootComponent) {
   }));
 }
 
+/**
+ * @template T, P, R
+ * @param {T & Component<P, R>} component
+ * @returns {Component<P, R>}
+ */
 export function component(component) {
   return function Component(...args) {
     return createScope(() => component(...args));
   };
 }
 
+/**
+ * @template T
+ * @param {string} name
+ * @param {Directive<T>} directive
+ */
 export function directive(name, directive) {
   useApp().directives[name] = directive;
 }
 
+/**
+ * @param {Element} rootElement
+ * @param {Component} rootComponent
+ * @returns {Cleanup}
+ */
 export function mount(rootElement, rootComponent) {
   return tree((cleanup) => {
     const anchor = rootElement.appendChild(new Text());
@@ -150,6 +183,11 @@ export function mount(rootElement, rootComponent) {
   });
 }
 
+/**
+ * @param {TemplateStringsArray} strings
+ * @param  {...any} args
+ * @returns {DocumentFragment}
+ */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings);
   const fragment = cloneNode.call(template.fragment, true);
@@ -174,6 +212,10 @@ export function template(strings, ...args) {
   return fragment;
 }
 
+/**
+ * @param {TemplateStringsArray} strings
+ * @returns {Template}
+ */
 function createTemplate(strings) {
   let insertions = null;
   let attributes = null;
@@ -201,15 +243,18 @@ function createTemplate(strings) {
     push.call(insertions, Number(arg));
     return `<slot name="${hash + arg}"></slot>`;
   });
-  data = trim.call(data);
   const template = document.createElement("template");
-  template.innerHTML = data;
+  template.innerHTML = trim.call(data);
   /** @type {Template} */
   const cacheItem = { fragment: template.content, attributes, insertions };
   TemplateCache.set(strings, cacheItem);
   return cacheItem;
 }
 
+/**
+ * @param {Element} elt
+ * @param {any} value
+ */
 function insertChild(elt, value) {
   if (value == null || typeof value === "boolean") {
     elt.remove();
@@ -228,6 +273,11 @@ function insertChild(elt, value) {
   }
 }
 
+/**
+ * @param {Element} elt
+ * @param {string} prop
+ * @param {any} data
+ */
 function insertAttribute(elt, prop, data) {
   if (startsWith.call(prop, "d-")) {
     prop = slice.call(prop, 2);
@@ -255,6 +305,12 @@ function insertAttribute(elt, prop, data) {
   }
 }
 
+/**
+ * @template T
+ * @param {string} prop
+ * @param {T} rawValue
+ * @returns {Binding<T>}
+ */
 function binding(prop, rawValue) {
   let modifiers = null, arg = null;
   if (includes.call(prop, ":")) {
@@ -276,6 +332,11 @@ function binding(prop, rawValue) {
   };
 }
 
+/**
+ * @param {Element} elt
+ * @param {string} prop
+ * @param {any} value
+ */
 function setProperty(elt, prop, value) {
   if (prop in elt) {
     elt[prop] = value;
@@ -289,6 +350,11 @@ function setProperty(elt, prop, value) {
   }
 }
 
+/**
+ * @param {Node[]} nodeArray
+ * @param  {...any} elements
+ * @returns {Node[]}
+ */
 function createNodeArray(nodeArray, ...elements) {
   for (const elt of elements) {
     if (elt == null || typeof elt === "boolean") {
@@ -309,10 +375,19 @@ function createNodeArray(nodeArray, ...elements) {
   return nodeArray;
 }
 
+/**
+ * @param {string} name
+ * @returns {string}
+ */
 function createAttributeName(name) {
   return toLowerCase.call(replace.call(name, /([A-Z])/g, "-$1"));
 }
 
+/**
+ * @param {Node} anchor
+ * @param {(Node | null)[] | null} currentNodes
+ * @param {Node[]} nextNodes
+ */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
   if (currentNodes === null) {
     for (const nextNode of nextNodes) {
@@ -352,6 +427,11 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
   }
 }
 
+/**
+ * @param {Node} node
+ * @param {Node} otherNode
+ * @returns {boolean}
+ */
 function bothAreCharacterData(node, otherNode) {
   const type = node.nodeType;
   return (type === 3 || type === 8) && otherNode.nodeType === type;

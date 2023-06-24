@@ -70,7 +70,7 @@ const App = () => {
   `;
 };
 
-createApp(App)
+const app = createApp(App)
   .component("app-navigation", Navigation)
   .component("app-router", HashRouter)
   .use(Plugins)
