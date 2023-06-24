@@ -1,9 +1,9 @@
-import { createComputed, createSignal, onDestroy, onMount } from "signal";
+import { computed, destroyed, mounted, signal } from "signal";
 import { template } from "signal/dom";
-import { getParams } from "signal/router";
+import { params } from "signal/router";
 
 const Dot = (x, y, target, counterSignal) => {
-  const hover = createSignal(false);
+  const hover = signal(false);
   const onMouseOut = () => hover(false);
   const onMouseOver = () => hover(true);
   const text = () => hover() ? "*" + counterSignal() + "*" : counterSignal();
@@ -41,16 +41,16 @@ const Triangle = (x, y, target, size, counterSignal) => {
 };
 
 export default () => {
-  const { target = "750", size = "25" } = getParams() || {};
+  const { target = "750", size = "25" } = params() || {};
   let id;
-  const elapsed = createSignal(0);
-  const count = createSignal(0);
-  const scale = createComputed(() => {
+  const elapsed = signal(0);
+  const count = signal(0);
+  const scale = computed(() => {
     const e = (elapsed() / 1000) % 10;
     return 1 + (e > 5 ? 10 - e : e) / 10;
   });
 
-  onMount(() => {
+  mounted(() => {
     id = setInterval(() => count((count() % 10) + 1), 1000);
     const start = Date.now();
     const frame = () => {
@@ -60,7 +60,7 @@ export default () => {
     requestAnimationFrame(frame);
   });
 
-  onDestroy(() => {
+  destroyed(() => {
     clearInterval(id);
   });
 

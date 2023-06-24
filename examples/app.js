@@ -1,6 +1,7 @@
-import { createEffect, onCleanup, onMount } from "signal";
-import { createRouter, pathSignal } from "signal/router";
+import { cleaned, effect, mounted } from "signal";
+import { path, routed } from "signal/router";
 import { createApp, template } from "signal/dom";
+import Plugins from "signal/dom/plugins";
 
 import Home from "./routes/home.js";
 import Counter from "./routes/counter.js";
@@ -13,24 +14,22 @@ import TextPlugin from "./plugins/text.js";
 
 const Navigation = () => {
   return template`
-    <link href="/examples/app.css" rel="stylesheet"/>
-    <nav path-signal="${pathSignal}">
+    <nav d-event:click.delegate="${console.log}">
       <a href="#/">home</a>
       <a href="#/counter">counter</a>
       <a href="#/sierpinski">sierpinski</a>
       <a href="#/todo">todo</a>
       <a href="#/about">about</a>
       <a href="#/error">error</a>
-      <slot></slot>
     </nav>
   `;
 };
 
 const HashRouter = () => {
   const getHash = () => location.hash.slice(1) || "/";
-  const listener = () => pathSignal(getHash());
+  const listener = () => path(getHash());
 
-  const Router = createRouter({
+  const Router = routed({
     "/": Home,
     "/counter": Counter,
     "/sierpinski": Sierpinski,
@@ -41,12 +40,12 @@ const HashRouter = () => {
     "/:url": NotFound,
   });
 
-  onMount(() => {
-    pathSignal(getHash());
+  mounted(() => {
+    path(getHash());
     addEventListener("hashchange", listener);
   });
 
-  onCleanup(() => {
+  cleaned(() => {
     removeEventListener("hashchange", listener);
   });
 
@@ -54,13 +53,13 @@ const HashRouter = () => {
 };
 
 const App = () => {
-  createEffect(() => {
-    document.title = `signal${pathSignal()}`;
+  effect(() => {
+    document.title = `signal${path()}`;
   });
 
   return template`
     <header>
-      <h3>signal${pathSignal}</h3>
+      <h3>signal${path}</h3>
       <app-navigation>
       </app-navigation>
     </header>
@@ -72,7 +71,8 @@ const App = () => {
 };
 
 createApp(App)
-  .component("app-navigation", Navigation, { shadow: true })
+  .component("app-navigation", Navigation)
   .component("app-router", HashRouter)
+  .use(Plugins)
   .use(TextPlugin)
   .mount(document.body);

@@ -1,4 +1,4 @@
-import { createSignal } from "signal";
+import { signal } from "signal";
 import { template } from "signal/dom";
 
 /**
@@ -9,8 +9,8 @@ import { template } from "signal/dom";
  * }} TodoItem
  */
 
-/** @type {import("signal").Signal<TodoItem[]>} */
-const list = createSignal([
+/** @type {Signal<TodoItem[]>} */
+const list = signal([
   { id: 0, done: true, text: "eat cornflakes without soymilk" },
   { id: 1, done: false, text: "buy soymilk" },
 ]);
@@ -41,7 +41,7 @@ const Item = (props) => {
 };
 
 export default () => {
-  const textValue = createSignal("");
+  const textValue = signal("");
 
   const addItem = (ev) => {
     if (ev.key === "Enter") {

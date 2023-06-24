@@ -1,11 +1,11 @@
-import { createComputed, createSignal } from "signal";
+import { computed, signal } from "signal";
 import { template } from "signal/dom";
 
 export default () => {
-  const counter = createSignal(0);
+  const counter = signal(0);
   const add = () => counter(counter() + 1);
   const sub = () => counter(counter() - 1);
-  const clicked = createComputed((currentValue) => {
+  const clicked = computed((currentValue) => {
     counter();
     return currentValue + 1;
   }, -1);
