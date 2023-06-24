@@ -88,6 +88,7 @@ export default {
         }
       } else {
         elt.addEventListener(name, listener, eventOptions);
+        cleanup = () => elt.removeEventListener(name, listener, eventOptions);
       }
       return cleanup;
     });
