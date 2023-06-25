@@ -1,12 +1,26 @@
-import { createComputed, createSignal, onMount, onUnmount } from "signal";
+import {
+  createComputed,
+  createInjection,
+  createSignal,
+  inject,
+  onMount,
+  onUnmount,
+  provide,
+} from "signal";
 import { template } from "signal/dom";
 import { getParams } from "signal/router";
 
-const Dot = (x, y, target, counterSignal) => {
+/**
+ * @type {jail.Injection<jail.Signal<number>>}
+ */
+const Counter = createInjection();
+
+const Dot = (x, y, target) => {
+  const counter = inject(Counter);
   const hover = createSignal(false);
   const onMouseOut = () => hover(false);
   const onMouseOver = () => hover(true);
-  const text = () => hover() ? "*" + counterSignal() + "*" : counterSignal();
+  const text = () => hover() ? "*" + counter() + "*" : counter();
 
   const css = () => `
     width: ${target}px;
@@ -29,15 +43,15 @@ const Dot = (x, y, target, counterSignal) => {
   `;
 };
 
-const Triangle = (x, y, target, size, counterSignal) => {
+const Triangle = (x, y, target, size) => {
   if (target <= size) {
-    return Dot(x, y, target, counterSignal);
+    return Dot(x, y, target);
   }
   target = target / 2;
   return template`
-    ${Triangle(x, y - target / 2, target, size, counterSignal)}
-    ${Triangle(x - target, y + target / 2, target, size, counterSignal)}
-    ${Triangle(x + target, y + target / 2, target, size, counterSignal)}
+    ${Triangle(x, y - target / 2, target, size)}
+    ${Triangle(x - target, y + target / 2, target, size)}
+    ${Triangle(x + target, y + target / 2, target, size)}
   `;
 };
 
@@ -50,6 +64,8 @@ export default () => {
     const e = (elapsed() / 1000) % 10;
     return 1 + (e > 5 ? 10 - e : e) / 10;
   });
+
+  provide(Counter, count);
 
   onMount(() => {
     id = setInterval(() => count((count() % 10) + 1), 1000);
