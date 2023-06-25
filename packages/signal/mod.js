@@ -1,75 +1,115 @@
 /// <reference types="./mod.d.ts" />
 const Error = Symbol();
-const Queue = new Set();
+/**
+ * @type {Set<jail.Node>}
+ */
+const NodeQueue = new Set();
 let isRunning = false;
-let activeBranch = null;
+/**
+ * @type {jail.Node | null}
+ */
+let activeNode = null;
 
-export function tree(callback) {
-  const localBranch = activeBranch = branch();
+/**
+ * @template T
+ * @param {(cleanup: jail.Cleanup) => T | void} callback
+ * @returns {T | void}
+ */
+export function createRoot(callback) {
+  const localNode = activeNode = createNode();
   try {
     return batch(() =>
       callback(
-        callback.length === 0 ? undefined : clean.bind(localBranch, true),
+        callback.length === 0 ? undefined : clean.bind(localNode, true),
       )
     );
   } catch (error) {
     handleError(error);
   } finally {
-    activeBranch = localBranch.parentBranch;
+    activeNode = localNode.parentNode;
   }
 }
 
-export function branchRef() {
-  return activeBranch;
+/**
+ * @returns {jail.Node | null}
+ */
+export function nodeRef() {
+  return activeNode;
 }
 
-export function withBranch(branch, callback) {
-  const previousBranch = activeBranch;
-  activeBranch = branch;
+/**
+ * @template T
+ * @param {jail.Node} node
+ * @param {() => T} callback
+ * @returns {T}
+ */
+export function withNode(node, callback) {
+  const localNode = activeNode;
+  activeNode = node;
   let result;
   try {
     result = callback();
   } catch (error) {
     handleError(error);
   } finally {
-    activeBranch = previousBranch;
+    activeNode = localNode;
   }
   return result;
 }
 
-function branch(initialValue, onupdate) {
-  const localBranch = {
+/**
+ * @param {any} [initialValue]
+ * @param {(currentValue: any) => any} [onupdate]
+ * @returns {jail.Node}
+ */
+function createNode(initialValue, onupdate) {
+  const localNode = {
     value: initialValue,
-    parentBranch: activeBranch,
-    childBranches: null,
+    parentNode: activeNode,
+    childNodes: null,
     injections: null,
     cleanups: null,
     onupdate: onupdate || null,
     sources: null,
     sourceSlots: null,
   };
-  if (activeBranch !== null) {
-    addChild.call(activeBranch, localBranch);
+  if (activeNode !== null) {
+    addChild.call(activeNode, localNode);
   }
-  return localBranch;
+  return localNode;
 }
 
-function addChild(branch) {
-  if (this.childBranches === null) {
-    this.childBranches = [branch];
+/**
+ * @this {jail.Node}
+ * @param {jail.Node} node
+ */
+function addChild(node) {
+  if (this.childNodes === null) {
+    this.childNodes = [node];
   } else {
-    this.childBranches.push(branch);
+    this.childNodes.push(node);
   }
 }
 
-export function mounted(callback) {
-  effect(() => untrack(callback));
+/**
+ * @param {() => void} callback
+ */
+export function onMount(callback) {
+  createEffect(() => untrack(callback));
 }
 
-export function destroyed(callback) {
-  cleaned(() => untrack(callback));
+/**
+ * @param {() => void} callback
+ */
+export function onUnmount(callback) {
+  onCleanup(() => untrack(callback));
 }
 
+/**
+ * @param {() => void} dependency
+ * @param {(currentValue: any) => any} callback
+ * @returns {(currentValue: any) => any}
+ */
 export function on(dependency, callback) {
   return ((currentValue) => {
     dependency();
@@ -77,67 +117,97 @@ export function on(dependency, callback) {
   });
 }
 
-export function effect(callback, initialValue) {
-  if (activeBranch !== null) {
-    const localBranch = branch(initialValue, callback);
+/**
+ * @param {(currentValue: any) => any} callback
+ * @param {any} [initialValue]
+ */
+export function createEffect(callback, initialValue) {
+  if (activeNode !== null) {
+    const localNode = createNode(initialValue, callback);
     if (isRunning) {
-      Queue.add(localBranch);
+      NodeQueue.add(localNode);
     } else {
-      queueMicrotask(() => update.call(localBranch, false));
+      queueMicrotask(() => update.call(localNode, false));
     }
   } else {
     queueMicrotask(() => callback(initialValue));
   }
 }
 
-export function computed(callback, initialValue) {
-  const src = source(initialValue);
-  effect(() => setValue.call(src, callback(src.value)));
-  return getValue.bind(src);
+/**
+ * @param {(currentValue: any) => any} callback
+ * @param {any} [initialValue]
+ * @returns {() => any}
+ */
+export function createComputed(callback, initialValue) {
+  const source = createSource(initialValue);
+  createEffect(() => setValue.call(source, callback(source.value)));
+  return getValue.bind(source);
 }
 
+/**
+ * @this {jail.Node | null}
+ * @param {symbol} id
+ * @returns
+ */
 function lookup(id) {
   return this !== null
     ? this.injections !== null && id in this.injections
       ? this.injections[id]
-      : lookup.call(this.parentBranch, id)
+      : lookup.call(this.parentNode, id)
     : undefined;
 }
 
-function source(initialValue) {
-  return { value: initialValue, branches: null, branchSlots: null };
+/**
+ * @param {any} [initialValue]
+ * @returns {jail.Source}
+ */
+function createSource(initialValue) {
+  return { value: initialValue, nodes: null, nodeSlots: null };
 }
 
+/**
+ * @this {jail.Source}
+ * @returns {any}
+ */
 function getValue() {
-  if (activeBranch !== null && activeBranch.onupdate !== null) {
-    const sourceSlot = this.branches?.length || 0,
-      branchSlot = activeBranch.sources?.length || 0;
-    if (activeBranch.sources === null) {
-      activeBranch.sources = [this];
-      activeBranch.sourceSlots = [sourceSlot];
+  if (activeNode !== null && activeNode.onupdate !== null) {
+    const sourceSlot = this.nodes?.length || 0,
+      nodeSlot = activeNode.sources?.length || 0;
+    if (activeNode.sources === null) {
+      activeNode.sources = [this];
+      activeNode.sourceSlots = [sourceSlot];
     } else {
-      activeBranch.sources.push(this);
-      activeBranch.sourceSlots.push(sourceSlot);
+      activeNode.sources.push(this);
+      activeNode.sourceSlots.push(sourceSlot);
     }
-    if (this.branches === null) {
-      this.branches = [activeBranch];
-      this.branchSlots = [branchSlot];
+    if (this.nodes === null) {
+      this.nodes = [activeNode];
+      this.nodeSlots = [nodeSlot];
     } else {
-      this.branches.push(activeBranch);
-      this.branchSlots.push(branchSlot);
+      this.nodes.push(activeNode);
+      this.nodeSlots.push(nodeSlot);
     }
   }
   return this.value;
 }
 
+/**
+ * @this {jail.Source}
+ * @param {any} value
+ */
 function setValue(value) {
   if (typeof value === "function") {
     value = value(this.value);
   }
   this.value = value;
-  queueBranches.call(this);
+  queueNodes.call(this);
 }
 
+/**
+ * @param {any} data
+ * @returns {boolean}
+ */
 export function isReactive(data) {
   if (data == null) {
     return false;
@@ -151,44 +221,67 @@ export function isReactive(data) {
   return false;
 }
 
+/**
+ * @param {any} data
+ * @returns {any}
+ */
 export function toValue(data) {
   return typeof data === "function" ? data() : data?.value || data;
 }
 
-function queueBranches() {
-  if (this.branches?.length) {
+/**
+ * @this {jail.Source}
+ */
+function queueNodes() {
+  if (this.nodes?.length) {
     batch(() => {
-      for (const branch of this.branches) {
-        Queue.add(branch);
+      for (const node of this.nodes) {
+        NodeQueue.add(node);
       }
     });
   }
 }
 
+/**
+ * @this {jail.Source}
+ * @param {any} value
+ * @returns {any}
+ */
 function sourceValue(value) {
   return arguments.length === 1
     ? setValue.call(this, value)
     : getValue.call(this);
 }
 
-export function signal(initialValue) {
-  return sourceValue.bind(source(initialValue));
+/**
+ * @param {any} [initialValue]
+ * @returns {jail.Signal}
+ */
+export function createSignal(initialValue) {
+  return sourceValue.bind(createSource(initialValue));
 }
 
-export function ref(initialValue) {
-  const src = source(initialValue);
+/**
+ * @param {any} [initialValue]
+ * @returns {jail.Ref}
+ */
+export function createRef(initialValue) {
+  const source = createSource(initialValue);
   return {
     get value() {
-      return getValue.call(src);
+      return getValue.call(source);
     },
     set value(nextValue) {
-      setValue.call(src, nextValue);
+      setValue.call(source, nextValue);
     },
   };
 }
 
+/**
+ * @param {any} error
+ */
 function handleError(error) {
-  const errorCallbacks = lookup.call(activeBranch, Error);
+  const errorCallbacks = lookup.call(activeNode, Error);
   if (!errorCallbacks) {
     return reportError(error);
   }
@@ -197,36 +290,50 @@ function handleError(error) {
   }
 }
 
+/**
+ * @param {(error: any) => void} callback
+ */
 export function catchError(callback) {
-  if (activeBranch === null) {
+  if (activeNode === null) {
     return;
   }
-  if (activeBranch.injections === null) {
-    activeBranch.injections = { [Error]: [callback] };
+  if (activeNode.injections === null) {
+    activeNode.injections = { [Error]: [callback] };
   } else {
-    activeBranch.injections[Error].push(callback);
+    activeNode.injections[Error].push(callback);
   }
 }
 
-export function cleaned(callback) {
-  if (activeBranch === null) {
+/**
+ * @param {jail.Cleanup} callback
+ */
+export function onCleanup(callback) {
+  if (activeNode === null) {
     return;
   }
-  if (activeBranch.cleanups === null) {
-    activeBranch.cleanups = [callback];
+  if (activeNode.cleanups === null) {
+    activeNode.cleanups = [callback];
   } else {
-    activeBranch.cleanups.push(callback);
+    activeNode.cleanups.push(callback);
   }
 }
 
+/**
+ * @param {() => any} callback
+ * @returns {any}
+ */
 export function untrack(callback) {
-  const branch = activeBranch;
-  activeBranch = null;
+  const localNode = activeNode;
+  activeNode = null;
   const result = callback();
-  activeBranch = branch;
+  activeNode = localNode;
   return result;
 }
 
+/**
+ * @param {() => any} callback
+ * @returns {any}
+ */
 function batch(callback) {
   if (isRunning) {
     return callback();
@@ -241,62 +348,77 @@ function flush() {
   if (isRunning === false) {
     return;
   }
-  for (const branch of Queue) {
-    Queue.delete(branch);
-    update.call(branch, false);
+  for (const node of NodeQueue) {
+    NodeQueue.delete(node);
+    update.call(node, false);
   }
   isRunning = false;
 }
 
+/**
+ * @this {jail.Node}
+ * @param {boolean} complete
+ */
 function update(complete) {
   clean.call(this, complete);
   if (this.onupdate === null) {
     return;
   }
-  const previousBranch = activeBranch;
-  activeBranch = this;
+  const previousNode = activeNode;
+  activeNode = this;
   try {
     this.value = this.onupdate(this.value);
   } catch (error) {
     handleError(error);
   } finally {
-    activeBranch = previousBranch;
+    activeNode = previousNode;
   }
 }
 
+/**
+ * @this {jail.Node}
+ */
 function cleanSources() {
   while (this.sources.length) {
     const source = this.sources.pop();
     const sourceSlot = this.sourceSlots.pop();
-    if (source.branches?.length) {
-      const sourceBranch = source.branches.pop();
-      const branchSlot = source.branchSlots.pop();
-      if (sourceSlot < source.branches.length) {
-        source.branches[sourceSlot] = sourceBranch;
-        source.branchSlots[sourceSlot] = branchSlot;
-        sourceBranch.sourceSlots[branchSlot] = sourceSlot;
+    if (source.nodes?.length) {
+      const sourceNode = source.nodes.pop();
+      const nodeSlot = source.nodeSlots.pop();
+      if (sourceSlot < source.nodes.length) {
+        source.nodes[sourceSlot] = sourceNode;
+        source.nodeSlots[sourceSlot] = nodeSlot;
+        sourceNode.sourceSlots[nodeSlot] = sourceSlot;
       }
     }
   }
 }
 
-function cleanChildBranches(complete) {
+/**
+ * @this {jail.Node}
+ * @param {boolean} complete
+ */
+function cleanChildNodes(complete) {
   const hasUpdateHandler = this.onupdate !== null;
-  while (this.childBranches.length) {
-    const childBranch = this.childBranches.pop();
+  while (this.childNodes.length) {
+    const childNode = this.childNodes.pop();
     clean.call(
-      childBranch,
-      complete || (hasUpdateHandler && childBranch.onupdate !== null),
+      childNode,
+      complete || (hasUpdateHandler && childNode.onupdate !== null),
     );
   }
 }
 
+/**
+ * @this {jail.Node}
+ * @param {boolean} complete
+ */
 function clean(complete) {
   if (this.sources?.length) {
     cleanSources.call(this);
   }
-  if (this.childBranches?.length) {
-    cleanChildBranches.call(this, complete);
+  if (this.childNodes?.length) {
+    cleanChildNodes.call(this, complete);
   }
   if (this.cleanups?.length) {
     cleanup.call(this);
@@ -307,35 +429,52 @@ function clean(complete) {
   }
 }
 
+/**
+ * @this {jail.Node}
+ */
 function cleanup() {
   while (this.cleanups.length) {
     this.cleanups.pop()();
   }
 }
 
+/**
+ * @this {jail.Node}
+ */
 function dispose() {
   this.value = null;
-  this.parentBranch = null;
-  this.childBranches = null;
+  this.parentNode = null;
+  this.childNodes = null;
   this.cleanups = null;
   this.onupdate = null;
   this.sources = null;
   this.sourceSlots = null;
 }
 
-export function injection(defaultValue) {
-  return {
-    id: Symbol(),
-    defaultValue,
-    provide(value, callback) {
-      return tree((cleanup) => {
-        activeBranch.injections = { [this.id]: value };
-        return callback(cleanup);
-      });
-    },
-  };
+/**
+ * @param {any} [defaultValue]
+ * @returns {jail.Injection}
+ */
+export function createInjection(defaultValue) {
+  return { id: Symbol(), defaultValue };
 }
 
+/**
+ * @param {jail.Injection} injection
+ * @returns {any}
+ */
 export function inject(injection) {
-  return lookup.call(activeBranch, injection.id) || injection.defaultValue;
+  return lookup.call(activeNode, injection.id) || injection.defaultValue;
+}
+
+/**
+ * @param {jail.Injection} injection
+ * @param {any} value
+ */
+export function provide(injection, value) {
+  if (activeNode === null) {
+    return;
+  }
+  activeNode.injections = activeNode.injections || {};
+  activeNode.injections[injection.id] = value;
 }

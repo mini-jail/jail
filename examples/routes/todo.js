@@ -1,16 +1,7 @@
-import { signal } from "signal";
+import { createSignal } from "signal";
 import { template } from "signal/dom";
 
-/**
- * @typedef {{
- *  id: number
- *  done: boolean
- *  text: string
- * }} TodoItem
- */
-
-/** @type {Signal<TodoItem[]>} */
-const list = signal([
+const list = createSignal([
   { id: 0, done: true, text: "eat cornflakes without soymilk" },
   { id: 1, done: false, text: "buy soymilk" },
 ]);
@@ -25,15 +16,15 @@ const Item = (props) => {
   };
 
   return template`
-    <div class="todo-item" id="${"item_id_" + props.id}">
+    <div class="todo-item">
       <div 
         class="todo-item-text" 
-        style="${props.done ? "color: green; font-style: italic;" : null}"
-        d-on:click="${toggleItem}"
+        style=${props.done ? "color: grey; font-style: italic;" : null}
+        d-on:click.delegate=${toggleItem}
       >
-        ${list().indexOf(props) + 1}. ${props.text}
+        ${props.text}
       </div>
-      <div class="todo-item-delete" d-on:click="${deleteItem}">
+      <div d-show=${props.done} class="todo-item-delete" d-on:click=${deleteItem}>
         delete
       </div>
     </div>
@@ -41,7 +32,7 @@ const Item = (props) => {
 };
 
 export default () => {
-  const textValue = signal("");
+  const textValue = createSignal("");
 
   const addItem = (ev) => {
     if (ev.key === "Enter") {
@@ -62,18 +53,20 @@ export default () => {
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>
       <div class="todo-app-container">
-        <input type="text"
-               placeholder="...milk?"
-               required
-               class="todo_input"
-               value="${textValue}" 
-               d-on:keyup.delegate="${addItem}" 
-               d-on:input.delegate="${onInput}"/>
+        <input 
+          type="text"
+          placeholder="...milk?"
+          required
+          class="todo_input"
+          value=${textValue}
+          d-on:keyup=${addItem}
+          d-on:input=${onInput}
+        />
         <div class="todo-items">
           ${() => list().map((item) => Item(item))}
         </div>
         <label>progress: ${done}/${length}</label>
-        <progress max="${length}" value="${done}"></progress>
+        <progress max=${length} value=${done}></progress>
       </div>
     </article>
 

@@ -1,8 +1,24 @@
 declare global {
-  interface DirectiveRegistry {
-    ref: Directive<Signal<Element> | Ref<Element>>;
-    on: Directive<(event: Event) => void>;
+  namespace jail {
+    type OnBinding<T extends Event = Event> = {
+      (event: T): void;
+    };
+
+    interface DirectiveRegistry {
+      ref: Directive<DOMElement>;
+      on: Directive<OnBinding>;
+      bind: Directive<unknown>;
+      html: Directive<string>;
+      text: Directive<string>;
+      show: Directive<boolean>;
+    }
   }
 }
 
-export default AppPlugin;
+export const Package: jail.Plugin;
+export const RefDirective: jail.DirectiveRegistry["ref"];
+export const OnDirective: jail.DirectiveRegistry["on"];
+export const BindDirective: jail.DirectiveRegistry["bind"];
+export const HTMLDirective: jail.DirectiveRegistry["html"];
+export const TextDirective: jail.DirectiveRegistry["text"];
+export const ShowDirective: jail.DirectiveRegistry["show"];

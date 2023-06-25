@@ -1,7 +1,7 @@
-import { cleaned, effect, mounted } from "signal";
-import { path, routed } from "signal/router";
+import { createEffect, onCleanup, onMount } from "signal";
+import { createRouter, path } from "signal/router";
 import { createApp, template } from "signal/dom";
-import Plugins from "signal/dom/plugins";
+import { Package } from "signal/dom/plugins";
 
 import Home from "./routes/home.js";
 import Counter from "./routes/counter.js";
@@ -10,11 +10,9 @@ import About from "./routes/about.js";
 import Todo from "./routes/todo.js";
 import NotFound from "./routes/notfound.js";
 
-import TextPlugin from "./plugins/text.js";
-
 const Navigation = () => {
   return template`
-    <nav d-on:click.once="${console.log}">
+    <nav>
       <a href="#/">home</a>
       <a href="#/counter">counter</a>
       <a href="#/sierpinski">sierpinski</a>
@@ -27,9 +25,8 @@ const Navigation = () => {
 
 const HashRouter = () => {
   const getHash = () => location.hash.slice(1) || "/";
-  const listener = () => path(getHash());
 
-  const Router = routed({
+  const router = createRouter({
     "/": Home,
     "/counter": Counter,
     "/sierpinski": Sierpinski,
@@ -40,22 +37,22 @@ const HashRouter = () => {
     "/:url": NotFound,
   });
 
-  mounted(() => {
+  const listener = () => path(getHash());
+
+  onMount(() => {
     path(getHash());
     addEventListener("hashchange", listener);
   });
 
-  cleaned(() => {
+  onCleanup(() => {
     removeEventListener("hashchange", listener);
   });
 
-  return template`${Router}`;
+  return template`${router}`;
 };
 
-const App = () => {
-  effect(() => {
-    document.title = `signal${path()}`;
-  });
+const RootComponent = () => {
+  createEffect(() => document.title = `signal${path()}`);
 
   return template`
     <header>
@@ -70,9 +67,8 @@ const App = () => {
   `;
 };
 
-const app = createApp(App)
+createApp(RootComponent)
   .component("app-navigation", Navigation)
   .component("app-router", HashRouter)
-  .use(Plugins)
-  .use(TextPlugin)
+  .use(Package)
   .mount(document.body);

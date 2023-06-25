@@ -1,14 +1,14 @@
-import { computed, destroyed, mounted, signal } from "signal";
+import { createComputed, createSignal, onMount, onUnmount } from "signal";
 import { template } from "signal/dom";
-import { params } from "signal/router";
+import { getParams } from "signal/router";
 
 const Dot = (x, y, target, counterSignal) => {
-  const hover = signal(false);
+  const hover = createSignal(false);
   const onMouseOut = () => hover(false);
   const onMouseOver = () => hover(true);
   const text = () => hover() ? "*" + counterSignal() + "*" : counterSignal();
 
-  const style = () => `
+  const css = () => `
     width: ${target}px;
     height: ${target}px;
     line-height: ${target}px;
@@ -20,11 +20,12 @@ const Dot = (x, y, target, counterSignal) => {
   `;
 
   return template`
-    <div class="dot"
-         d-text="${text}"
-         style="${style}"
-         d-on:mouseover.delegate="${onMouseOver}" 
-         d-on:mouseout.delegate="${onMouseOut}"></div>
+    <div 
+      class="dot" 
+      d-text=${text}
+      style=${css} 
+      d-on:mouseover.delegate=${onMouseOver} 
+      d-on:mouseout.delegate=${onMouseOut}></div>
   `;
 };
 
@@ -41,16 +42,16 @@ const Triangle = (x, y, target, size, counterSignal) => {
 };
 
 export default () => {
-  const { target = "750", size = "25" } = params() || {};
+  const { target = "750", size = "25" } = getParams() || {};
   let id;
-  const elapsed = signal(0);
-  const count = signal(0);
-  const scale = computed(() => {
+  const elapsed = createSignal(0);
+  const count = createSignal(0);
+  const scale = createComputed(() => {
     const e = (elapsed() / 1000) % 10;
     return 1 + (e > 5 ? 10 - e : e) / 10;
   });
 
-  mounted(() => {
+  onMount(() => {
     id = setInterval(() => count((count() % 10) + 1), 1000);
     const start = Date.now();
     const frame = () => {
@@ -60,15 +61,15 @@ export default () => {
     requestAnimationFrame(frame);
   });
 
-  destroyed(() => {
+  onUnmount(() => {
     clearInterval(id);
   });
 
-  const style = () =>
+  const transform = () =>
     `transform: scaleX(${scale() / 2.1}) scaleY(0.7) translateZ(0.1px);`;
 
   return template`
-    <div class="triangle-demo" style="${style}">
+    <div class="triangle-demo" style=${transform}>
       ${Triangle(0, 0, Number(target), Number(size), count)}
     </div>
 

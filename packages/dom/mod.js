@@ -1,80 +1,73 @@
 /// <reference types="./mod.d.ts" />
 import {
-  branchRef,
-  cleaned,
-  effect,
+  createEffect,
+  createInjection,
+  createRoot,
   inject,
-  injection,
   isReactive,
+  nodeRef,
+  onCleanup,
+  provide,
   toValue,
-  tree,
-  withBranch,
+  withNode,
 } from "signal";
 
 const { replace, slice, includes, startsWith, toLowerCase, match, trim } =
   String.prototype;
 const { replaceChild, insertBefore, isEqualNode, cloneNode } = Node.prototype;
 const { getAttribute, setAttribute, removeAttribute } = Element.prototype;
-const { push } = Array.prototype;
-const hash = ((size, chars) => {
-  let counter = -1, result = "";
-  while (++counter < size) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result + "_";
-})(8, "abcdefghijklmnopqrstuvwxyz");
-const ArgRegExp = /###(\d+)###/g;
-const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g;
-const AttrRegExp = / ([^"'<>]+)=["']###(\d+)###["']/g;
-const OnlyLastAttr = RegExp(`( ${hash})(?=.*[.])`, "g");
-const ChildQuery = `slot[name^=${hash}]`;
-const AttrQuery = `[${hash}]`;
 /**
- * @type {Map<TemplateStringsArray, Template>}
+ * @type {(query: string) => Iterable<DOMElement>}
+ */
+const query = DocumentFragment.prototype.querySelectorAll;
+const push = Array.prototype.push;
+const prefix = "arg_";
+const prefixLength = prefix.length;
+const ArgRegExp = /{{ (\d+) }}/g;
+const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g;
+const AttrRegExp = / ([^"'<>\s]+)=["']?{{ (\d+) }}["']?/g;
+const OnlyLastAttr = RegExp(`( ${prefix})(?=.*[.])`, "g");
+const InsertionQuery = `slot[name^=${prefix}]`;
+const AttributeQuery = `[${prefix}]`;
+/**
+ * @type {Map<TemplateStringsArray, jail.Template>}
  */
 const TemplateCache = new Map();
 /**
- * @type {Injection<AppInjection>}
+ * @type {jail.Injection<jail.AppInjection>}
  */
-const App = injection({
-  branch: null,
+const App = createInjection({
+  node: null,
   cleanup: null,
   mounted: false,
   anchor: null,
   rootElement: document,
-  directives: {},
   currentNodes: null,
+  directives: {},
+  components: {},
 });
 
-function useApp() {
-  return inject(App);
-}
-
 /**
- * @template T
- * @param {(app: AppInjection) => T} callback
- * @returns {T}
- */
-function createAppInjection(callback) {
-  return App.provide({}, (cleanup) => {
-    const app = useApp();
-    app.branch = branchRef();
-    app.mounted = false;
-    app.anchor = null;
-    app.currentNodes = null;
-    app.directives = {};
-    app.components = {};
-    app.cleanup = cleanup;
-    return callback(app);
-  });
-}
-
-/**
- * @param {Component} rootComponent
- * @returns {App}
+ * @param {jail.FunctionalComponent} rootComponent
+ * @returns {jail.App}
  */
 export function createApp(rootComponent) {
-  return createAppInjection((app) => ({
+  /** @type {jail.AppInjection} */
+  const app = createRoot((cleanup) => {
+    provide(App, {
+      node: nodeRef(),
+      cleanup,
+      mounted: false,
+      anchor: null,
+      rootElement: null,
+      currentNodes: null,
+      directives: {},
+      components: {},
+    });
+    return inject(App);
+  });
+
+  return {
     directive(name, directive) {
       if (arguments.length === 1) {
         return app.directives[name];
@@ -90,7 +83,7 @@ export function createApp(rootComponent) {
         #onDestroy = null;
         constructor() {
           super();
-          withBranch(app.branch, () => {
+          withNode(app.node, () => {
             this.#onDestroy = mount(
               options?.shadow ? this.attachShadow({ mode: "open" }) : this,
               rootComponent,
@@ -104,6 +97,10 @@ export function createApp(rootComponent) {
       customElements.define(name, app.components[name]);
       return this;
     },
+    provide(injection, value) {
+      withNode(app.node, () => provide(injection, value));
+      return this;
+    },
     mount(rootElement) {
       if (app.mounted === true) {
         return this;
@@ -111,8 +108,8 @@ export function createApp(rootComponent) {
       app.mounted = true;
       app.rootElement = rootElement;
       app.anchor = rootElement.appendChild(new Text());
-      withBranch(app.branch, () => {
-        effect(() => {
+      withNode(app.node, () => {
+        createEffect(() => {
           const nextNodes = createNodeArray([], rootComponent());
           reconcileNodes(app.anchor, app.currentNodes, nextNodes);
           app.currentNodes = nextNodes;
@@ -131,19 +128,19 @@ export function createApp(rootComponent) {
       return this;
     },
     run(callback) {
-      return withBranch(app.branch, callback);
+      return withNode(app.node, callback);
     },
     use(plugin) {
       plugin.install(this);
       return this;
     },
-  }));
+  };
 }
 
 /**
  * @template T, P, R
- * @param {T & Component<P, R>} component
- * @returns {Component<P, R>}
+ * @param {T & FunctionalComponent<P, R>} component
+ * @returns {FunctionalComponent<P, R>}
  */
 export function component(component) {
   return function Component(...args) {
@@ -157,24 +154,24 @@ export function component(component) {
  * @param {Directive<T>} directive
  */
 export function directive(name, directive) {
-  useApp().directives[name] = directive;
+  inject(App).directives[name] = directive;
 }
 
 /**
- * @param {Element} rootElement
- * @param {Component} rootComponent
+ * @param {DOMElement} rootElement
+ * @param {FunctionalComponent} rootComponent
  * @returns {Cleanup}
  */
 export function mount(rootElement, rootComponent) {
-  return tree((cleanup) => {
+  return createRoot((cleanup) => {
     const anchor = rootElement.appendChild(new Text());
     let currentNodes = null;
-    effect(() => {
+    createEffect(() => {
       const nextNodes = createNodeArray([], rootComponent());
       reconcileNodes(anchor, currentNodes, nextNodes);
       currentNodes = nextNodes;
     });
-    cleaned(() => {
+    onCleanup(() => {
       reconcileNodes(anchor, currentNodes, []);
       anchor?.remove();
       currentNodes = null;
@@ -191,22 +188,22 @@ export function mount(rootElement, rootComponent) {
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings);
   const fragment = cloneNode.call(template.fragment, true);
-  if (template.attributes) {
-    for (const elt of fragment.querySelectorAll(AttrQuery)) {
-      removeAttribute.call(elt, hash);
+  if (template.hasInsertions) {
+    for (const elt of query.call(fragment, InsertionQuery)) {
+      insertChild(elt, args[slice.call(elt.name, prefixLength)]);
+    }
+  }
+  if (template.hasAttributes) {
+    for (const elt of query.call(fragment, AttributeQuery)) {
+      removeAttribute.call(elt, prefix);
       for (const data in elt.dataset) {
-        if (startsWith.call(data, hash) === false) {
+        if (startsWith.call(data, prefix) === false) {
           continue;
         }
         const prop = getAttribute.call(elt, `data-${data}`);
         removeAttribute.call(elt, `data-${data}`);
-        insertAttribute(elt, prop, args[slice.call(data, hash.length)]);
+        insertAttribute(elt, prop, args[slice.call(data, prefixLength)]);
       }
-    }
-  }
-  if (template.insertions) {
-    for (const elt of fragment.querySelectorAll(ChildQuery)) {
-      insertChild(elt, args[slice.call(elt.name, hash.length)]);
     }
   }
   return fragment;
@@ -217,42 +214,38 @@ export function template(strings, ...args) {
  * @returns {Template}
  */
 function createTemplate(strings) {
-  let insertions = null;
-  let attributes = null;
+  let hasInsertions = false;
+  let hasAttributes = false;
   let data = "", arg = 0;
   while (arg < strings.length - 1) {
-    data = data + strings[arg] + `###${arg++}###`;
+    data = data + strings[arg] + `{{ ${arg++} }}`;
   }
   data = replace.call(trim.call(data + strings[arg]), /^[ \t]+/gm, "");
-  data = replace.call(data, TagRegExp, (match) => {
-    match = replace.call(match, /(\s+)/g, " ");
-    match = replace.call(match, AttrRegExp, (_match, name, arg) => {
-      attributes = attributes || [];
-      push.call(attributes, Number(arg));
-      return ` data-${hash + arg}="${name}" ${hash}`;
+  data = replace.call(data, TagRegExp, (data) => {
+    data = replace.call(data, /(\s+)/g, " ");
+    data = replace.call(data, AttrRegExp, (_match, name, arg) => {
+      hasAttributes = true;
+      return ` data-${prefix + arg}="${name}" ${prefix}`;
     });
-    match = replace.call(match, ArgRegExp, (_match, arg) => {
-      attributes = attributes || [];
-      push.call(attributes, Number(arg));
-      return ` data-${hash + arg}="d-ref" ${hash}`;
-    });
-    return replace.call(match, OnlyLastAttr, "");
+    return replace.call(data, OnlyLastAttr, "");
   });
   data = replace.call(data, ArgRegExp, (_match, arg) => {
-    insertions = insertions || [];
-    push.call(insertions, Number(arg));
-    return `<slot name="${hash + arg}"></slot>`;
+    hasInsertions = true;
+    return `<slot name="${prefix + arg}"></slot>`;
   });
   const template = document.createElement("template");
   template.innerHTML = trim.call(data);
-  /** @type {Template} */
-  const cacheItem = { fragment: template.content, attributes, insertions };
+  const cacheItem = {
+    fragment: template.content,
+    hasAttributes,
+    hasInsertions,
+  };
   TemplateCache.set(strings, cacheItem);
   return cacheItem;
 }
 
 /**
- * @param {Element} elt
+ * @param {DOMElement} elt
  * @param {any} value
  */
 function insertChild(elt, value) {
@@ -263,7 +256,7 @@ function insertChild(elt, value) {
   } else if (isReactive(value) || (Array.isArray(value) && value.length)) {
     const anchor = new Text();
     replaceChild.call(elt.parentNode, anchor, elt);
-    effect((currentNodes) => {
+    createEffect((currentNodes) => {
       const nextNodes = createNodeArray([], toValue(value));
       reconcileNodes(anchor, currentNodes, nextNodes);
       return nextNodes;
@@ -274,7 +267,7 @@ function insertChild(elt, value) {
 }
 
 /**
- * @param {Element} elt
+ * @param {DOMElement} elt
  * @param {string} prop
  * @param {any} data
  */
@@ -282,18 +275,15 @@ function insertAttribute(elt, prop, data) {
   if (startsWith.call(prop, "d-")) {
     prop = slice.call(prop, 2);
     const key = match.call(prop, /[^:.]+/)[0];
-    const directive = useApp().directives[key];
+    const directive = inject(App).directives[key];
     if (directive) {
-      effect((binding) => {
-        const cleanup = directive(elt, binding);
-        if (typeof cleanup === "function") {
-          cleaned(cleanup);
-        }
+      createEffect((binding) => {
+        directive(elt, binding);
         return binding;
-      }, binding(prop, data));
+      }, createBinding(prop, data));
     }
   } else if (isReactive(data)) {
-    effect((currentValue) => {
+    createEffect((currentValue) => {
       const nextValue = toValue(data);
       if (nextValue !== currentValue) {
         setProperty(elt, prop, nextValue);
@@ -309,9 +299,9 @@ function insertAttribute(elt, prop, data) {
  * @template T
  * @param {string} prop
  * @param {T} rawValue
- * @returns {Binding<T>}
+ * @returns {jail.Binding<T>}
  */
-function binding(prop, rawValue) {
+function createBinding(prop, rawValue) {
   let modifiers = null, arg = null;
   if (includes.call(prop, ":")) {
     arg = match.call(prop, /:([^"'<>.]+)/)[1];
@@ -333,7 +323,7 @@ function binding(prop, rawValue) {
 }
 
 /**
- * @param {Element} elt
+ * @param {DOMElement} elt
  * @param {string} prop
  * @param {any} value
  */

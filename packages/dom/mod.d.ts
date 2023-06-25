@@ -1,100 +1,117 @@
 declare global {
-  interface App {
-    directive<K extends keyof DirectiveRegistry>(
-      name: K,
-    ): DirectiveRegistry[K] | undefined;
-    directive<K extends keyof DirectiveRegistry>(
-      name: K,
-      directive: DirectiveRegistry[K],
-    ): App;
-    directive(name: string): Directive | undefined;
-    directive(name: string, directive: Directive): App;
+  namespace jail {
+    type DOMElement = HTMLElement | SVGElement;
 
-    component<K extends keyof ComponentRegistry>(
-      name: K,
-      rootComponent: ComponentRegistry[K],
-      options?: ComponentOptions,
-    ): App;
-    component(
-      name: `${string}-${string}`,
-      rootComponent: Component,
-      options?: ComponentOptions,
-    ): App;
-    component<K extends keyof ComponentRegistry>(
-      name: K,
-    ): ComponentRegistry[K] | undefined;
-    component(name: `${string}-${string}`): Component | undefined;
+    interface App {
+      directive<K extends keyof DirectiveRegistry>(
+        name: K,
+      ): DirectiveRegistry[K] | undefined;
+      directive<K extends keyof DirectiveRegistry>(
+        name: K,
+        directive: DirectiveRegistry[K],
+      ): App;
+      directive(name: string): Directive | undefined;
+      directive(name: string, directive: Directive): App;
 
-    mount(rootElement: Element): App;
-    unmount(): App;
-    run<T>(callback: () => T): T;
-    use(plugin: AppPlugin): App;
-  }
+      provide<T>(injection: Injection<T>, value: T): App;
 
-  interface Directive<T = unknown> {
-    (elt: Element, binding: Binding<T>): Cleanup;
-  }
+      component<K extends keyof ComponentRegistry>(
+        name: K,
+        rootComponent: ComponentRegistry[K],
+      ): App;
+      component<K extends keyof ComponentRegistry>(
+        name: K,
+        rootComponent: ComponentRegistry[K],
+        options?: ComponentOptions,
+      ): App;
+      component(name: string, rootComponent: Component): App;
+      component(
+        name: string,
+        rootComponent: Component,
+        options?: ComponentOptions,
+      ): App;
+      component<K extends keyof ComponentRegistry>(
+        name: K,
+      ): ComponentRegistry[K] | undefined;
+      component(name: string): Component | undefined;
 
-  interface AppPlugin {
-    install(app: App): void;
-  }
+      mount(rootElement: DOMElement): App;
+      unmount(): App;
+      run<T>(callback: () => T): T;
+      use(plugin: Plugin): App;
+    }
 
-  interface Template {
-    fragment: DocumentFragment;
-    attributes: number[] | null;
-    insertions: number[] | null;
-  }
+    interface Plugin {
+      install(app: App): void;
+    }
 
-  interface ComponentOptions {
-    shadow?: boolean;
-  }
+    interface Template {
+      fragment: DocumentFragment;
+      hasAttributes: boolean;
+      hasInsertions: boolean;
+    }
 
-  interface FunctionalComponent<P extends unknown[] = unknown[], R = unknown> {
-    (...params: P): R;
-  }
+    interface ComponentOptions {
+      shadow?: boolean;
+    }
 
-  interface Component {
-    new (): HTMLElement;
-  }
+    interface FunctionalComponent<
+      P extends unknown[] = unknown[],
+      R = unknown,
+    > {
+      (...params: P): R;
+    }
 
-  interface Binding<T> {
-    readonly value: T;
-    readonly rawValue: Signal<T> | Ref<T> | T;
-    readonly arg: string | null;
-    readonly modifiers: { [name: string]: boolean } | null;
-  }
+    interface Component {
+      new (): HTMLElement;
+    }
 
-  interface AppInjection {
-    branch: Branch | null;
-    cleanup: Cleanup | null;
-    mounted: boolean;
-    anchor: Node | null;
-    rootElement: Element | null;
-    currentNodes: Node[] | null;
-    directives: { [name: string]: Directive };
-    components: { [name: string]: Component };
-  }
+    interface Binding<T> {
+      readonly value: T;
+      readonly rawValue: Signal<T> | Ref<T> | T;
+      readonly arg: string | null;
+      readonly modifiers: { [key: string]: boolean } | null;
+    }
 
-  interface DirectiveRegistry {
-    [name: string]: Directive<any>;
-  }
+    interface AppInjection {
+      node: Node | null;
+      cleanup: Cleanup | null;
+      mounted: boolean;
+      anchor: globalThis.Node | null;
+      rootElement: DOMElement | null;
+      currentNodes: globalThis.Node[] | null;
+      directives: { [name: string]: Directive };
+      components: { [name: string]: Component };
+    }
 
-  interface ComponentRegistry {
-    [name: `${string}-${string}`]: Component;
+    interface DirectiveRegistry {
+      [name: string]: Directive<any>;
+    }
+
+    interface ComponentRegistry {
+      [name: string]: Component;
+    }
+
+    interface Directive<T = unknown> {
+      (elt: DOMElement, binding: Binding<T>): void;
+    }
   }
 }
 
-export function createApp(rootComponent: Component): App;
+export function createApp(rootComponent: jail.Component): jail.App;
 
-export function component<
+export function createComponent<
   T extends (...args: unknown[]) => unknown,
   P extends Parameters<T>,
   R extends ReturnType<T>,
->(component: FunctionalComponent<P, R>): FunctionalComponent<P, R>;
+>(component: jail.FunctionalComponent<P, R>): jail.FunctionalComponent<P, R>;
 
-export function directive<T>(name: string, directive: Directive<T>): void;
+export function directive<T>(name: string, directive: jail.Directive<T>): void;
 
-export function mount(rootElement: Element, rootComponent: Component): Cleanup;
+export function mount(
+  rootElement: jail.DOMElement,
+  rootComponent: jail.Component,
+): jail.Cleanup;
 
 export function template(strings: TemplateStringsArray): DocumentFragment;
 export function template(

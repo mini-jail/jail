@@ -1,13 +1,20 @@
 /// <reference types="./mod.d.ts" />
-import { computed, inject, injection, signal, tree } from "signal";
+import {
+  createComputed,
+  createInjection,
+  createRoot,
+  createSignal,
+  inject,
+  provide,
+} from "signal";
 
-export const path = signal("");
 /**
- * @type {Injection<Params>}
+ * @type {jail.Injection<jail.Params>}
  */
-const Params = injection();
+const Params = createInjection();
+export const path = createSignal("");
 
-export function params() {
+export function getParams() {
   return inject(Params);
 }
 
@@ -15,7 +22,7 @@ export function params() {
  * @param {string} path
  * @returns {RegExp}
  */
-function matcher(path) {
+function createMatcher(path) {
   return RegExp(
     "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
   );
@@ -23,35 +30,33 @@ function matcher(path) {
 
 /**
  * @template T
- * @param {RouteMap<T>} routeMap
- * @returns {Route[]}
+ * @param {jail.RouteMap<T>} routeMap
+ * @returns {jail.Route[]}
  */
-function routes(routeMap) {
+function createRoutes(routeMap) {
   return Object.keys(routeMap).map((path) => ({
     path,
-    regexp: matcher(path),
+    regexp: createMatcher(path),
     handler: routeMap[path],
   }));
 }
 
 /**
  * @template T
- * @param {RouteMap<T>} routeMap
+ * @param {jail.RouteMap<T>} routeMap
  * @returns {() => T | undefined}
  */
-export function routed(routeMap) {
-  const routeArray = routes(routeMap);
-  return tree(() => {
-    return computed(() => {
-      const nextPath = path();
-      for (const route of routeArray) {
-        if (route.regexp.test(nextPath)) {
-          const params = route.regexp.exec(nextPath)?.groups;
-          return Params.provide(params, () => {
-            return route.handler();
-          });
-        }
+export function createRouter(routeMap) {
+  const routeArray = createRoutes(routeMap);
+  return createComputed(() => {
+    const nextPath = path();
+    for (const route of routeArray) {
+      if (route.regexp.test(nextPath)) {
+        return createRoot(() => {
+          provide(Params, route.regexp.exec(nextPath)?.groups);
+          return route.handler();
+        });
       }
-    });
+    }
   });
 }
