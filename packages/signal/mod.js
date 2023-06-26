@@ -226,7 +226,11 @@ export function isReactive(data) {
  * @returns {any}
  */
 export function toValue(data) {
-  return typeof data === "function" ? data() : data?.value || data
+  return typeof data === "function"
+    ? data()
+    : typeof data === "object" && "value" in data
+    ? data.value
+    : data
 }
 
 /**

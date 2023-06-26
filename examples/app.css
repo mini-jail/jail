@@ -114,17 +114,17 @@ progress::-webkit-progress-value {
 }
 
 code {
-  background-color: cadetblue;
+  background-color: slategray;
   display: block;
   counter-reset: line;
   margin: 0 auto;
   width: max-content;
-  padding: 10px;
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
 }
 
 code pre {
-  color: wheat;
+  color: papayawhip;
+  padding-right: 10px;
 }
 
 code pre::before {
@@ -135,5 +135,11 @@ code pre::before {
   display: inline-block;
   width: 32px;
   color: pink;
-  padding-right: 20px;
+  padding: 0px 10px;
+  margin-right: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+code pre:nth-child(odd) {
+  background-color: rgba(255, 255, 255, 0.1);
 }

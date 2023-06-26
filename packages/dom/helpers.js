@@ -71,6 +71,14 @@ export function ref(elt, binding) {
 
 /**
  * @param {jail.DOMElement} elt
+ * @param {jail.Binding<string>} binding
+ */
+export function style(elt, binding) {
+  elt.style[binding.arg] = binding.value || null
+}
+
+/**
+ * @param {jail.DOMElement} elt
  * @param {jail.Binding} binding
  */
 export function bind(elt, binding) {

@@ -3,6 +3,7 @@ import { createRouter, path } from "signal/router"
 import { component, mount, template } from "signal/dom"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
+import SimpleCounter from "./routes/simple-counter.js"
 import Sierpinski from "./routes/sierpinski.js"
 import About from "./routes/about.js"
 import Todo from "./routes/todo.js"
@@ -27,6 +28,7 @@ const HashRouter = component(() => {
   const router = createRouter({
     "/": Home,
     "/counter": Counter,
+    "/counter/simple": SimpleCounter,
     "/sierpinski": Sierpinski,
     "/sierpinski/:target": Sierpinski,
     "/sierpinski/:target/:size": Sierpinski,

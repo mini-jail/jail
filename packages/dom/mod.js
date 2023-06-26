@@ -30,6 +30,7 @@ import {
   show,
   slice,
   startsWith,
+  style,
   text,
   toKebabCase,
   trim,
@@ -81,7 +82,7 @@ export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
     provide(App, {
       node: nodeRef(),
-      directives: { ref, bind, html, text, show, on },
+      directives: { ref, bind, html, text, show, on, style },
       anchor: rootElement.appendChild(new Text()),
       currentNodes: null,
       rootElement,
