@@ -1,21 +1,21 @@
-import { Application, Router } from "https://deno.land/x/oak@v10.2.0/mod.ts";
+import { Application, Router } from "https://deno.land/x/oak@v10.2.0/mod.ts"
 
-const app = new Application();
+const app = new Application()
 
 app.use(async (ctx, next) => {
   try {
     await ctx.send({
       root: Deno.cwd(),
       index: "examples/index.html",
-    });
+    })
   } catch {
-    next();
+    next()
   }
-});
+})
 
-const router = new Router();
+const router = new Router()
 
-app.use(router.routes());
-app.use(router.allowedMethods());
+app.use(router.routes())
+app.use(router.allowedMethods())
 
-await app.listen({ port: 8000 });
+await app.listen({ port: 8000 })

@@ -1,4 +1,4 @@
-import { template } from "signal/dom";
+import { template } from "signal/dom"
 
 export default () => {
   return template`
@@ -16,5 +16,5 @@ export default () => {
         transition: 500ms;
       }
     </style>
-  `;
-};
+  `
+}

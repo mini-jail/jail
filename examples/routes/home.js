@@ -1,4 +1,4 @@
-import { template } from "signal/dom";
+import { template } from "signal/dom"
 
 export default () => {
   return template`
@@ -21,5 +21,5 @@ export default () => {
         btw. this whole page is just an example, lol.
       </pre>
     </article>
-  `;
-};
+  `
+}

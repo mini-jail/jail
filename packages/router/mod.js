@@ -6,16 +6,16 @@ import {
   createSignal,
   inject,
   provide,
-} from "signal";
+} from "signal"
 
 /**
  * @type {jail.Injection<jail.Params>}
  */
-const Params = createInjection();
-export const path = createSignal("");
+const Params = createInjection()
+export const path = createSignal("")
 
 export function getParams() {
-  return inject(Params);
+  return inject(Params)
 }
 
 /**
@@ -25,7 +25,7 @@ export function getParams() {
 function createMatcher(path) {
   return RegExp(
     "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
-  );
+  )
 }
 
 /**
@@ -38,7 +38,7 @@ function createRoutes(routeMap) {
     path,
     regexp: createMatcher(path),
     handler: routeMap[path],
-  }));
+  }))
 }
 
 /**
@@ -47,16 +47,16 @@ function createRoutes(routeMap) {
  * @returns {() => T | undefined}
  */
 export function createRouter(routeMap) {
-  const routeArray = createRoutes(routeMap);
+  const routeArray = createRoutes(routeMap)
   return createComputed(() => {
-    const nextPath = path();
+    const nextPath = path()
     for (const route of routeArray) {
       if (route.regexp.test(nextPath)) {
         return createRoot(() => {
-          provide(Params, route.regexp.exec(nextPath)?.groups);
-          return route.handler();
-        });
+          provide(Params, route.regexp.exec(nextPath)?.groups)
+          return route.handler()
+        })
       }
     }
-  });
+  })
 }

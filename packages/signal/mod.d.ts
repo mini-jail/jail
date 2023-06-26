@@ -1,40 +1,40 @@
 declare global {
   namespace jail {
     type Cleanup = {
-      (): void;
-    };
+      (): void
+    }
 
     type Signal<T = unknown> = {
-      (): T;
-      (value: T): void;
-      (update: (currentValue: T | undefined) => T): void;
-    };
+      (): T
+      (value: T): void
+      (update: (currentValue: T | undefined) => T): void
+    }
 
     type Source<T = unknown> = {
-      value: T | undefined | null;
-      nodes: Node[] | null;
-      nodeSlots: number[] | null;
-    };
+      value: T | undefined | null
+      nodes: Node[] | null
+      nodeSlots: number[] | null
+    }
 
     type Node<T = unknown> = {
-      value: T | undefined | null;
-      parentNode: Node | null;
-      childNodes: Node[] | null;
-      injections: { [id: symbol]: unknown } | null;
-      cleanups: Cleanup[] | null;
-      onupdate: ((currentValue: T | undefined) => T) | null;
-      sources: Source[] | null;
-      sourceSlots: number[] | null;
-    };
+      value: T | undefined | null
+      parentNode: Node | null
+      childNodes: Node[] | null
+      injections: { [id: symbol]: unknown } | null
+      cleanups: Cleanup[] | null
+      onupdate: ((currentValue: T | undefined) => T) | null
+      sources: Source[] | null
+      sourceSlots: number[] | null
+    }
 
     type Ref<T = unknown> = {
-      value: T;
-    };
+      value: T
+    }
 
     type Injection<T = unknown> = {
-      readonly id: symbol;
-      readonly defaultValue: T | undefined;
-    };
+      readonly id: symbol
+      readonly defaultValue: T | undefined
+    }
   }
 }
 
@@ -49,7 +49,7 @@ declare global {
  */
 export function createRoot<T>(
   callback: (cleanup: jail.Cleanup) => T | void,
-): T | void;
+): T | void
 
 /**
  * @example
@@ -66,7 +66,7 @@ export function createRoot<T>(
  * });
  * ```
  */
-export function nodeRef(): Node | null;
+export function nodeRef(): Node | null
 
 /**
  * @example
@@ -83,7 +83,7 @@ export function nodeRef(): Node | null;
  * });
  * ```
  */
-export function withNode<T>(node: Node, callback: () => T): T;
+export function withNode<T>(node: Node, callback: () => T): T
 
 /**
  * @example
@@ -96,7 +96,7 @@ export function withNode<T>(node: Node, callback: () => T): T;
  * });
  * ```
  */
-export function onMount(callback: () => void): void;
+export function onMount(callback: () => void): void
 
 /**
  * @example
@@ -109,7 +109,7 @@ export function onMount(callback: () => void): void;
  * });
  * ```
  */
-export function onUnmount(callback: () => void): void;
+export function onUnmount(callback: () => void): void
 
 /**
  * @example
@@ -126,7 +126,7 @@ export function onUnmount(callback: () => void): void;
 export function on<T>(
   dependency: () => void,
   callback: (currentValue: T | undefined) => T,
-): (currentValue: T | undefined) => T;
+): (currentValue: T | undefined) => T
 
 /**
  * @example
@@ -139,14 +139,14 @@ export function on<T>(
  * });
  * ```
  */
-export function createEffect(callback: () => void): void;
+export function createEffect(callback: () => void): void
 export function createEffect<T>(
   callback: (currentValue: T | undefined) => T,
-): void;
+): void
 export function createEffect<T>(
   callback: (currentValue: T) => T,
   initialValue: T,
-): void;
+): void
 
 /**
  * @example
@@ -161,17 +161,17 @@ export function createEffect<T>(
  */
 export function createComputed<T>(
   callback: (currentValue: T | undefined) => T,
-): () => T;
+): () => T
 export function createComputed<T>(
   callback: (currentValue: T) => T,
   initialValue: T,
-): () => T;
+): () => T
 
 export function isReactive<T>(
   data: unknown,
-): data is jail.Ref<T> | jail.Signal<T>;
+): data is jail.Ref<T> | jail.Signal<T>
 
-export function toValue<T>(data: jail.Ref<T> | jail.Signal<T> | T): T;
+export function toValue<T>(data: jail.Ref<T> | jail.Signal<T> | T): T
 
 /**
  * @example
@@ -186,8 +186,8 @@ export function toValue<T>(data: jail.Ref<T> | jail.Signal<T> | T): T;
  * sig(); //"bye world!"
  * ```
  */
-export function createSignal<T>(): jail.Signal<T | undefined>;
-export function createSignal<T>(initialValue: T): jail.Signal<T>;
+export function createSignal<T>(): jail.Signal<T | undefined>
+export function createSignal<T>(initialValue: T): jail.Signal<T>
 
 /**
  * @example
@@ -199,8 +199,8 @@ export function createSignal<T>(initialValue: T): jail.Signal<T>;
  * word.value = "bye world"; //triggers
  * ```
  */
-export function createRef<T>(): jail.Ref<T | undefined>;
-export function createRef<T>(initialValue?: T): jail.Ref<T>;
+export function createRef<T>(): jail.Ref<T | undefined>
+export function createRef<T>(initialValue?: T): jail.Ref<T>
 
 /**
  * @example
@@ -214,7 +214,7 @@ export function createRef<T>(initialValue?: T): jail.Ref<T>;
  * });
  * ```
  */
-export function catchError<T>(callback: (error: T) => void): void;
+export function catchError<T>(callback: (error: T) => void): void
 
 /**
  * @example
@@ -228,7 +228,7 @@ export function catchError<T>(callback: (error: T) => void): void;
  * });
  * ```
  */
-export function onCleanup(callback: jail.Cleanup): void;
+export function onCleanup(callback: jail.Cleanup): void
 
 /**
  * @example
@@ -245,7 +245,7 @@ export function onCleanup(callback: jail.Cleanup): void;
  * });
  * ```
  */
-export function untrack<T>(callback: () => T): T;
+export function untrack<T>(callback: () => T): T
 
 /**
  * @example
@@ -257,8 +257,8 @@ export function untrack<T>(callback: () => T): T;
  * const theme = inject(Theme); // { color: "pink" }
  * ```
  */
-export function createInjection<T>(): jail.Injection<T | undefined>;
-export function createInjection<T>(defaultValue: T): jail.Injection<T>;
+export function createInjection<T>(): jail.Injection<T | undefined>
+export function createInjection<T>(defaultValue: T): jail.Injection<T>
 
 /**
  * @example
@@ -272,7 +272,7 @@ export function createInjection<T>(defaultValue: T): jail.Injection<T>;
  * inject(Word); // undefined
  * ```
  */
-export function inject<T>(injection: jail.Injection<T>): T;
+export function inject<T>(injection: jail.Injection<T>): T
 
 /**
  * @example
@@ -288,4 +288,4 @@ export function inject<T>(injection: jail.Injection<T>): T;
  * });
  * ```
  */
-export function provide<T>(injection: jail.Injection<T>, value: T): void;
+export function provide<T>(injection: jail.Injection<T>, value: T): void

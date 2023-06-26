@@ -1,26 +1,25 @@
-import { createSignal } from "signal";
-import { template } from "signal/dom";
+import { createSignal } from "signal"
+import { template } from "signal/dom"
 
 const list = createSignal([
   { id: 0, done: true, text: "eat cornflakes without soymilk" },
   { id: 1, done: false, text: "buy soymilk" },
-]);
+])
 
 const Item = (props) => {
-  const deleteItem = () => list(list().filter((item) => item.id !== props.id));
+  const deleteItem = () => list(list().filter((item) => item.id !== props.id))
   const toggleItem = () => {
     list((items) => {
-      props.done = !props.done;
-      return items;
-    });
-  };
+      props.done = !props.done
+      return items
+    })
+  }
 
   return template`
     <div class="todo-item">
       <div 
-        class="todo-item-text" 
+        class="todo-item-text" d-on:click.delegate=${toggleItem}
         style=${props.done ? "color: grey; font-style: italic;" : null}
-        d-on:click.delegate=${toggleItem}
       >
         ${props.text}
       </div>
@@ -28,23 +27,23 @@ const Item = (props) => {
         delete
       </div>
     </div>
-  `;
-};
+  `
+}
 
 export default () => {
-  const textValue = createSignal("");
+  const textValue = createSignal("")
 
   const addItem = (ev) => {
     if (ev.key === "Enter") {
-      list(list().concat({ id: Date.now(), done: false, text: textValue() }));
-      textValue("");
-      return;
+      list(list().concat({ id: Date.now(), done: false, text: textValue() }))
+      textValue("")
+      return
     }
-  };
+  }
 
-  const onInput = (ev) => textValue(ev.target.value);
-  const length = () => list().length;
-  const done = () => list().filter((item) => item.done).length;
+  const onInput = (ev) => textValue(ev.target.value)
+  const length = () => list().length
+  const done = () => list().filter((item) => item.done).length
 
   return template`
     <article class="todo-app">
@@ -54,13 +53,9 @@ export default () => {
       </h4>
       <div class="todo-app-container">
         <input 
-          type="text"
-          placeholder="...milk?"
-          required
-          class="todo_input"
-          value=${textValue}
-          d-on:keyup=${addItem}
-          d-on:input=${onInput}
+          type="text" placeholder="...milk?"
+          required class="todo_input" value=${textValue}
+          d-on:keyup=${addItem} d-on:input=${onInput}
         />
         <div class="todo-items">
           ${() => list().map((item) => Item(item))}
@@ -98,11 +93,6 @@ export default () => {
       .todo-item-delete:hover {
         color: indianred;
       }
-      .todo-app progress {
-        background-color: white;
-        border: 0;
-        height: 20px;
-      }
       .todo-app input, 
       .todo-app label,
       .todo-app progress {
@@ -111,5 +101,5 @@ export default () => {
         margin: 0 auto;
       }
     </style>
-  `;
-};
+  `
+}

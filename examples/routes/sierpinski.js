@@ -6,21 +6,21 @@ import {
   onMount,
   onUnmount,
   provide,
-} from "signal";
-import { template } from "signal/dom";
-import { getParams } from "signal/router";
+} from "signal"
+import { template } from "signal/dom"
+import { getParams } from "signal/router"
 
 /**
  * @type {jail.Injection<jail.Signal<number>>}
  */
-const Counter = createInjection();
+const Counter = createInjection()
 
 const Dot = (x, y, target) => {
-  const counter = inject(Counter);
-  const hover = createSignal(false);
-  const onMouseOut = () => hover(false);
-  const onMouseOver = () => hover(true);
-  const text = () => hover() ? "*" + counter() + "*" : counter();
+  const counter = inject(Counter)
+  const hover = createSignal(false)
+  const onMouseOut = () => hover(false)
+  const onMouseOver = () => hover(true)
+  const text = () => hover() ? "*" + counter() + "*" : counter()
 
   const css = () => `
     width: ${target}px;
@@ -31,58 +31,56 @@ const Dot = (x, y, target) => {
     top: ${y}px;
     font-size: ${(target / 2.5)}px;
     border-radius: ${target}px;
-  `;
+  `
 
   return template`
     <div 
-      class="dot" 
-      d-text=${text}
-      style=${css} 
+      class="dot" d-text=${text} style=${css} 
       d-on:mouseover.delegate=${onMouseOver} 
       d-on:mouseout.delegate=${onMouseOut}></div>
-  `;
-};
+  `
+}
 
 const Triangle = (x, y, target, size) => {
   if (target <= size) {
-    return Dot(x, y, target);
+    return Dot(x, y, target)
   }
-  target = target / 2;
+  target = target / 2
   return template`
     ${Triangle(x, y - target / 2, target, size)}
     ${Triangle(x - target, y + target / 2, target, size)}
     ${Triangle(x + target, y + target / 2, target, size)}
-  `;
-};
+  `
+}
 
 export default () => {
-  const { target = "750", size = "25" } = getParams() || {};
-  let id;
-  const elapsed = createSignal(0);
-  const count = createSignal(0);
+  const { target = "750", size = "25" } = getParams() || {}
+  let id
+  const elapsed = createSignal(0)
+  const count = createSignal(0)
   const scale = createComputed(() => {
-    const e = (elapsed() / 1000) % 10;
-    return 1 + (e > 5 ? 10 - e : e) / 10;
-  });
+    const e = (elapsed() / 1000) % 10
+    return 1 + (e > 5 ? 10 - e : e) / 10
+  })
 
-  provide(Counter, count);
+  provide(Counter, count)
 
   onMount(() => {
-    id = setInterval(() => count((count() % 10) + 1), 1000);
-    const start = Date.now();
+    id = setInterval(() => count((count() % 10) + 1), 1000)
+    const start = Date.now()
     const frame = () => {
-      elapsed(Date.now() - start);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
+      elapsed(Date.now() - start)
+      requestAnimationFrame(frame)
+    }
+    requestAnimationFrame(frame)
+  })
 
   onUnmount(() => {
-    clearInterval(id);
-  });
+    clearInterval(id)
+  })
 
   const transform = () =>
-    `transform: scaleX(${scale() / 2.1}) scaleY(0.7) translateZ(0.1px);`;
+    `transform: scaleX(${scale() / 2.1}) scaleY(0.7) translateZ(0.1px);`
 
   return template`
     <div class="triangle-demo" style=${transform}>
@@ -102,5 +100,5 @@ export default () => {
         user-select: none;
       }
     </style>
-  `;
-};
+  `
+}

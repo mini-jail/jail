@@ -71,31 +71,69 @@ article {
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
 }
 
-button {
+button,
+input {
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+  transition: 100ms;
   background-color: white;
   padding: 5px 20px;
   border: 0;
   cursor: pointer;
-}
-
-input[type="text"] {
-  background-color: white;
-  padding: 5px 20px;
-  border: 0;
-  cursor: pointer;
-  box-shadow: none;
   outline: none;
 }
 
-input[type="text"]:hover,
-input[type="text"]:active {
+button:hover,
+input:hover {
   background-color: plum;
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.1);
 }
 
-button:hover {
-  background-color: plum;
+button:active,
+input:focus {
+  background-color: pink;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
 }
 
 pre {
   white-space: break-spaces;
+}
+
+progress {
+  background-color: white;
+  border: 0;
+  height: 20px;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+}
+
+progress::-moz-progress-bar,
+progress::-webkit-progress-bar,
+progress::-webkit-progress-value {
+  background-color: plum !important;
+  color: plum !important;
+  accent-color: plum !important;
+}
+
+code {
+  background-color: cadetblue;
+  display: block;
+  counter-reset: line;
+  margin: 0 auto;
+  width: max-content;
+  padding: 10px;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+}
+
+code pre {
+  color: wheat;
+}
+
+code pre::before {
+  counter-increment: line;
+  content: counter(line);
+  user-select: none;
+  text-align: right;
+  display: inline-block;
+  width: 32px;
+  color: pink;
+  padding-right: 20px;
 }
