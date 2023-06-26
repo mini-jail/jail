@@ -43,7 +43,7 @@ declare global {
  * ```js
  * createRoot((cleanup) => {
  *   // do stuff
- *   // use cleanup() to stop all effects
+ *   // use cleanup() to stop all effects etc.
  * });
  * ```
  */
@@ -55,7 +55,7 @@ export function createRoot<T>(
  * @example
  * ```js
  * // save node reference for later
- * const [node, cleanup] = root((cleanup) => {
+ * const [node, cleanup] = createRoot((cleanup) => {
  *   // ...
  *   return [nodeRef(), cleanup];
  * });
@@ -72,7 +72,7 @@ export function nodeRef(): Node | null
  * @example
  * ```js
  * // save node reference for later
- * const node = root(() => {
+ * const node = createRoot(() => {
  *   // ...
  *   return nodeRef();
  * });
@@ -261,31 +261,11 @@ export function createInjection<T>(): jail.Injection<T | undefined>
 export function createInjection<T>(defaultValue: T): jail.Injection<T>
 
 /**
- * @example
- * ```js
- * const Word = createInjection();
- *
- * Word.provide("hello", () => {
- *   inject(Word); // "hello"
- * });
- *
- * inject(Word); // undefined
- * ```
+ * @see createInjection
  */
 export function inject<T>(injection: jail.Injection<T>): T
 
 /**
- * @example
- * ```js
- * const Color = createInjection("pink");
- *
- * createRoot(() => {
- *   provide(Color, "yellow");
- *   ...
- *   createRoot(() => {
- *     inject(Color); // "yellow"
- *   });
- * });
- * ```
+ * @see createInjection
  */
 export function provide<T>(injection: jail.Injection<T>, value: T): void

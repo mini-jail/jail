@@ -6,9 +6,9 @@ import {
   onMount,
   onUnmount,
   provide,
-} from "signal"
-import { template } from "signal/dom"
-import { getParams } from "signal/router"
+} from "jail/signal"
+import { template } from "jail/dom"
+import { getParams } from "jail/router"
 
 /**
  * @type {jail.Injection<jail.Signal<number>>}
@@ -75,16 +75,14 @@ export default () => {
     requestAnimationFrame(frame)
   })
 
-  onUnmount(() => {
-    clearInterval(id)
-  })
+  onUnmount(() => clearInterval(id))
 
   const transform = () =>
     `transform: scaleX(${scale() / 2.1}) scaleY(0.7) translateZ(0.1px);`
 
   return template`
     <div class="triangle-demo" style=${transform}>
-      ${Triangle(0, 0, Number(target), Number(size), count)}
+      ${Triangle(0, 0, Number(target), Number(size))}
     </div>
 
     <style>

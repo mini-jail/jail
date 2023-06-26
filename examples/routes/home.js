@@ -1,4 +1,4 @@
-import { template } from "signal/dom"
+import { template } from "jail/dom"
 
 export default () => {
   return template`

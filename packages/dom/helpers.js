@@ -129,7 +129,7 @@ export function show(elt, binding) {
  */
 export function on(elt, binding) {
   if (binding.arg === null) {
-    console.info(`missing name: d-on:[arg=name]...`)
+    console.info(`missing name: [d-|prefix]on:[arg=name]...`)
     return
   }
   const name = binding.arg

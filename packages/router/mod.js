@@ -6,7 +6,7 @@ import {
   createSignal,
   inject,
   provide,
-} from "signal"
+} from "jail/signal"
 
 /**
  * @type {jail.Injection<jail.Params>}
@@ -31,7 +31,7 @@ function createMatcher(path) {
 /**
  * @template T
  * @param {jail.RouteMap<T>} routeMap
- * @returns {jail.Route[]}
+ * @returns {jail.Route<T>[]}
  */
 function createRoutes(routeMap) {
   return Object.keys(routeMap).map((path) => ({

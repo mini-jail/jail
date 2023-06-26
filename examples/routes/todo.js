@@ -1,5 +1,5 @@
-import { createSignal } from "signal"
-import { template } from "signal/dom"
+import { createSignal } from "jail/signal"
+import { template } from "jail/dom"
 
 const list = createSignal([
   { id: 0, done: true, text: "eat cornflakes without soymilk" },

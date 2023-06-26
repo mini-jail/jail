@@ -1,9 +1,9 @@
-import { createComputed, createRef, createSignal } from "signal"
-import { template } from "signal/dom"
+import { createComputed, createRef } from "jail/signal"
+import { template } from "jail/dom"
 
 const code = `
-import { createRef } from "signal"
-import { template } from "signal/dom"
+import { createRef } from "jail/signal"
+import { template } from "jail/dom"
 
 function Counter() {
   const counter = createRef(0)

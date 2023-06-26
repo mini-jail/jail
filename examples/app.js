@@ -1,6 +1,6 @@
-import { createEffect, onCleanup, onMount } from "signal"
-import { createRouter, path } from "signal/router"
-import { component, mount, template } from "signal/dom"
+import { createEffect, onCleanup, onMount } from "jail/signal"
+import { createRouter, path } from "jail/router"
+import { component, mount, template } from "jail/dom"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
 import SimpleCounter from "./routes/simple-counter.js"
@@ -51,7 +51,7 @@ const HashRouter = component(() => {
   return router
 })
 
-const RootComponent = component(() => {
+const App = () => {
   createEffect(() => document.title = `signal${path()}`)
 
   return template`
@@ -63,8 +63,6 @@ const RootComponent = component(() => {
       ${HashRouter()}
     </main>
   `
-})
+}
 
-mount(document.body, () => {
-  return RootComponent()
-})
+mount(document.body, App)

@@ -9,7 +9,7 @@ import {
   onCleanup,
   provide,
   toValue,
-} from "signal"
+} from "jail/signal"
 import {
   bind,
   cloneNode,
@@ -36,6 +36,8 @@ import {
   trim,
 } from "./helpers.js"
 
+const dirPrefix = "d-"
+const dirPrefixLength = dirPrefix.length
 const prefix = "arg_"
 const prefixLength = prefix.length
 const ArgRegExp = /{{ (\d+) }}/g
@@ -196,8 +198,8 @@ function insertChild(elt, value) {
  * @param {any} data
  */
 function insertAttribute(elt, prop, data) {
-  if (startsWith.call(prop, "d-")) {
-    prop = slice.call(prop, 2)
+  if (startsWith.call(prop, dirPrefix)) {
+    prop = slice.call(prop, dirPrefixLength)
     const key = match.call(prop, /[^:.]+/)[0]
     const directive = inject(App).directives[key]
     if (directive) {
