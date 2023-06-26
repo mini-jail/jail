@@ -41,10 +41,10 @@ const dirPrefixLength = dirPrefix.length
 const prefix = "_arg_"
 const prefixLength = prefix.length
 const ArgRegExp = /###(\d+)###/g
+const SAttrRegExp = /^@@@(\d+)@@@$/
+const MAttrRegExp = /@@@(\d+)@@@/g
 const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
-const AttrRegExp =
-  / ([^"'<>\s]+)=(?:["']?|(?:["']([^"'\\]*)))###(\d+)###(?:(?:([^"'\\]*)["'])|(?:["']?))/g
-const OnlyLastAttr = RegExp(`( ${prefix})(?=.*[.])`, "g")
+const AttrRegExp = / ([^"'\s]+)=["']([^"']+)["']/g
 const InsertionQuery = `slot[name^=${prefix}]`
 const AttributeQuery = `[${prefix}]`
 /**
@@ -123,30 +123,39 @@ export function template(strings, ...args) {
   if (template.hasAttributes) {
     for (const elt of query.call(fragment, AttributeQuery)) {
       removeAttribute.call(elt, prefix)
-      for (const data in elt.dataset) {
-        if (startsWith.call(data, prefix) === false) {
+      for (const key in elt.dataset) {
+        if (startsWith.call(key, prefix) === false) {
           continue
         }
-        const prop = getAttribute.call(elt, `data-${data}`),
-          pre = getAttribute.call(elt, `data-_pre_${data}`) || "",
-          suf = getAttribute.call(elt, `data-_suf_${data}`) || ""
-        let value = args[slice.call(data, prefixLength)]
-        if (pre !== "" || suf !== "") {
-          if (isReactive(value)) {
-            const base = value
-            value = () => `${pre}${toValue(base)}${suf}`
-          } else {
-            value = `${pre}${value}${suf}`
-          }
-          removeAttribute.call(elt, `data-_pre_${data}`)
-          removeAttribute.call(elt, `data-_suf_${data}`)
-        }
-        removeAttribute.call(elt, `data-${data}`)
+        const prop = getAttribute.call(elt, key)
+        const data = getAttribute.call(elt, `data-${key}`)
+        const arg = match.call(data, SAttrRegExp)?.[1]
+        const value = arg ? args[arg] : createMultiValue(data, args)
+        removeAttribute.call(elt, key)
+        removeAttribute.call(elt, `data-${key}`)
         insertAttribute(elt, prop, value)
       }
     }
   }
   return fragment
+}
+
+/**
+ * @param {string} data
+ * @param {any[]} args
+ * @returns {string}
+ */
+function createMultiValue(data, args) {
+  const values = match.call(data, MAttrRegExp)
+  if (values) {
+    for (const [arg] of values.entries()) {
+      if (isReactive(args[arg])) {
+        return replace.bind(data, MAttrRegExp, (_, arg) => toValue(args[arg]))
+      }
+    }
+    return replace.call(data, MAttrRegExp, (_, arg) => args[arg])
+  }
+  return data
 }
 
 /**
@@ -156,26 +165,22 @@ export function template(strings, ...args) {
 function createTemplate(strings) {
   let hasInsertions = false
   let hasAttributes = false
-  let data = "", arg = 0
+  let data = "", arg = 0, id = 0
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `###${arg++}###`
   }
   data = replace.call(trim.call(data + strings[arg]), /^[ \t]+/gm, "")
   data = replace.call(data, TagRegExp, (data) => {
-    data = replace.call(data, /(\s+)/g, " ")
-    data = replace.call(data, AttrRegExp, (_match, name, pre, arg, suf) => {
-      hasAttributes = true
-      let attr = ` data-${prefix + arg}="${name}" ${prefix}`
-      if (pre) {
-        attr = attr + ` data-_pre_${prefix + arg}="${pre}"`
-      }
-      if (suf) {
-        attr = attr + ` data-_suf_${prefix + arg}="${suf}"`
-      }
-      return attr
-    })
-    data = replace.call(data, ArgRegExp, "")
-    return replace.call(data, OnlyLastAttr, "")
+    data = replace.call(data, /\s+/g, " ")
+    if (includes.call(data, "###")) {
+      data = replace.call(data, AttrRegExp, (_match, name, value) => {
+        hasAttributes = true
+        value = replace.call(value, ArgRegExp, "@@@$1@@@")
+        return ` data-${prefix}${++id}="${value}" ${prefix}${id}="${name}" ${prefix}`
+      })
+      data = replace.call(data, ArgRegExp, "")
+    }
+    return data
   })
   data = replace.call(data, ArgRegExp, (_match, arg) => {
     hasInsertions = true

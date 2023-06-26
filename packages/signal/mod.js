@@ -228,7 +228,7 @@ export function isReactive(data) {
 export function toValue(data) {
   return typeof data === "function"
     ? data()
-    : typeof data === "object" && "value" in data
+    : data && typeof data === "object" && "value" in data
     ? data.value
     : data
 }

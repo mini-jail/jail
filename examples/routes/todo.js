@@ -18,12 +18,12 @@ const Item = (props) => {
   return template`
     <div class="todo-item">
       <div 
-        class="todo-item-text" d-on:click.delegate=${toggleItem}
-        style=${props.done ? "color: grey; font-style: italic;" : null}
+        class="todo-item-text" d-on:click.delegate="${toggleItem}"
+        style="${props.done ? "color: grey; font-style: italic;" : null}"
       >
         ${props.text}
       </div>
-      <div d-show=${props.done} class="todo-item-delete" d-on:click=${deleteItem}>
+      <div d-show="${props.done}" class="todo-item-delete" d-on:click="${deleteItem}">
         delete
       </div>
     </div>
@@ -54,14 +54,14 @@ export default () => {
       <div class="todo-app-container">
         <input 
           type="text" placeholder="...milk?"
-          required class="todo_input" value=${textValue}
-          d-on:keyup=${addItem} d-on:input=${onInput}
+          required class="todo_input" value="${textValue}"
+          d-on:keyup="${addItem}" d-on:input="${onInput}"
         />
         <div class="todo-items">
           ${() => list().map((item) => Item(item))}
         </div>
         <label>progress: ${done}/${length}</label>
-        <progress max=${length} value=${done}></progress>
+        <progress max="${length}" value="${done}"></progress>
       </div>
     </article>
 

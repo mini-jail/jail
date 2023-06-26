@@ -7,6 +7,7 @@ export const {
   includes,
   startsWith,
   match,
+  matchAll,
   trim,
   toUpperCase,
   toLocaleLowerCase,

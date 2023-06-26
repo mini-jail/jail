@@ -35,9 +35,9 @@ const Dot = (x, y, target) => {
 
   return template`
     <div 
-      class="dot" d-text=${text} style=${css} 
-      d-on:mouseover.delegate=${onMouseOver} 
-      d-on:mouseout.delegate=${onMouseOut}></div>
+      class="dot" d-text="${text}" style="${css}"
+      d-on:mouseover.delegate="${onMouseOver}"
+      d-on:mouseout.delegate="${onMouseOut}"></div>
   `
 }
 
@@ -81,7 +81,7 @@ export default () => {
     `transform: scaleX(${scale() / 2.1}) scaleY(0.7) translateZ(0.1px);`
 
   return template`
-    <div class="triangle-demo" style=${transform}>
+    <div class="triangle-demo" style="${transform}">
       ${Triangle(0, 0, Number(target), Number(size))}
     </div>
 
