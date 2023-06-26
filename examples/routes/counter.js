@@ -26,11 +26,11 @@ export default () => {
   return template`
     <article>
       <h4>
+        counter example
+        <sub>(...what else?)</sub>
         <button d-on:click.delegate=${() => show.value = !show.value}>
           ${() => show.value ? "hide" : "show"} code
         </button>
-        counter example
-        <sub>(...what else?)</sub>
       </h4>
       <button d-on:click.delegate=${() => counter.value--}>-</button>
       <span>current value: ${counter}</span>
