@@ -38,11 +38,12 @@ import {
 
 const dirPrefix = "d-"
 const dirPrefixLength = dirPrefix.length
-const prefix = "arg_"
+const prefix = "_arg_"
 const prefixLength = prefix.length
-const ArgRegExp = /{{ (\d+) }}/g
+const ArgRegExp = /###(\d+)###/g
 const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
-const AttrRegExp = / ([^"'<>\s]+)=["']?{{ (\d+) }}["']?/g
+const AttrRegExp =
+  / ([^"'<>\s]+)=(?:["']?|(?:["']([^"'\\]*)))###(\d+)###(?:(?:([^"'\\]*)["'])|(?:["']?))/g
 const OnlyLastAttr = RegExp(`( ${prefix})(?=.*[.])`, "g")
 const InsertionQuery = `slot[name^=${prefix}]`
 const AttributeQuery = `[${prefix}]`
@@ -126,9 +127,22 @@ export function template(strings, ...args) {
         if (startsWith.call(data, prefix) === false) {
           continue
         }
-        const prop = getAttribute.call(elt, `data-${data}`)
+        const prop = getAttribute.call(elt, `data-${data}`),
+          pre = getAttribute.call(elt, `data-_pre_${data}`) || "",
+          suf = getAttribute.call(elt, `data-_suf_${data}`) || ""
+        let value = args[slice.call(data, prefixLength)]
+        if (pre !== "" || suf !== "") {
+          if (isReactive(value)) {
+            const base = value
+            value = () => `${pre}${toValue(base)}${suf}`
+          } else {
+            value = `${pre}${value}${suf}`
+          }
+          removeAttribute.call(elt, `data-_pre_${data}`)
+          removeAttribute.call(elt, `data-_suf_${data}`)
+        }
         removeAttribute.call(elt, `data-${data}`)
-        insertAttribute(elt, prop, args[slice.call(data, prefixLength)])
+        insertAttribute(elt, prop, value)
       }
     }
   }
@@ -144,15 +158,23 @@ function createTemplate(strings) {
   let hasAttributes = false
   let data = "", arg = 0
   while (arg < strings.length - 1) {
-    data = data + strings[arg] + `{{ ${arg++} }}`
+    data = data + strings[arg] + `###${arg++}###`
   }
   data = replace.call(trim.call(data + strings[arg]), /^[ \t]+/gm, "")
   data = replace.call(data, TagRegExp, (data) => {
     data = replace.call(data, /(\s+)/g, " ")
-    data = replace.call(data, AttrRegExp, (_match, name, arg) => {
+    data = replace.call(data, AttrRegExp, (_match, name, pre, arg, suf) => {
       hasAttributes = true
-      return ` data-${prefix + arg}="${name}" ${prefix}`
+      let attr = ` data-${prefix + arg}="${name}" ${prefix}`
+      if (pre) {
+        attr = attr + ` data-_pre_${prefix + arg}="${pre}"`
+      }
+      if (suf) {
+        attr = attr + ` data-_suf_${prefix + arg}="${suf}"`
+      }
+      return attr
     })
+    data = replace.call(data, ArgRegExp, "")
     return replace.call(data, OnlyLastAttr, "")
   })
   data = replace.call(data, ArgRegExp, (_match, arg) => {
@@ -161,11 +183,7 @@ function createTemplate(strings) {
   })
   const template = document.createElement("template")
   template.innerHTML = trim.call(data)
-  const cacheItem = {
-    fragment: template.content,
-    hasAttributes,
-    hasInsertions,
-  }
+  const cacheItem = { fragment: template.content, hasAttributes, hasInsertions }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
 }
