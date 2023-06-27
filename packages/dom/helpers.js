@@ -83,7 +83,7 @@ export function style(elt, binding) {
  */
 export function bind(elt, binding) {
   let prop = binding.arg
-  if (binding.modifiers?.camel || binding.modifiers?.prop) {
+  if (binding.modifiers?.camel) {
     prop = toCamelCase(prop)
   }
   if (binding.modifiers?.attr) {
