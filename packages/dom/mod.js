@@ -41,8 +41,8 @@ const dirPrefixLength = dirPrefix.length
 const prefix = "_arg_"
 const prefixLength = prefix.length
 const ArgRegExp = /###(\d+)###/g
-const SAttrRegExp = /^@@@(\d+)@@@$/
-const MAttrRegExp = /@@@(\d+)@@@/g
+const SValRegExp = /^@@@(\d+)@@@$/
+const MValRegExp = /@@@(\d+)@@@/g
 const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AttrRegExp = / ([^"'\s]+)=["']([^"']+)["']/g
 const InsertionQuery = `slot[name^=${prefix}]`
@@ -127,13 +127,11 @@ export function template(strings, ...args) {
         if (startsWith.call(key, prefix) === false) {
           continue
         }
-        const prop = getAttribute.call(elt, key)
         const data = getAttribute.call(elt, `data-${key}`)
-        const arg = match.call(data, SAttrRegExp)?.[1]
-        const value = arg ? args[arg] : createMultiValue(data, args)
+        const prop = getAttribute.call(elt, key)
         removeAttribute.call(elt, key)
         removeAttribute.call(elt, `data-${key}`)
-        insertAttribute(elt, prop, value)
+        insertAttribute(elt, prop, createAttributeValue(data, args))
       }
     }
   }
@@ -143,19 +141,24 @@ export function template(strings, ...args) {
 /**
  * @param {string} data
  * @param {any[]} args
- * @returns {string}
+ * @returns {any | (() => any)}
  */
-function createMultiValue(data, args) {
-  const values = match.call(data, MAttrRegExp)
-  if (values) {
-    for (const [arg] of values.entries()) {
-      if (isReactive(args[arg])) {
-        return replace.bind(data, MAttrRegExp, (_, arg) => toValue(args[arg]))
-      }
-    }
-    return replace.call(data, MAttrRegExp, (_, arg) => args[arg])
+function createAttributeValue(data, args) {
+  const arg = match.call(data, SValRegExp)?.[1]
+  if (arg) {
+    return args[arg]
   }
-  return data
+  const values = match.call(data, MValRegExp)
+  if (values === null) {
+    return data
+  }
+  for (const value of values) {
+    const arg = match.call(value, SValRegExp)[1]
+    if (isReactive(args[arg])) {
+      return replace.bind(data, MValRegExp, (_, arg) => toValue(args[arg]))
+    }
+  }
+  return replace.call(data, MValRegExp, (_, arg) => args[arg])
 }
 
 /**
@@ -163,8 +166,6 @@ function createMultiValue(data, args) {
  * @returns {jail.Template}
  */
 function createTemplate(strings) {
-  let hasInsertions = false
-  let hasAttributes = false
   let data = "", arg = 0, id = 0
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `###${arg++}###`
@@ -173,8 +174,10 @@ function createTemplate(strings) {
   data = replace.call(data, TagRegExp, (data) => {
     data = replace.call(data, /\s+/g, " ")
     if (includes.call(data, "###")) {
-      data = replace.call(data, AttrRegExp, (_match, name, value) => {
-        hasAttributes = true
+      data = replace.call(data, AttrRegExp, (data, name, value) => {
+        if (includes.call(value, "###") === false) {
+          return data
+        }
         value = replace.call(value, ArgRegExp, "@@@$1@@@")
         return ` data-${prefix}${++id}="${value}" ${prefix}${id}="${name}" ${prefix}`
       })
@@ -182,13 +185,15 @@ function createTemplate(strings) {
     }
     return data
   })
-  data = replace.call(data, ArgRegExp, (_match, arg) => {
-    hasInsertions = true
-    return `<slot name="${prefix + arg}"></slot>`
-  })
+  data = replace.call(data, ArgRegExp, `<slot name="${prefix}$1"></slot>`)
+  data = trim.call(data)
   const template = document.createElement("template")
-  template.innerHTML = trim.call(data)
-  const cacheItem = { fragment: template.content, hasAttributes, hasInsertions }
+  template.innerHTML = data
+  const cacheItem = {
+    fragment: template.content,
+    hasAttributes: includes.call(data, ` data-${prefix}`),
+    hasInsertions: includes.call(data, `<slot name="${prefix}`),
+  }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
 }

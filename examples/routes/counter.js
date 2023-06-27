@@ -24,7 +24,7 @@ export default () => {
   }, -1)
 
   return template`
-    <article data-user="has clicked ${clicked} times">
+    <article data-user="user has clicked ${clicked} times (counter equals ${counter})">
       <h4>
         counter example
         <sub>(...what else?)</sub>
