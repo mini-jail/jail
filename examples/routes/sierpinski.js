@@ -60,7 +60,7 @@ export default () => {
   const count = createSignal(0)
   const scale = createComputed(() => {
     const e = (elapsed() / 1000) % 10
-    return 1 + (e > 5 ? 10 - e : e) / 10
+    return (1 + (e > 5 ? 10 - e : e) / 10) / 2
   })
 
   provide(Counter, count)
@@ -77,11 +77,8 @@ export default () => {
 
   onUnmount(() => clearInterval(id))
 
-  const transform = () =>
-    `transform: scaleX(${scale() / 2.1}) scaleY(0.7) translateZ(0.1px);`
-
   return template`
-    <div class="triangle-demo" style="${transform}">
+    <div class="triangle-demo" d-style:transform="scale(${scale}) translateZ(0.1px)">
       ${Triangle(0, 0, Number(target), Number(size))}
     </div>
 

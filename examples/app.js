@@ -55,7 +55,7 @@ const App = () => {
   createEffect(() => document.title = `signal${path()}`)
 
   return template`
-    <header>
+    <header id="${"cool"}">
       <h3>signal${path}</h3>
       ${Navigation()}
     </header>

@@ -12,7 +12,7 @@ export default () => {
 
     <style>
       body {
-        background-color: indianred;
+        background-color: ${"indianred"};
         transition: 500ms;
       }
     </style>

@@ -1,35 +1,12 @@
 const RegisteredEvents = {}
 const Events = Symbol("Events")
 
-export const {
-  replace,
-  slice,
-  includes,
-  startsWith,
-  match,
-  trim,
-  toUpperCase,
-  toLocaleLowerCase,
-} = String.prototype
-export const { replaceChild, insertBefore, isEqualNode, cloneNode } =
-  Node.prototype
-export const { getAttribute, setAttribute, removeAttribute } = Element.prototype
-/**
- * @type {(query: string) => Iterable<DOMElement>}
- */
-export const query = DocumentFragment.prototype.querySelectorAll
-export const push = Array.prototype.push
-
 /**
  * @param {string} data
  * @returns {string}
  */
 export function toCamelCase(data) {
-  return replace.call(
-    data,
-    /-([a-z])/g,
-    (_match, group) => toUpperCase.call(group),
-  )
+  return data.replace(/-[a-z]/g, (match) => match.slice(1).toUpperCase())
 }
 
 /**
@@ -37,11 +14,7 @@ export function toCamelCase(data) {
  * @returns {string}
  */
 export function toKebabCase(data) {
-  return replace.call(
-    data,
-    /([A-Z])/g,
-    (_match, group) => toLocaleLowerCase.call(group),
-  )
+  return data.replace(/([A-Z])/g, "-$1").toLowerCase()
 }
 
 /**
@@ -60,7 +33,7 @@ function eventLoop(event) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<jail.DOMElement>} binding
  */
-export function ref(elt, binding) {
+function ref(elt, binding) {
   if (typeof binding.rawValue === "function") {
     binding.rawValue(elt)
   }
@@ -73,7 +46,7 @@ export function ref(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<string>} binding
  */
-export function style(elt, binding) {
+function style(elt, binding) {
   elt.style[binding.arg] = binding.value || null
 }
 
@@ -81,7 +54,7 @@ export function style(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding} binding
  */
-export function bind(elt, binding) {
+function bind(elt, binding) {
   let prop = binding.arg
   if (binding.modifiers?.camel) {
     prop = toCamelCase(prop)
@@ -103,7 +76,7 @@ export function bind(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<string>} binding
  */
-export function html(elt, binding) {
+function html(elt, binding) {
   elt.innerHTML = binding.value
 }
 
@@ -111,7 +84,7 @@ export function html(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<string>} binding
  */
-export function text(elt, binding) {
+function text(elt, binding) {
   elt.textContent = binding.value
 }
 
@@ -119,7 +92,7 @@ export function text(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<boolean>} binding
  */
-export function show(elt, binding) {
+function show(elt, binding) {
   elt.style.display = binding.value ? null : "none"
 }
 
@@ -127,7 +100,7 @@ export function show(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<(event: Event) => void>} binding
  */
-export function on(elt, binding) {
+function on(elt, binding) {
   if (binding.arg === null) {
     console.info(`missing name: [d-|prefix]on:[arg=name]...`)
     return
@@ -189,3 +162,8 @@ export function on(elt, binding) {
     elt.addEventListener(name, listener, eventOptions)
   }
 }
+
+/**
+ * @type {{ [key: string]: jail.Directive }}
+ */
+export const directives = { on, ref, show, html, text, style, bind }

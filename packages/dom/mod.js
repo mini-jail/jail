@@ -5,36 +5,11 @@ import {
   createRoot,
   inject,
   isReactive,
-  nodeRef,
   onCleanup,
   provide,
   toValue,
 } from "jail/signal"
-import {
-  bind,
-  cloneNode,
-  getAttribute,
-  html,
-  includes,
-  insertBefore,
-  isEqualNode,
-  match,
-  on,
-  push,
-  query,
-  ref,
-  removeAttribute,
-  replace,
-  replaceChild,
-  setAttribute,
-  show,
-  slice,
-  startsWith,
-  style,
-  text,
-  toKebabCase,
-  trim,
-} from "./helpers.js"
+import { directives, toKebabCase } from "./helpers.js"
 
 const dirPrefix = "d-"
 const dirPrefixLength = dirPrefix.length
@@ -47,13 +22,10 @@ const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AttrRegExp = / ([^"'\s]+)=["']([^"']+)["']/g
 const InsertionQuery = `slot[name^=${prefix}]`
 const AttributeQuery = `[${prefix}]`
-/**
- * @type {Map<TemplateStringsArray, jail.Template>}
- */
+const replace = String.prototype.replace
+/** @type {Map<TemplateStringsArray, jail.Template>} */
 const TemplateCache = new Map()
-/**
- * @type {jail.Injection<jail.AppInjection | undefined>}
- */
+/** @type {jail.Injection<jail.AppInjection | undefined>} */
 const App = createInjection()
 
 /**
@@ -84,13 +56,9 @@ export function directive(name, directive) {
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
     provide(App, {
-      node: nodeRef(),
-      directives: { ref, bind, html, text, show, on, style },
+      directives,
       anchor: rootElement.appendChild(new Text()),
       currentNodes: null,
-      rootElement,
-      rootComponent,
-      cleanup,
     })
     const app = inject(App)
     createEffect(() => {
@@ -100,7 +68,7 @@ export function mount(rootElement, rootComponent) {
     })
     onCleanup(() => {
       reconcileNodes(app.anchor, app.currentNodes, [])
-      app.anchor?.remove()
+      app.anchor.remove()
       app.anchor = null
       app.currentNodes = null
     })
@@ -115,24 +83,24 @@ export function mount(rootElement, rootComponent) {
  */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
-  const fragment = cloneNode.call(template.fragment, true)
+  const fragment = template.fragment.cloneNode(true)
   if (template.hasInsertions) {
-    for (const elt of query.call(fragment, InsertionQuery)) {
-      insertChild(elt, args[slice.call(elt.name, prefixLength)])
+    for (const slot of fragment.querySelectorAll(InsertionQuery)) {
+      insertChild(slot, args[slot.name.slice(prefixLength)])
     }
   }
   if (template.hasAttributes) {
-    for (const elt of query.call(fragment, AttributeQuery)) {
-      removeAttribute.call(elt, prefix)
+    for (const elt of fragment.querySelectorAll(AttributeQuery)) {
+      elt.removeAttribute(prefix)
       for (const key in elt.dataset) {
-        if (startsWith.call(key, prefix) === false) {
+        if (key.startsWith(prefix) === false) {
           continue
         }
-        const data = getAttribute.call(elt, `data-${key}`)
-        const prop = getAttribute.call(elt, key)
-        removeAttribute.call(elt, key)
-        removeAttribute.call(elt, `data-${key}`)
-        insertAttribute(elt, prop, createAttributeValue(data, args))
+        const data = elt.getAttribute(`data-${key}`)
+        const prop = elt.getAttribute(key)
+        elt.removeAttribute(`data-${key}`)
+        elt.removeAttribute(key)
+        insertAttribute(elt, prop, createValue(data, args))
       }
     }
   }
@@ -144,17 +112,13 @@ export function template(strings, ...args) {
  * @param {any[]} args
  * @returns {any | (() => any)}
  */
-function createAttributeValue(data, args) {
-  const arg = match.call(data, SValRegExp)?.[1]
+function createValue(data, args) {
+  const arg = data.match(SValRegExp)?.[1]
   if (arg) {
     return args[arg]
   }
-  const values = match.call(data, MValRegExp)
-  if (values === null) {
-    return data
-  }
-  for (const value of values) {
-    if (isReactive(args[match.call(value, SValRegExp)[1]])) {
+  for (const [_match, arg] of data.matchAll(MValRegExp)) {
+    if (isReactive(args[arg])) {
       return replace.bind(data, MValRegExp, (_, arg) => toValue(args[arg]))
     }
   }
@@ -170,15 +134,16 @@ function createTemplate(strings) {
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `###${arg++}###`
   }
-  data = replace.call(trim.call(data + strings[arg]), /^[ \t]+/gm, "")
+  data = data + strings[arg]
+  data = replace.call(data, /^[ \t]+/gm, "").trim()
   data = replace.call(data, TagRegExp, (data) => {
     data = replace.call(data, /\s+/g, " ")
-    if (includes.call(data, "###")) {
+    if (data.includes("###")) {
       data = replace.call(data, AttrRegExp, (data, name, value) => {
-        if (includes.call(value, "###") === false) {
+        if (value.includes("###") === false) {
           return data
         }
-        value = replace.call(value, ArgRegExp, "@@@$1@@@")
+        value = replace.call(value, ArgRegExp, "@@@$1@@@").trim()
         return ` data-${prefix}${++id}="${value}" ${prefix}${id}="${name}" ${prefix}`
       })
       data = replace.call(data, ArgRegExp, "")
@@ -186,37 +151,36 @@ function createTemplate(strings) {
     return data
   })
   data = replace.call(data, ArgRegExp, `<slot name="${prefix}$1"></slot>`)
-  data = trim.call(data)
   const template = document.createElement("template")
   template.innerHTML = data
   const cacheItem = {
     fragment: template.content,
-    hasAttributes: includes.call(data, ` data-${prefix}`),
-    hasInsertions: includes.call(data, `<slot name="${prefix}`),
+    hasAttributes: data.includes(` data-${prefix}`),
+    hasInsertions: data.includes(`<slot name="${prefix}`),
   }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
 }
 
 /**
- * @param {jail.DOMElement} elt
+ * @param {HTMLSlotElement} slot
  * @param {any} value
  */
-function insertChild(elt, value) {
+function insertChild(slot, value) {
   if (value == null || typeof value === "boolean") {
-    elt.remove()
+    slot.remove()
   } else if (value instanceof Node) {
-    replaceChild.call(elt.parentNode, value, elt)
+    slot.parentNode.replaceChild(value, slot)
   } else if (isReactive(value) || (Array.isArray(value) && value.length)) {
     const anchor = new Text()
-    replaceChild.call(elt.parentNode, anchor, elt)
+    slot.parentNode.replaceChild(anchor, slot)
     createEffect((currentNodes) => {
       const nextNodes = createNodeArray([], toValue(value))
       reconcileNodes(anchor, currentNodes, nextNodes)
       return nextNodes
     }, null)
   } else {
-    replaceChild.call(elt.parentNode, new Text(String(value)), elt)
+    slot.parentNode.replaceChild(new Text(String(value)), slot)
   }
 }
 
@@ -226,9 +190,9 @@ function insertChild(elt, value) {
  * @param {any} data
  */
 function insertAttribute(elt, prop, data) {
-  if (startsWith.call(prop, dirPrefix)) {
-    prop = slice.call(prop, dirPrefixLength)
-    const key = match.call(prop, /[^:.]+/)[0]
+  if (prop.startsWith(dirPrefix)) {
+    prop = prop.slice(dirPrefixLength)
+    const key = prop.match(/[a-z\-\_]+/)[0]
     const directive = inject(App).directives[key]
     if (directive) {
       createEffect(
@@ -256,14 +220,12 @@ function insertAttribute(elt, prop, data) {
  * @returns {jail.Binding<T>}
  */
 function createBinding(prop, rawValue) {
-  let modifiers = null, arg = null
-  if (includes.call(prop, ":")) {
-    arg = match.call(prop, /:([^"'<>.]+)/)[1]
-  }
-  if (includes.call(prop, ".")) {
-    for (const key of match.call(prop, /\.([^"'<>.]+)/g)) {
-      modifiers = modifiers || {}
-      modifiers[slice.call(key, 1)] = true
+  let modifiers = null
+  const arg = prop.match(/:([^"'<>.]+)/)?.[1] || null
+  if (prop.includes(".")) {
+    modifiers = {}
+    for (const [_match, modifier] of prop.matchAll(/\.([^"'.]+)/g)) {
+      modifiers[modifier] = true
     }
   }
   return {
@@ -288,9 +250,9 @@ function setProperty(elt, prop, value) {
   }
   const name = toKebabCase(prop)
   if (value != null) {
-    setAttribute.call(elt, name, String(value))
+    elt.setAttribute(name, String(value))
   } else {
-    removeAttribute.call(elt, name)
+    elt.removeAttribute(name)
   }
 }
 
@@ -305,11 +267,11 @@ function createNodeArray(nodeArray, ...elements) {
       continue
     }
     if (elt instanceof DocumentFragment) {
-      push.call(nodeArray, ...elt.childNodes)
+      nodeArray.push(...elt.childNodes)
     } else if (elt instanceof Node) {
-      push.call(nodeArray, elt)
+      nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
-      push.call(nodeArray, new Text(String(elt)))
+      nodeArray.push(new Text(String(elt)))
     } else if (isReactive(elt)) {
       createNodeArray(nodeArray, toValue(elt))
     } else if (Symbol.iterator in elt) {
@@ -325,9 +287,10 @@ function createNodeArray(nodeArray, ...elements) {
  * @param {Node[]} nextNodes
  */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
+  const parentNode = anchor.parentNode
   if (currentNodes === null) {
     for (const nextNode of nextNodes) {
-      insertBefore.call(anchor.parentNode, nextNode, anchor)
+      parentNode.insertBefore(nextNode, anchor)
     }
     return
   }
@@ -341,7 +304,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
       if (bothAreCharacterData(currentNodes[j], nextNodes[i])) {
         currentNodes[j].data = nextNodes[i].data
         nextNodes[i] = currentNodes[j]
-      } else if (isEqualNode.call(currentNodes[j], nextNodes[i])) {
+      } else if (currentNodes[j].isEqualNode(nextNodes[i])) {
         nextNodes[i] = currentNodes[j]
       }
       if (nextNodes[i] === currentNodes[j]) {
@@ -352,13 +315,9 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
         break
       }
     }
-    insertBefore.call(
-      anchor.parentNode,
-      nextNodes[i],
-      currentNode?.nextSibling || anchor,
-    )
+    parentNode.insertBefore(nextNodes[i], currentNode?.nextSibling || anchor)
   }
-  while (currentNodes?.length) {
+  while (currentNodes.length) {
     currentNodes.pop()?.remove()
   }
 }

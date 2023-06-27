@@ -1,6 +1,8 @@
 declare global {
   namespace jail {
-    type DOMElement = HTMLElement | SVGElement
+    type DOMElement = (HTMLElement | SVGElement) & {
+      name?: string
+    }
 
     interface Template {
       fragment: DocumentFragment
@@ -23,17 +25,18 @@ declare global {
     }
 
     interface AppInjection {
-      node: Node | null
       anchor: ChildNode | null
       currentNodes: ChildNode[] | null
-      rootElement: DOMElement | null
-      rootComponent: Component
-      cleanup: Cleanup
       directives: { [name: string]: Directive }
     }
 
     interface Directive<T = unknown> {
       (elt: DOMElement, binding: Binding<T>): void
+    }
+
+    type DocumentFragment = {
+      querySelectorAll(selectors: string): Iterable<DOMElement>
+      cloneNode(deep?: boolean): DocumentFragment
     }
   }
 }
