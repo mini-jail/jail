@@ -101,6 +101,7 @@ export function mount(rootElement, rootComponent) {
     onCleanup(() => {
       reconcileNodes(app.anchor, app.currentNodes, [])
       app.anchor?.remove()
+      app.anchor = null
       app.currentNodes = null
     })
     return cleanup
