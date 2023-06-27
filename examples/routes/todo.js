@@ -16,7 +16,7 @@ const Item = (props) => {
   }
 
   return template`
-    <div class="todo-item">
+    <div class="todo-item" id="item_${props.id}">
       <div 
         class="todo-item-text" d-on:click.delegate="${toggleItem}"
         style="${props.done ? "color: grey; font-style: italic;" : null}"
