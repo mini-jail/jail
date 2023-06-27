@@ -153,8 +153,7 @@ function createAttributeValue(data, args) {
     return data
   }
   for (const value of values) {
-    const arg = match.call(value, SValRegExp)[1]
-    if (isReactive(args[arg])) {
+    if (isReactive(args[match.call(value, SValRegExp)[1]])) {
       return replace.bind(data, MValRegExp, (_, arg) => toValue(args[arg]))
     }
   }
