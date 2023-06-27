@@ -143,7 +143,6 @@ export function on(elt, binding) {
       const listenerCopy = listener
       listener = function (event) {
         event.preventDefault()
-        preventDefault.call(event)
         listenerCopy.call(elt, event)
       }
     }
