@@ -23,7 +23,7 @@ const SValRegExp = /^@@@(\d+)@@@$/
 const MValRegExp = /@@@(\d+)@@@/g
 const RemainLastAttr = RegExp(` ${Atr}=""(?=.* ${Atr}="")`, "g")
 const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
-const AttrRegExp =
+const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
 /** @type {Map<TemplateStringsArray, jail.Template>} */
 const TemplateCache = new Map()
@@ -101,11 +101,11 @@ export function template(strings, ...args) {
         if (key.startsWith(Atr) === false) {
           continue
         }
-        const data = elt.getAttribute(`data-${key}`)
+        const value = elt.getAttribute(`data-${key}`)
         const prop = elt.getAttribute(key)
         elt.removeAttribute(`data-${key}`)
         elt.removeAttribute(key)
-        insertAttribute(elt, prop, createValue(data, args))
+        insertAttribute(elt, prop, createValue(value, args))
       }
     }
   }
@@ -117,17 +117,17 @@ export function template(strings, ...args) {
  * @param {any[]} args
  * @returns {any | (() => any)}
  */
-function createValue(data, args) {
-  const arg = data.match(SValRegExp)?.[1]
+function createValue(value, args) {
+  const arg = value.match(SValRegExp)?.[1]
   if (arg) {
     return args[arg]
   }
-  for (const [_match, arg] of data.matchAll(MValRegExp)) {
+  for (const [_match, arg] of value.matchAll(MValRegExp)) {
     if (isReactive(args[arg])) {
-      return replace.bind(data, MValRegExp, (_, arg) => toValue(args[arg]))
+      return replace.bind(value, MValRegExp, (_, arg) => toValue(args[arg]))
     }
   }
-  return replace.call(data, MValRegExp, (_, arg) => args[arg])
+  return replace.call(value, MValRegExp, (_, arg) => args[arg])
 }
 
 /**
@@ -135,24 +135,24 @@ function createValue(data, args) {
  * @returns {string}
  */
 export function createTemplateString(strings) {
-  let data = "", arg = 0, attr = 0
+  let data = "", arg = 0, atr = 0
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `###${arg++}###`
   }
   data = data + strings[arg]
   data = replace.call(data, /^[ \t]+/gm, "").trim()
   data = replace.call(data, TagRegExp, (data) => {
-    if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
-      return data
-    }
-    data = replace.call(data, AttrRegExp, (_data, name1, val, _, name2) => {
+    data = replace.call(data, AtrRegExp, (data, name1, val, _, name2) => {
+      if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
+        return data
+      }
       const prop = name1 || name2
       val = val ? replace.call(val, ArgRegExp, "@@@$1@@@").trim() : ""
-      return ` data-${Atr}${attr}="${val}" ${Atr}${attr++}="${prop}" ${Atr}=""`
+      return ` data-${Atr}${atr}="${val}" ${Atr}${atr++}="${prop}" ${Atr}=""`
     })
     data = replace.call(data, RemainLastAttr, "")
-    data = replace.call(data, /\s+/g, " ")
-    return replace.call(data, ArgRegExp, `__unknown__$1`)
+    data = replace.call(data, ArgRegExp, `__unknown__$1`)
+    return replace.call(data, /\s+/g, " ")
   })
   data = replace.call(data, ArgRegExp, `<slot name="${Ins}$1"></slot>`)
   return data
