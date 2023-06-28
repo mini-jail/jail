@@ -19,7 +19,7 @@ const directivePrefixLength = directivePrefix.length
 const ArgRegExp = /###(\d+)###/g
 const SValRegExp = /^@@@(\d+)@@@$/
 const MValRegExp = /@@@(\d+)@@@/g
-const TagRegExp = /<[a-zA-Z\-](?:"[^"]+"|'[^']+'|[^'">])+>/g
+const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AttrRegExp = /\s([^"'\s]+)=(?:"([^"]+)"|'([^']+)')/g
 const replace = String.prototype.replace
 /** @type {Map<TemplateStringsArray, jail.Template>} */
