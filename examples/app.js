@@ -1,6 +1,6 @@
 import { createEffect, onCleanup, onMount } from "jail/signal"
 import { createRouter, path } from "jail/router"
-import { component, mount, template } from "jail/dom"
+import { component, directive, mount, template } from "jail/dom"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
 import SimpleCounter from "./routes/simple-counter.js"
@@ -53,6 +53,15 @@ const HashRouter = component(() => {
 
 const App = () => {
   createEffect(() => document.title = `signal${path()}`)
+
+  directive("my-text", (elt, binding) => {
+    const value = String(binding.value)
+    if (elt.firstChild?.nodeType === 3) {
+      elt.firstChild.data = value
+    } else {
+      elt.prepend(value)
+    }
+  })
 
   return template`
     <header>
