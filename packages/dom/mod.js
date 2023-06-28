@@ -11,17 +11,16 @@ import {
 } from "jail/signal"
 import { directives, toKebabCase } from "./helpers.js"
 
-const dirPrefix = "d-"
-const dirPrefixLength = dirPrefix.length
-const prefix = "_arg_"
-const prefixLength = prefix.length
+const attribute = "__ættr1but3__"
+const insertion = "__1ns3rt10n__"
+const insertionLength = insertion.length
+const directivePrefix = "d-"
+const directivePrefixLength = directivePrefix.length
 const ArgRegExp = /###(\d+)###/g
 const SValRegExp = /^@@@(\d+)@@@$/
 const MValRegExp = /@@@(\d+)@@@/g
-const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
-const AttrRegExp = / ([^"'\s]+)=["']([^"']+)["']/g
-const InsertionQuery = `slot[name^=${prefix}]`
-const AttributeQuery = `[${prefix}]`
+const TagRegExp = /<[a-zA-Z\-](?:"[^"]+"|'[^']+'|[^'">])+>/g
+const AttrRegExp = /\s([^"'\s]+)=(?:"([^"]+)"|'([^']+)')/g
 const replace = String.prototype.replace
 /** @type {Map<TemplateStringsArray, jail.Template>} */
 const TemplateCache = new Map()
@@ -85,15 +84,15 @@ export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
   const fragment = template.fragment.cloneNode(true)
   if (template.hasInsertions) {
-    for (const slot of fragment.querySelectorAll(InsertionQuery)) {
-      insertChild(slot, args[slot.name.slice(prefixLength)])
+    for (const elt of fragment.querySelectorAll(`slot[name^=${insertion}]`)) {
+      insertChild(elt, args[elt.name.slice(insertionLength)])
     }
   }
   if (template.hasAttributes) {
-    for (const elt of fragment.querySelectorAll(AttributeQuery)) {
-      elt.removeAttribute(prefix)
+    for (const elt of fragment.querySelectorAll(`[${attribute}]`)) {
+      elt.removeAttribute(attribute)
       for (const key in elt.dataset) {
-        if (key.startsWith(prefix) === false) {
+        if (key.startsWith(attribute) === false) {
           continue
         }
         const data = elt.getAttribute(`data-${key}`)
@@ -144,19 +143,19 @@ function createTemplate(strings) {
           return data
         }
         value = replace.call(value, ArgRegExp, "@@@$1@@@").trim()
-        return ` data-${prefix}${++id}="${value}" ${prefix}${id}="${name}" ${prefix}`
+        return ` data-${attribute}${id}="${value}" ${attribute}${id++}="${name}" ${attribute}`
       })
-      data = replace.call(data, ArgRegExp, "")
+      data = replace.call(data, ArgRegExp, `__unknown__$1`)
     }
     return data
   })
-  data = replace.call(data, ArgRegExp, `<slot name="${prefix}$1"></slot>`)
+  data = replace.call(data, ArgRegExp, `<slot name="${insertion}$1"></slot>`)
   const template = document.createElement("template")
   template.innerHTML = data
   const cacheItem = {
     fragment: template.content,
-    hasAttributes: data.includes(` data-${prefix}`),
-    hasInsertions: data.includes(`<slot name="${prefix}`),
+    hasAttributes: data.includes(attribute),
+    hasInsertions: data.includes(insertion),
   }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
@@ -190,8 +189,8 @@ function insertChild(slot, value) {
  * @param {any} data
  */
 function insertAttribute(elt, prop, data) {
-  if (prop.startsWith(dirPrefix)) {
-    prop = prop.slice(dirPrefixLength)
+  if (prop.startsWith(directivePrefix)) {
+    prop = prop.slice(directivePrefixLength)
     const key = prop.match(/[a-z\-\_]+/)[0]
     const directive = inject(App).directives[key]
     if (directive) {

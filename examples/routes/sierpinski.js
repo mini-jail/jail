@@ -21,23 +21,28 @@ const Dot = (x, y, target) => {
   const onMouseOut = () => hover(false)
   const onMouseOver = () => hover(true)
   const text = () => hover() ? "*" + counter() + "*" : counter()
+  const bgColor = () => hover() === true ? "lightpink" : "white"
 
-  const css = () => `
+  const css = `
     width: ${target}px;
     height: ${target}px;
     line-height: ${target}px;
-    background-color: ${hover() === true ? "lightpink" : "white"};
     left: ${x}px;
     top: ${y}px;
     font-size: ${(target / 2.5)}px;
     border-radius: ${target}px;
+    position: absolute;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
   `
 
   return template`
     <div 
-      class="dot" d-text="${text}" style="${css}"
+      d-text="${text}" style="${css}" d-style:background-color="${bgColor}"
       d-on:mouseover.delegate="${onMouseOver}"
-      d-on:mouseout.delegate="${onMouseOut}"></div>
+      d-on:mouseout.delegate="${onMouseOut}"
+    ></div>
   `
 }
 
@@ -78,22 +83,8 @@ export default () => {
   onUnmount(() => clearInterval(id))
 
   return template`
-    <div class="triangle-demo" d-style:transform="scale(${scale}) translateZ(0.1px)">
+    <div style="position: absolute; left: 50%; top: 50%;" d-style:transform="scale(${scale}) translateZ(0.1px)">
       ${Triangle(0, 0, Number(target), Number(size))}
     </div>
-
-    <style>
-      .triangle-demo {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-      }
-      .dot {
-        position: absolute;
-        text-align: center;
-        cursor: pointer;
-        user-select: none;
-      }
-    </style>
   `
 }
