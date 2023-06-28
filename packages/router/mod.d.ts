@@ -17,6 +17,10 @@ declare global {
     type RouteMap<T = unknown> = {
       [path: string]: RouteHandler<T>
     }
+
+    interface ExtendableInjectionMap {
+      "jail/router/params": Params
+    }
   }
 }
 

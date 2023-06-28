@@ -20,7 +20,7 @@ declare global {
       value: T | undefined | null
       parentNode: Node | null
       childNodes: Node[] | null
-      injections: { [id: symbol]: unknown } | null
+      injections: Injections | null
       cleanups: Cleanup[] | null
       onupdate: ((currentValue: T | undefined) => T) | null
       sources: Source[] | null
@@ -31,9 +31,10 @@ declare global {
       value: T
     }
 
-    type Injection<T = unknown> = {
-      readonly id: symbol
-      readonly defaultValue: T | undefined
+    type Injections = ExtendableInjectionMap
+
+    interface ExtendableInjectionMap {
+      "jail/signal/error": ((error: any) => void)[]
     }
   }
 }
@@ -247,25 +248,21 @@ export function onCleanup(callback: jail.Cleanup): void
  */
 export function untrack<T>(callback: () => T): T
 
-/**
- * @example
- * ```js
- * const Theme = createInjection({
- *   color: "pink",
- * });
- *
- * const theme = inject(Theme); // { color: "pink" }
- * ```
- */
-export function createInjection<T>(): jail.Injection<T | undefined>
-export function createInjection<T>(defaultValue: T): jail.Injection<T>
+export function inject<K extends keyof jail.Injections>(
+  key: K,
+): jail.Injections[K] | undefined
+export function inject<K extends keyof jail.Injections>(
+  key: K,
+  defaultValue: jail.Injections[K],
+): jail.Injections[K]
+export function inject<T>(key: string | symbol): T | undefined
+export function inject<T>(key: string | symbol, defaultValue: T): T
+export function inject(key: string | symbol): any | undefined
+export function inject(key: string | symbol, defaultValue: any): any
 
-/**
- * @see createInjection
- */
-export function inject<T>(injection: jail.Injection<T>): T
-
-/**
- * @see createInjection
- */
-export function provide<T>(injection: jail.Injection<T>, value: T): void
+export function provide<K extends keyof jail.Injections>(
+  key: K,
+  value: jail.Injections[K],
+): void
+export function provide<T>(key: string | symbol, value: T): void
+export function provide(key: string | symbol, value: any): void

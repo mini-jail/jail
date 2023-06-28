@@ -1,31 +1,34 @@
 /// <reference types="./mod.d.ts" />
 import {
   createEffect,
-  createInjection,
   createRoot,
   inject,
   isReactive,
   onCleanup,
+  onUnmount,
   provide,
   toValue,
 } from "jail/signal"
 import { directives, toKebabCase } from "./helpers.js"
 
-const attribute = "__ættr1but3__"
-const insertion = "__1ns3rt10n__"
-const insertionLength = insertion.length
-const directivePrefix = "d-"
-const directivePrefixLength = directivePrefix.length
+const Attr = "_ættr_"
+const Ins = "_1n53_"
+const InsLength = Ins.length
+const DirPrefix = "d-"
+const DirPrefixLength = DirPrefix.length
 const ArgRegExp = /###(\d+)###/g
 const SValRegExp = /^@@@(\d+)@@@$/
 const MValRegExp = /@@@(\d+)@@@/g
+const DirRegExp = RegExp(`${DirPrefix}[^\"'<>]+`, "g")
+const RemainFirstAttr = RegExp(`${Attr}=""(?=.*${Attr}="")`, "g")
 const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
-const AttrRegExp = /\s([^"'\s]+)=(?:"([^"]+)"|'([^']+)')/g
+const AttrRegExp =
+  /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
 const replace = String.prototype.replace
 /** @type {Map<TemplateStringsArray, jail.Template>} */
 const TemplateCache = new Map()
-/** @type {jail.Injection<jail.AppInjection | undefined>} */
-const App = createInjection()
+/** @type {"jail/dom/app"} */
+const App = Symbol()
 
 /**
  * @template T, P, R
@@ -44,7 +47,10 @@ export function component(component) {
  * @param {jail.Directive<T>} directive
  */
 export function directive(name, directive) {
-  inject(App).directives[name] = directive
+  const directives = inject(App).directives,
+    directiveCopy = directives[name]
+  directives[name] = directive
+  onUnmount(() => directives[name] = directiveCopy)
 }
 
 /**
@@ -84,15 +90,15 @@ export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
   const fragment = template.fragment.cloneNode(true)
   if (template.hasInsertions) {
-    for (const elt of fragment.querySelectorAll(`slot[name^=${insertion}]`)) {
-      insertChild(elt, args[elt.name.slice(insertionLength)])
+    for (const elt of fragment.querySelectorAll(`slot[name^=${Ins}]`)) {
+      insertChild(elt, args[elt.name.slice(InsLength)])
     }
   }
   if (template.hasAttributes) {
-    for (const elt of fragment.querySelectorAll(`[${attribute}]`)) {
-      elt.removeAttribute(attribute)
+    for (const elt of fragment.querySelectorAll(`[${Attr}]`)) {
+      elt.removeAttribute(Attr)
       for (const key in elt.dataset) {
-        if (key.startsWith(attribute) === false) {
+        if (key.startsWith(Attr) === false) {
           continue
         }
         const data = elt.getAttribute(`data-${key}`)
@@ -125,37 +131,52 @@ function createValue(data, args) {
 }
 
 /**
- * @param {TemplateStringsArray} strings
- * @returns {jail.Template}
+ * @param {TemplateStringsArray | string[]} strings
+ * @returns {string}
  */
-function createTemplate(strings) {
-  let data = "", arg = 0, id = 0
+export function createTemplateString(strings) {
+  let data = "", arg = 0
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `###${arg++}###`
   }
   data = data + strings[arg]
   data = replace.call(data, /^[ \t]+/gm, "").trim()
-  data = replace.call(data, TagRegExp, (data) => {
-    data = replace.call(data, /\s+/g, " ")
-    if (data.includes("###")) {
-      data = replace.call(data, AttrRegExp, (data, name, value) => {
-        if (value.includes("###") === false) {
-          return data
-        }
-        value = replace.call(value, ArgRegExp, "@@@$1@@@").trim()
-        return ` data-${attribute}${id}="${value}" ${attribute}${id++}="${name}" ${attribute}`
-      })
-      data = replace.call(data, ArgRegExp, `__unknown__$1`)
+  data = replace.call(data, TagRegExp, attributeReplacer)
+  data = replace.call(data, ArgRegExp, `<slot name="${Ins}$1"></slot>`)
+  return data
+}
+
+/**
+ * @param {string} data
+ * @returns {string}
+ */
+function attributeReplacer(data) {
+  let id = 0
+  data = replace.call(data, /\s+/g, " ")
+  data = replace.call(data, AttrRegExp, (data, name1, val, _, name2) => {
+    if (!data.includes("###") && !DirRegExp.test(data)) {
+      return data
     }
-    return data
+    const prop = name1 || name2
+    val = val ? replace.call(val, ArgRegExp, "@@@$1@@@").trim() : ""
+    return ` data-${Attr}${id}="${val}" ${Attr}${id++}="${prop}" ${Attr}=""`
   })
-  data = replace.call(data, ArgRegExp, `<slot name="${insertion}$1"></slot>`)
+  data = replace.call(data, RemainFirstAttr, "")
+  return replace.call(data, ArgRegExp, `__unknown__$1`)
+}
+
+/**
+ * @param {TemplateStringsArray} strings
+ * @returns {jail.Template}
+ */
+function createTemplate(strings) {
   const template = document.createElement("template")
-  template.innerHTML = data
+  const templateString = createTemplateString(strings)
+  template.innerHTML = templateString
   const cacheItem = {
     fragment: template.content,
-    hasAttributes: data.includes(attribute),
-    hasInsertions: data.includes(insertion),
+    hasAttributes: templateString.includes(Attr),
+    hasInsertions: templateString.includes(Ins),
   }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
@@ -189,8 +210,8 @@ function insertChild(slot, value) {
  * @param {any} data
  */
 function insertAttribute(elt, prop, data) {
-  if (prop.startsWith(directivePrefix)) {
-    prop = prop.slice(directivePrefixLength)
+  if (prop.startsWith(DirPrefix)) {
+    prop = prop.slice(DirPrefixLength)
     const key = prop.match(/[a-z\-\_]+/)[0]
     const directive = inject(App).directives[key]
     if (directive) {

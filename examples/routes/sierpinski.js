@@ -1,22 +1,16 @@
 import {
   createComputed,
-  createInjection,
   createSignal,
   inject,
   onMount,
   onUnmount,
   provide,
 } from "jail/signal"
-import { template } from "jail/dom"
+import { directive, template } from "jail/dom"
 import { getParams } from "jail/router"
 
-/**
- * @type {jail.Injection<jail.Signal<number>>}
- */
-const Counter = createInjection()
-
 const Dot = (x, y, target) => {
-  const counter = inject(Counter)
+  const counter = inject("counter")
   const hover = createSignal(false)
   const onMouseOut = () => hover(false)
   const onMouseOver = () => hover(true)
@@ -68,7 +62,7 @@ export default () => {
     return (1 + (e > 5 ? 10 - e : e) / 10) / 2
   })
 
-  provide(Counter, count)
+  provide("counter", count)
 
   onMount(() => {
     id = setInterval(() => count((count() % 10) + 1), 1000)
@@ -81,6 +75,15 @@ export default () => {
   })
 
   onUnmount(() => clearInterval(id))
+
+  directive("my-text", (elt, binding) => {
+    const value = String(binding.value)
+    if (elt.firstChild?.nodeType === 3) {
+      elt.firstChild.data = value
+    } else {
+      elt.prepend(value)
+    }
+  })
 
   return template`
     <div style="position: absolute; left: 50%; top: 50%;" d-style:transform="scale(${scale}) translateZ(0.1px)">

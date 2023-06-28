@@ -1,17 +1,14 @@
 /// <reference types="./mod.d.ts" />
 import {
   createComputed,
-  createInjection,
   createRoot,
   createSignal,
   inject,
   provide,
 } from "jail/signal"
 
-/**
- * @type {jail.Injection<jail.Params>}
- */
-const Params = createInjection()
+/** @type {"jail/router/params"} */
+const Params = Symbol()
 export const path = createSignal("")
 
 export function getParams() {

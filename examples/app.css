@@ -98,6 +98,18 @@ pre {
   white-space: break-spaces;
 }
 
+textarea {
+  background-color: white;
+  border: 0;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+  outline: none;
+  display: block;
+  resize: vertical;
+  width: 100%;
+  min-height: 60px;
+  height: 60px;
+}
+
 progress {
   background-color: white;
   border: 0;

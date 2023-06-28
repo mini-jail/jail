@@ -1,4 +1,5 @@
 /// <reference types="./mod.d.ts" />
+/** @type {"jail/signal/error"} */
 const Error = Symbol()
 /**
  * @type {Set<jail.Node>}
@@ -147,14 +148,14 @@ export function createComputed(callback, initialValue) {
 
 /**
  * @this {jail.Node | null}
- * @param {symbol} id
+ * @param {string | symbol} key
  * @returns
  */
-function lookup(id) {
+function lookup(key) {
   return this !== null
-    ? this.injections !== null && id in this.injections
-      ? this.injections[id]
-      : lookup.call(this.parentNode, id)
+    ? this.injections !== null && key in this.injections
+      ? this.injections[key]
+      : lookup.call(this.parentNode, key)
     : undefined
 }
 
@@ -456,29 +457,24 @@ function dispose() {
 }
 
 /**
+ * @param {string | symbol} key
  * @param {any} [defaultValue]
- * @returns {jail.Injection}
  */
-export function createInjection(defaultValue) {
-  return { id: Symbol(), defaultValue }
+export function inject(key, defaultValue) {
+  return lookup.call(activeNode, key) || defaultValue
 }
 
 /**
- * @param {jail.Injection} injection
- * @returns {any}
- */
-export function inject(injection) {
-  return lookup.call(activeNode, injection.id) || injection.defaultValue
-}
-
-/**
- * @param {jail.Injection} injection
+ * @param {string | symbol} key
  * @param {any} value
  */
-export function provide(injection, value) {
+export function provide(key, value) {
   if (activeNode === null) {
     return
   }
-  activeNode.injections = activeNode.injections || {}
-  activeNode.injections[injection.id] = value
+  if (activeNode.injections === null) {
+    activeNode.injections = { [key]: value }
+  } else {
+    activeNode.injections[key] = value
+  }
 }
