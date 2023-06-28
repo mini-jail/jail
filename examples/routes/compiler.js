@@ -4,7 +4,7 @@ import { createSignal, untrack } from "jail/signal"
 export default () => {
   const showExplanation = createSignal(false)
   const text = createSignal(
-    `<div data-cool="user is \${} cool!">\n  you are \${} cool!\n</div>`,
+    `<div data-cool="user is \${} cool!" id="\${}">\n  you are \${} cool!\n</div>`,
   )
   const time = createSignal(0)
   const timeMs = () => `millisecond${time() === 1 ? "" : "s"}`
