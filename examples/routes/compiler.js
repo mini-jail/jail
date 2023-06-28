@@ -4,8 +4,9 @@ import { createSignal, untrack } from "jail/signal"
 export default () => {
   const showExplanation = createSignal(false)
   const text = createSignal(
-    `<div data-cool="user is \${} cool!" id="\${}">\n  you are \${} cool!\n</div>`,
+    `<div d-focus data-cool="user is \${} cool!" id="\${}">\n  you are \${} cool!\n</div>`,
   )
+  const inputLength = () => text().length
   const time = createSignal(0)
   const timeMs = () => `millisecond${time() === 1 ? "" : "s"}`
   const compiled = () => {
@@ -15,6 +16,7 @@ export default () => {
     untrack(() => time(end - start))
     return result
   }
+  const outputLength = () => compiled().length
   const onInput = (ev) => text(ev.currentTarget.value)
   const onClick = () => showExplanation(!showExplanation())
   const outputCSS = `
@@ -52,11 +54,10 @@ export default () => {
         10.  drink water
       </pre>
       <pre style="display: flex; gap: 16px; flex-direction: column;">
-        <label style="flex: 1;">input:</label>
+        <label style="flex: 1;">input: (${inputLength} characters)</label>
         <textarea value="${text()}" d-on:input="${onInput}"></textarea>
-        <label style="flex: 1;">output:</label>
+        <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
         <pre style="${outputCSS}" d-text="${compiled}"></pre>
-        <pre>compiled in ${time} ${timeMs}</pre>
       </pre>
     </article>
   `

@@ -11,20 +11,20 @@ import {
 } from "jail/signal"
 import { directives, toKebabCase } from "./helpers.js"
 
-const Attr = "_ættr_"
-const Ins = "_1n53_"
+const replace = String.prototype.replace
+const Atr = "_atr_"
+const Ins = "_ins_"
 const InsLength = Ins.length
 const DirPrefix = "d-"
 const DirPrefixLength = DirPrefix.length
+const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const ArgRegExp = /###(\d+)###/g
 const SValRegExp = /^@@@(\d+)@@@$/
 const MValRegExp = /@@@(\d+)@@@/g
-const DirRegExp = RegExp(`${DirPrefix}[^\"'<>]+`, "g")
-const RemainFirstAttr = RegExp(`${Attr}=""(?=.*${Attr}="")`, "g")
+const RemainLastAttr = RegExp(` ${Atr}=""(?=.* ${Atr}="")`, "g")
 const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AttrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
-const replace = String.prototype.replace
 /** @type {Map<TemplateStringsArray, jail.Template>} */
 const TemplateCache = new Map()
 /** @type {"jail/dom/app"} */
@@ -95,10 +95,10 @@ export function template(strings, ...args) {
     }
   }
   if (template.hasAttributes) {
-    for (const elt of fragment.querySelectorAll(`[${Attr}]`)) {
-      elt.removeAttribute(Attr)
+    for (const elt of fragment.querySelectorAll(`[${Atr}]`)) {
+      elt.removeAttribute(Atr)
       for (const key in elt.dataset) {
-        if (key.startsWith(Attr) === false) {
+        if (key.startsWith(Atr) === false) {
           continue
         }
         const data = elt.getAttribute(`data-${key}`)
@@ -135,34 +135,27 @@ function createValue(data, args) {
  * @returns {string}
  */
 export function createTemplateString(strings) {
-  let data = "", arg = 0
+  let data = "", arg = 0, attr = 0
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `###${arg++}###`
   }
   data = data + strings[arg]
   data = replace.call(data, /^[ \t]+/gm, "").trim()
-  data = replace.call(data, TagRegExp, attributeReplacer)
-  data = replace.call(data, ArgRegExp, `<slot name="${Ins}$1"></slot>`)
-  return data
-}
-
-/**
- * @param {string} data
- * @returns {string}
- */
-function attributeReplacer(data) {
-  let id = 0
-  data = replace.call(data, /\s+/g, " ")
-  data = replace.call(data, AttrRegExp, (data, name1, val, _, name2) => {
-    if (!data.includes("###") && !DirRegExp.test(data)) {
+  data = replace.call(data, TagRegExp, (data) => {
+    if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
       return data
     }
-    const prop = name1 || name2
-    val = val ? replace.call(val, ArgRegExp, "@@@$1@@@").trim() : ""
-    return ` data-${Attr}${id}="${val}" ${Attr}${id++}="${prop}" ${Attr}=""`
+    data = replace.call(data, AttrRegExp, (_data, name1, val, _, name2) => {
+      const prop = name1 || name2
+      val = val ? replace.call(val, ArgRegExp, "@@@$1@@@").trim() : ""
+      return ` data-${Atr}${attr}="${val}" ${Atr}${attr++}="${prop}" ${Atr}=""`
+    })
+    data = replace.call(data, RemainLastAttr, "")
+    data = replace.call(data, /\s+/g, " ")
+    return replace.call(data, ArgRegExp, `__unknown__$1`)
   })
-  data = replace.call(data, RemainFirstAttr, "")
-  return replace.call(data, ArgRegExp, `__unknown__$1`)
+  data = replace.call(data, ArgRegExp, `<slot name="${Ins}$1"></slot>`)
+  return data
 }
 
 /**
@@ -175,7 +168,7 @@ function createTemplate(strings) {
   template.innerHTML = templateString
   const cacheItem = {
     fragment: template.content,
-    hasAttributes: templateString.includes(Attr),
+    hasAttributes: templateString.includes(Atr),
     hasInsertions: templateString.includes(Ins),
   }
   TemplateCache.set(strings, cacheItem)
