@@ -39,13 +39,13 @@ export default () => {
       <button d-on:click="${onClick}" d-style:margin="0 auto">show/hide explanation</button>
       <pre d-show="${showExplanation}" style="${explainCSS}">
         0.   standard html stays standard html!
-        1.   join string literals with "###\\d+###"
+        1.   join string literals with "{{\\d+}}"
         2.   go inside tags with this regexp (in general): 
         .    <span d-style:color="red">${/<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g}</span>
         3.   look for valid attributes with this regexp:
         .    <span d-style:color="red">${/\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g}</span>
-        3.1. replace dynamic values inside attributes with "@@@\\d+@@@"
-        4.   replace all other "###\\d+###" with <span d-style:color="red">${`<slot name="\${Ins}\\d+"></slot>`}</span>
+        3.1. replace dynamic values inside attributes with "{\\d+}"
+        4.   replace all other "{{\\d+}}" with <span d-style:color="red">${`<slot name="\${Ins}\\d+"></slot>`}</span>
         5.   insert code into template element and extract its fragment
         6.   tell compiler if it has insertable attributes &| children
         7.   insert attributes inside fragment

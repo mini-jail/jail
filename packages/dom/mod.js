@@ -9,18 +9,18 @@ import {
   provide,
   toValue,
 } from "jail/signal"
-import { directives, toKebabCase } from "./helpers.js"
+import { directives, replace, toKebabCase } from "./helpers.js"
 
-const replace = String.prototype.replace
 const Atr = "_atr_"
 const Ins = "_ins_"
 const InsLength = Ins.length
 const DirPrefix = "d-"
 const DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
-const ArgRegExp = /###(\d+)###/g
-const SValRegExp = /^@@@(\d+)@@@$/
-const MValRegExp = /@@@(\d+)@@@/g
+const DirKeyRegExp = /[a-z\-\_]+/
+const ArgRegExp = /{{(\d+)}}/g
+const SValRegExp = /^{(\d+)}$/
+const MValRegExp = /{(\d+)}/g
 const RemainLastAttr = RegExp(` ${Atr}=""(?=.* ${Atr}="")`, "g")
 const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AtrRegExp =
@@ -101,10 +101,10 @@ export function template(strings, ...args) {
         if (key.startsWith(Atr) === false) {
           continue
         }
-        const value = elt.getAttribute(`data-${key}`)
-        const prop = elt.getAttribute(key)
+        const data = elt.getAttribute(`data-${key}`)
+        const prop = data.split(" ", 1)[0]
+        const value = data.slice(prop.length + 1)
         elt.removeAttribute(`data-${key}`)
-        elt.removeAttribute(key)
         insertAttribute(elt, prop, createValue(value, args))
       }
     }
@@ -113,7 +113,7 @@ export function template(strings, ...args) {
 }
 
 /**
- * @param {string} data
+ * @param {string} value
  * @param {any[]} args
  * @returns {any | (() => any)}
  */
@@ -137,7 +137,7 @@ function createValue(value, args) {
 export function createTemplateString(strings) {
   let data = "", arg = 0, atr = 0
   while (arg < strings.length - 1) {
-    data = data + strings[arg] + `###${arg++}###`
+    data = data + strings[arg] + `{{${arg++}}}`
   }
   data = data + strings[arg]
   data = replace.call(data, /^[ \t]+/gm, "").trim()
@@ -146,9 +146,8 @@ export function createTemplateString(strings) {
       if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
         return data
       }
-      const prop = name1 || name2
-      val = val ? replace.call(val, ArgRegExp, "@@@$1@@@").trim() : ""
-      return ` data-${Atr}${atr}="${val}" ${Atr}${atr++}="${prop}" ${Atr}=""`
+      val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
+      return ` data-${Atr}${atr++}="${name1 || name2}${val}" ${Atr}=""`
     })
     data = replace.call(data, RemainLastAttr, "")
     data = replace.call(data, ArgRegExp, `__unknown__$1`)
@@ -205,13 +204,13 @@ function insertChild(slot, value) {
 function insertAttribute(elt, prop, data) {
   if (prop.startsWith(DirPrefix)) {
     prop = prop.slice(DirPrefixLength)
-    const key = prop.match(/[a-z\-\_]+/)[0]
+    const key = prop.match(DirKeyRegExp)[0]
     const directive = inject(App).directives[key]
     if (directive) {
-      createEffect(
-        (binding) => (directive(elt, binding), binding),
-        createBinding(prop, data),
-      )
+      createEffect((binding) => {
+        directive(elt, binding)
+        return binding
+      }, createBinding(prop, data))
     }
   } else if (isReactive(data)) {
     createEffect((currentValue) => {

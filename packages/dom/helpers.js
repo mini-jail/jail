@@ -1,12 +1,14 @@
 const RegisteredEvents = {}
 const Events = Symbol("Events")
 
+export const replace = String.prototype.replace
+
 /**
  * @param {string} data
  * @returns {string}
  */
 export function toCamelCase(data) {
-  return data.replace(/-[a-z]/g, (match) => match.slice(1).toUpperCase())
+  return replace.call(data, /-[a-z]/g, (match) => match.slice(1).toUpperCase())
 }
 
 /**
@@ -14,7 +16,7 @@ export function toCamelCase(data) {
  * @returns {string}
  */
 export function toKebabCase(data) {
-  return data.replace(/([A-Z])/g, "-$1").toLowerCase()
+  return replace.call(data, /([A-Z])/g, "-$1").toLowerCase()
 }
 
 /**
@@ -107,12 +109,12 @@ function on(elt, binding) {
   }
   const name = binding.arg
   const modifiers = binding.modifiers
-  let identifier = name,
+  let id = name,
     listener = binding.rawValue,
     eventOptions
   if (modifiers) {
     if (modifiers.prevent) {
-      identifier += "-prevent"
+      id = id + "-prevent"
       const listenerCopy = listener
       listener = function (event) {
         event.preventDefault()
@@ -120,7 +122,7 @@ function on(elt, binding) {
       }
     }
     if (modifiers.stop) {
-      identifier += "-stop"
+      id = id + "-stop"
       const listenerCopy = listener
       listener = function (event) {
         event.stopPropagation()
@@ -128,17 +130,17 @@ function on(elt, binding) {
       }
     }
     if (modifiers.once) {
-      identifier += "-once"
+      id = id + "-once"
       eventOptions = eventOptions || {}
       eventOptions.once = true
     }
     if (modifiers.capture) {
-      identifier += "-capture"
+      id = id + "-capture"
       eventOptions = eventOptions || {}
       eventOptions.capture = true
     }
     if (modifiers.passive) {
-      identifier += "-passive"
+      id = id + "-passive"
       eventOptions = eventOptions || {}
       eventOptions.passive = true
     }
@@ -154,9 +156,9 @@ function on(elt, binding) {
     } else {
       elt[Events][name] = listener
     }
-    if (RegisteredEvents[identifier] === undefined) {
+    if (RegisteredEvents[id] === undefined) {
       addEventListener(name, eventLoop, eventOptions)
-      RegisteredEvents[identifier] = true
+      RegisteredEvents[id] = true
     }
   } else {
     elt.addEventListener(name, listener, eventOptions)
