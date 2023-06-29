@@ -25,8 +25,6 @@ declare global {
     }
 
     interface AppInjection {
-      anchor: ChildNode | null
-      currentNodes: ChildNode[] | null
       directives: Directives
     }
 

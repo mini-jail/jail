@@ -50,7 +50,9 @@ export function directive(name, directive) {
   const directives = inject(App).directives,
     directiveCopy = directives[name]
   directives[name] = directive
-  onUnmount(() => directives[name] = directiveCopy)
+  if (directiveCopy) {
+    onUnmount(() => directives[name] = directiveCopy)
+  }
 }
 
 /**
@@ -60,22 +62,17 @@ export function directive(name, directive) {
  */
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
-    provide(App, {
-      directives,
-      anchor: rootElement.appendChild(new Text()),
-      currentNodes: null,
-    })
-    const app = inject(App)
+    provide(App, { directives })
+    const anchor = rootElement.appendChild(new Text())
+    const currentNodes = []
     createEffect(() => {
       const nextNodes = createNodeArray([], rootComponent())
-      reconcileNodes(app.anchor, app.currentNodes, nextNodes)
-      app.currentNodes = nextNodes
+      reconcileNodes(anchor, currentNodes, nextNodes)
+      currentNodes = nextNodes
     })
     onCleanup(() => {
-      reconcileNodes(app.anchor, app.currentNodes, [])
-      app.anchor.remove()
-      app.anchor = null
-      app.currentNodes = null
+      reconcileNodes(anchor, currentNodes, [])
+      anchor.remove()
     })
     return cleanup
   })
