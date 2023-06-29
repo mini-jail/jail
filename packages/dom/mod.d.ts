@@ -75,7 +75,7 @@ export function directive<K extends keyof jail.Directives>(
   directive: jail.Directive<jail.Directives[K]>,
 ): void
 export function directive<T>(name: string, directive: jail.Directive<T>): void
-export function directive(name: string, directive: jail.Directive<any>): void
+export function directive(name: string, directive: jail.Directive): void
 
 export function mount(
   rootElement: jail.DOMElement,

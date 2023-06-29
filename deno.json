@@ -7,6 +7,9 @@
     }
   },
   "compilerOptions": {
-    "lib": ["DOM", "ESNext", "deno.ns"]
+    "lib": ["DOM", "ESNext", "deno.ns"],
+    "allowUnreachableCode": true,
+    "allowJs": true,
+    "noImplicitAny": false
   }
 }
