@@ -1,17 +1,15 @@
 declare global {
   namespace jail {
-    type DOMElement = (HTMLElement | SVGElement) & {
-      name?: string
-    }
+    type DOMElement = HTMLElement | SVGElement
 
     interface Template {
-      fragment: DocumentFragment
+      fragment: Fragment
       hasAttributes: boolean
       hasInsertions: boolean
     }
 
     interface DOMComponent<P extends unknown[] = unknown[]> {
-      (...params: P): globalThis.DocumentFragment
+      (...params: P): DocumentFragment
     }
 
     interface Component<
@@ -36,10 +34,11 @@ declare global {
       (elt: DOMElement, binding: Binding<T>): void
     }
 
-    type DocumentFragment = {
+    type Fragment = {
+      querySelectorAll(selectors: `slot${string}`): Iterable<HTMLSlotElement>
       querySelectorAll(selectors: string): Iterable<DOMElement>
-      cloneNode(deep?: boolean): DocumentFragment
-    }
+      cloneNode(deep?: boolean): Fragment
+    } & DocumentFragment
 
     type Directives = ExtendableDirectiveMap
 
