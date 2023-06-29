@@ -1,6 +1,4 @@
-import { createEffect } from "jail/signal"
-import { path } from "jail/router"
-import { component, mount, template } from "jail/dom"
+import { component, createEffect, mount, path, template } from "jail"
 import HashRouter from "./router.js"
 
 const Navigation = component(() => {
