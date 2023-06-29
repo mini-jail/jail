@@ -64,7 +64,7 @@ export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
     provide(App, { directives })
     const anchor = rootElement.appendChild(new Text())
-    const currentNodes = []
+    let currentNodes = null
     createEffect(() => {
       const nextNodes = createNodeArray([], rootComponent())
       reconcileNodes(anchor, currentNodes, nextNodes)
