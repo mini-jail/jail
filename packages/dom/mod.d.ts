@@ -10,6 +10,10 @@ declare global {
       hasInsertions: boolean
     }
 
+    interface DOMComponent<P extends unknown[] = unknown[]> {
+      (...params: P): globalThis.DocumentFragment
+    }
+
     interface Component<
       P extends unknown[] = unknown[],
       R = unknown,
@@ -59,7 +63,13 @@ export function component<
   T extends (...args: unknown[]) => unknown,
   P extends Parameters<T>,
   R extends ReturnType<T>,
->(component: jail.Component<P, R>): jail.Component<P, R>
+>(
+  component: jail.Component<P, R>,
+): R extends
+  | DocumentFragment
+  | { value: DocumentFragment | undefined | null }
+  | (() => DocumentFragment | undefined | null) ? jail.DOMComponent<P>
+  : jail.Component<P, R>
 
 export function directive<K extends keyof jail.Directives>(
   name: K,
