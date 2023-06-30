@@ -478,3 +478,17 @@ export function provide(key, value) {
     activeNode.injections[key] = value
   }
 }
+
+/**
+ * @template T
+ * @param {T & (...args: any[]) => any} callback
+ * @returns {T}
+ */
+export function createRunner(callback) {
+  const boundNode = activeNode
+  return function Runner() {
+    return withNode(boundNode, () => {
+      return callback(arguments)
+    })
+  }
+}
