@@ -267,4 +267,6 @@ export function provide<K extends keyof jail.Injections>(
 export function provide<T>(key: string | symbol, value: T): void
 export function provide(key: string | symbol, value: any): void
 
-export function createRunner<T extends (...args: any[]) => any>(callback: T): T
+export function createCallback<T extends (...args: any[]) => any>(
+  callback: T,
+): T

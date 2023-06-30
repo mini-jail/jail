@@ -484,9 +484,9 @@ export function provide(key, value) {
  * @param {T & (...args: any[]) => any} callback
  * @returns {T}
  */
-export function createRunner(callback) {
+export function createCallback(callback) {
   const boundNode = activeNode
-  return function Runner() {
+  return function Callback() {
     return withNode(boundNode, () => {
       return callback(arguments)
     })
