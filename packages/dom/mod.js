@@ -5,7 +5,6 @@ import {
   inject,
   isReactive,
   onCleanup,
-  onMount,
   onUnmount,
   provide,
   toValue,
@@ -205,9 +204,8 @@ function insertAttribute(elt, prop, data) {
     const key = prop.match(DirKeyRegExp)[0]
     const directive = inject(App).directives[key]
     if (directive) {
-      const handler = isReactive(data) ? createEffect : onMount
       const binding = createBinding(prop, data)
-      handler(() => directive(elt, binding))
+      createEffect(() => directive(elt, binding))
     }
   } else if (isReactive(data)) {
     createEffect((currentValue) => {
