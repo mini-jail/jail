@@ -6,7 +6,7 @@ import {
   onUnmount,
   provide,
 } from "jail/signal"
-import { directive, template } from "jail/dom"
+import { createDirective, template } from "jail/dom"
 import { getParams } from "jail/router"
 
 const Dot = (x, y, target) => {
@@ -76,7 +76,7 @@ export default () => {
 
   onUnmount(() => clearInterval(id))
 
-  directive("my-text", (elt, binding) => {
+  createDirective("my-text", (elt, binding) => {
     const value = String(binding.value)
     if (elt.firstChild?.nodeType === 3) {
       elt.firstChild.data = value

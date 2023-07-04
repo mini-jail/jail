@@ -4,10 +4,14 @@ declare global {
       (): void
     }
 
+    type Callback<T> = {
+      (currentValue: T | undefined): T
+    }
+
     type Signal<T = unknown> = {
       (): T
       (value: T): void
-      (update: (currentValue: T | undefined) => T): void
+      (update: Callback<T>): void
     }
 
     type Source<T = unknown> = {
@@ -22,7 +26,7 @@ declare global {
       childNodes: Node[] | null
       injections: Injections | null
       cleanups: Cleanup[] | null
-      onupdate: ((currentValue: T | undefined) => T) | null
+      onupdate: Callback<T> | null
       sources: Source[] | null
       sourceSlots: number[] | null
     }

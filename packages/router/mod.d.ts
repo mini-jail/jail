@@ -28,4 +28,9 @@ export const path: jail.Signal<string>
 
 export function getParams(): jail.Params
 
+export function createRoute<T>(
+  path: string,
+  handler: jail.RouteHandler<T>,
+): () => T | undefined
+
 export function createRouter<T>(routeMap: jail.RouteMap<T>): () => T | undefined

@@ -58,7 +58,7 @@ declare global {
   }
 }
 
-export function component<
+export function createComponent<
   T extends (...args: unknown[]) => unknown,
   P extends Parameters<T>,
   R extends ReturnType<T>,
@@ -70,12 +70,15 @@ export function component<
   | (() => DocumentFragment | undefined | null) ? jail.DOMComponent<P>
   : jail.Component<P, R>
 
-export function directive<K extends keyof jail.Directives>(
+export function createDirective<K extends keyof jail.Directives>(
   name: K,
   directive: jail.Directive<jail.Directives[K]>,
 ): void
-export function directive<T>(name: string, directive: jail.Directive<T>): void
-export function directive(name: string, directive: jail.Directive): void
+export function createDirective<T>(
+  name: string,
+  directive: jail.Directive<T>,
+): void
+export function createDirective(name: string, directive: jail.Directive): void
 
 export function mount(
   rootElement: jail.DOMElement,

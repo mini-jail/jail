@@ -59,9 +59,10 @@ export function withNode(node, callback) {
 }
 
 /**
- * @param {any} [initialValue]
- * @param {(currentValue: any) => any} [onupdate]
- * @returns {jail.Node}
+ * @template T
+ * @param {T} [initialValue]
+ * @param {jail.Callback<T>} [onupdate]
+ * @returns {jail.Node<T>}
  */
 function createNode(initialValue, onupdate) {
   const localNode = {
@@ -107,9 +108,10 @@ export function onUnmount(callback) {
 }
 
 /**
+ * @template T
  * @param {() => void} dependency
- * @param {(currentValue: any) => any} callback
- * @returns {(currentValue: any) => any}
+ * @param {T & jail.Callback<T>} callback
+ * @returns {T}
  */
 export function on(dependency, callback) {
   return ((currentValue) => {
@@ -119,8 +121,9 @@ export function on(dependency, callback) {
 }
 
 /**
- * @param {(currentValue: any) => any} callback
- * @param {any} [initialValue]
+ * @template T
+ * @param {jail.Callback<T>} callback
+ * @param {T} [initialValue]
  */
 export function createEffect(callback, initialValue) {
   if (activeNode !== null) {
@@ -136,9 +139,10 @@ export function createEffect(callback, initialValue) {
 }
 
 /**
- * @param {(currentValue: any) => any} callback
- * @param {any} [initialValue]
- * @returns {() => any}
+ * @template T
+ * @param {jail.Callback<T>} callback
+ * @param {T} [initialValue]
+ * @returns {() => T}
  */
 export function createComputed(callback, initialValue) {
   const source = createSource(initialValue)
@@ -160,16 +164,18 @@ function lookup(key) {
 }
 
 /**
- * @param {any} [initialValue]
- * @returns {jail.Source}
+ * @template T
+ * @param {T} [initialValue]
+ * @returns {jail.Source<T>}
  */
 function createSource(initialValue) {
   return { value: initialValue, nodes: null, nodeSlots: null }
 }
 
 /**
- * @this {jail.Source}
- * @returns {any}
+ * @template T
+ * @this {jail.Source<T>}
+ * @returns {T}
  */
 function getValue() {
   if (activeNode !== null && activeNode.onupdate !== null) {
@@ -194,8 +200,9 @@ function getValue() {
 }
 
 /**
- * @this {jail.Source}
- * @param {any} value
+ * @template T
+ * @this {jail.Source<T>}
+ * @param {T | jail.Callback<T>} value
  */
 function setValue(value) {
   if (typeof value === "function") {
@@ -223,8 +230,9 @@ export function isReactive(data) {
 }
 
 /**
- * @param {any} data
- * @returns {any}
+ * @template T
+ * @param {jail.Signal<T> | jail.Ref<T> | T} data
+ * @returns {T}
  */
 export function toValue(data) {
   return typeof data === "function"
@@ -248,9 +256,10 @@ function queueNodes() {
 }
 
 /**
- * @this {jail.Source}
- * @param {any} value
- * @returns {any}
+ * @template T
+ * @this {jail.Source<T>}
+ * @param {T | jail.Callback<T>} [value]
+ * @returns {T | void}
  */
 function sourceValue(value) {
   return arguments.length === 1
@@ -259,16 +268,18 @@ function sourceValue(value) {
 }
 
 /**
- * @param {any} [initialValue]
- * @returns {jail.Signal}
+ * @template T
+ * @param {T} [initialValue]
+ * @returns {jail.Signal<T>}
  */
 export function createSignal(initialValue) {
   return sourceValue.bind(createSource(initialValue))
 }
 
 /**
- * @param {any} [initialValue]
- * @returns {jail.Ref}
+ * @template T
+ * @param {T} [initialValue]
+ * @returns {jail.Ref<T>}
  */
 export function createRef(initialValue) {
   const source = createSource(initialValue)
@@ -324,8 +335,9 @@ export function onCleanup(callback) {
 }
 
 /**
- * @param {() => any} callback
- * @returns {any}
+ * @template T
+ * @param {() => T} callback
+ * @returns {T}
  */
 export function untrack(callback) {
   const localNode = activeNode
@@ -336,8 +348,9 @@ export function untrack(callback) {
 }
 
 /**
- * @param {() => any} callback
- * @returns {any}
+ * @template T
+ * @param {() => T} callback
+ * @returns {T}
  */
 function batch(callback) {
   if (isRunning) {
@@ -361,7 +374,8 @@ function flush() {
 }
 
 /**
- * @this {jail.Node}
+ * @template T
+ * @this {jail.Node<T>}
  * @param {boolean} complete
  */
 function update(complete) {
@@ -381,7 +395,8 @@ function update(complete) {
 }
 
 /**
- * @this {jail.Node}
+ * @template T
+ * @this {jail.Node<T>}
  */
 function cleanSources() {
   while (this.sources.length) {
@@ -400,7 +415,8 @@ function cleanSources() {
 }
 
 /**
- * @this {jail.Node}
+ * @template T
+ * @this {jail.Node<T>}
  * @param {boolean} complete
  */
 function cleanChildNodes(complete) {
@@ -415,7 +431,8 @@ function cleanChildNodes(complete) {
 }
 
 /**
- * @this {jail.Node}
+ * @template T
+ * @this {jail.Node<T>}
  * @param {boolean} complete
  */
 function clean(complete) {
@@ -435,7 +452,8 @@ function clean(complete) {
 }
 
 /**
- * @this {jail.Node}
+ * @template T
+ * @this {jail.Node<T>}
  */
 function cleanup() {
   while (this.cleanups.length) {
@@ -444,7 +462,8 @@ function cleanup() {
 }
 
 /**
- * @this {jail.Node}
+ * @template T
+ * @this {jail.Node<T>}
  */
 function dispose() {
   this.value = null

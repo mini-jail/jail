@@ -35,7 +35,7 @@ const App = Symbol()
  * @param {T & jail.Component<P, R>} component
  * @returns {jail.Component<P, R>}
  */
-export function component(component) {
+export function createComponent(component) {
   return function Component(...args) {
     return createRoot(() => component(...args))
   }
@@ -46,7 +46,7 @@ export function component(component) {
  * @param {string} name
  * @param {jail.Directive<T>} directive
  */
-export function directive(name, directive) {
+export function createDirective(name, directive) {
   const directives = inject(App).directives,
     directiveCopy = directives[name]
   directives[name] = directive

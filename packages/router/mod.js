@@ -40,6 +40,25 @@ function createRoutes(routeMap) {
 
 /**
  * @template T
+ * @param {string} path
+ * @param {jail.RouteHandler<T>} handler
+ * @returns {() => T | undefined}
+ */
+export function createRoute(path, handler) {
+  const matcher = createMatcher(path)
+  return createComputed(() => {
+    const nextPath = path()
+    if (matcher.test(nextPath)) {
+      return createRoot(() => {
+        provide(Params, matcher.exec(nextPath)?.groups)
+        return handler()
+      })
+    }
+  })
+}
+
+/**
+ * @template T
  * @param {jail.RouteMap<T>} routeMap
  * @returns {() => T | undefined}
  */

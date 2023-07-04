@@ -35,7 +35,7 @@ function eventLoop(event) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<jail.DOMElement>} binding
  */
-function ref(elt, binding) {
+function refDirective(elt, binding) {
   if (typeof binding.rawValue === "function") {
     binding.rawValue(elt)
   }
@@ -48,7 +48,7 @@ function ref(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<string>} binding
  */
-function style(elt, binding) {
+function styleDirective(elt, binding) {
   elt.style[binding.arg] = binding.value || null
 }
 
@@ -56,7 +56,7 @@ function style(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding} binding
  */
-function bind(elt, binding) {
+function bindDirective(elt, binding) {
   let prop = binding.arg
   if (binding.modifiers?.camel) {
     prop = toCamelCase(prop)
@@ -78,7 +78,7 @@ function bind(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<string>} binding
  */
-function html(elt, binding) {
+function htmlDirective(elt, binding) {
   elt.innerHTML = binding.value
 }
 
@@ -86,7 +86,7 @@ function html(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<string>} binding
  */
-function text(elt, binding) {
+function textDirective(elt, binding) {
   elt.textContent = binding.value
 }
 
@@ -94,7 +94,7 @@ function text(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<boolean>} binding
  */
-function show(elt, binding) {
+function showDirective(elt, binding) {
   elt.style.display = binding.value ? null : "none"
 }
 
@@ -102,7 +102,7 @@ function show(elt, binding) {
  * @param {jail.DOMElement} elt
  * @param {jail.Binding<(event: Event) => void>} binding
  */
-function on(elt, binding) {
+function onDirective(elt, binding) {
   if (binding.arg === null) {
     console.info(`missing name: [d-|prefix]on:[arg=name]...`)
     return
@@ -168,4 +168,12 @@ function on(elt, binding) {
 /**
  * @type {{ [key: string]: jail.Directive }}
  */
-export const directives = { on, ref, show, html, text, style, bind }
+export const directives = {
+  on: onDirective,
+  ref: refDirective,
+  show: showDirective,
+  html: htmlDirective,
+  text: textDirective,
+  style: styleDirective,
+  bind: bindDirective,
+}
