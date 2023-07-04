@@ -1,7 +1,7 @@
-import { component, createEffect, mount, path, template } from "jail"
+import { createComponent, createEffect, mount, path, template } from "jail"
 import HashRouter from "./router.js"
 
-const Navigation = component(() => {
+const Navigation = createComponent(() => {
   return template`
     <nav>
       <a href="#/">home</a>
