@@ -177,9 +177,6 @@ function renderComponents(fragment, args) {
 function createComponentParams(elt, args) {
   let params = null
   for (const key in elt.dataset) {
-    if (key.startsWith("_arg_") === false) {
-      continue
-    }
     const data = elt.getAttribute(`data-${key}`)
     const prop = data.split(" ", 1)[0]
     params = params || {}
@@ -222,7 +219,7 @@ export function createTemplateString(strings) {
     if (ComRegExp.test(tagName)) {
       data = replace.call(data, AtrRegExp, (_data, name1, val, _, name2) => {
         val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-        return ` data-_arg_${atr++}="${name1 || name2}${val}" _arg_=""`
+        return ` data-_arg_${atr++}="${name1 || name2}${val}"`
       })
       data = replace.call(data, ComRegExp, `template class="${Com}$1"`)
     } else {
