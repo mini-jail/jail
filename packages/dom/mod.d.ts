@@ -6,17 +6,7 @@ declare global {
       fragment: Fragment
       hasAttributes: boolean
       hasInsertions: boolean
-    }
-
-    interface DOMComponent<P extends unknown[] = unknown[]> {
-      (...params: P): DocumentFragment
-    }
-
-    interface Component<
-      P extends unknown[] = unknown[],
-      R = unknown,
-    > {
-      (...params: P): R
+      hasComponents: boolean
     }
 
     interface Binding<T> {
@@ -28,19 +18,28 @@ declare global {
 
     interface AppInjection {
       directives: Directives
+      components: Components
     }
 
     interface Directive<T = unknown> {
       (elt: DOMElement, binding: Binding<T>): void
     }
 
+    interface Component<P extends object = {}> {
+      (params: P, ...children: globalThis.Node[]): any
+    }
+
     type Fragment = {
       querySelectorAll(selectors: `slot${string}`): Iterable<HTMLSlotElement>
+      querySelectorAll(
+        selectors: `template${string}`,
+      ): Iterable<HTMLTemplateElement>
       querySelectorAll(selectors: string): Iterable<DOMElement>
       cloneNode(deep?: boolean): Fragment
     } & DocumentFragment
 
     type Directives = ExtendableDirectiveMap
+    type Components = ExtendableComponentMap
 
     interface ExtendableDirectiveMap {
       on: (this: DOMElement, event: Event) => void
@@ -55,20 +54,10 @@ declare global {
     interface ExtendableInjectionMap {
       "jail/dom/app": AppInjection
     }
+
+    interface ExtendableComponentMap {}
   }
 }
-
-export function createComponent<
-  T extends (...args: unknown[]) => unknown,
-  P extends Parameters<T>,
-  R extends ReturnType<T>,
->(
-  component: jail.Component<P, R>,
-): R extends
-  | DocumentFragment
-  | { value: DocumentFragment | undefined | null }
-  | (() => DocumentFragment | undefined | null) ? jail.DOMComponent<P>
-  : jail.Component<P, R>
 
 export function createDirective<K extends keyof jail.Directives>(
   name: K,
@@ -79,6 +68,16 @@ export function createDirective<T>(
   directive: jail.Directive<T>,
 ): void
 export function createDirective(name: string, directive: jail.Directive): void
+
+export function createComponent<K extends keyof jail.ExtendableComponentMap>(
+  name: K,
+  component: jail.Component<jail.ExtendableComponentMap[K]>,
+): void
+export function createComponent<T extends object>(
+  name: string,
+  component: jail.Component<T>,
+): void
+export function createComponent(name: string, component: jail.Component): void
 
 export function mount(
   rootElement: jail.DOMElement,

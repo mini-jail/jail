@@ -13,6 +13,12 @@ import { directives, replace, toKebabCase } from "./helpers.js"
 
 const Atr = "_atr_"
 const Ins = "_ins_"
+const Com = "_com_"
+/** @type {`slot[name^="${Ins}"]`} */
+const insertionQuery = `slot[name^="${Ins}"]`
+const attributeQuery = `[${Atr}]`
+/** @type {`template[class^="${Com}"]`} */
+const componentQuery = `template[class^="${Com}"]`
 const InsLength = Ins.length
 const DirPrefix = "d-"
 const DirPrefixLength = DirPrefix.length
@@ -22,7 +28,9 @@ const ArgRegExp = /{{(\d+)}}/g
 const SValRegExp = /^{(\d+)}$/
 const MValRegExp = /{(\d+)}/g
 const RemainLastAttr = RegExp(` ${Atr}=""(?=.* ${Atr}="")`, "g")
-const TagRegExp = /<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g
+const ComRegExp = /((?:[a-zA-Z]+)-(?:[a-zA-Z]+))/
+const ClosingComRegExp = /<\/((?:[a-zA-Z]+)-(?:[a-zA-Z]+))>/g
+const TagRegExp = /<([a-zA-Z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
 /** @type {Map<TemplateStringsArray, jail.Template>} */
@@ -31,27 +39,28 @@ const TemplateCache = new Map()
 const App = Symbol()
 
 /**
- * @template T, P, R
- * @param {T & jail.Component<P, R>} component
- * @returns {jail.Component<P, R>}
+ * @template T
+ * @param {string} name
+ * @param {jail.Directive<T>} directive
  */
-export function createComponent(component) {
-  return function Component(...args) {
-    return createRoot(() => component(...args))
+export function createDirective(name, directive) {
+  const items = inject(App).directives, copy = items[name]
+  items[name] = directive
+  if (copy) {
+    onUnmount(() => items[name] = copy)
   }
 }
 
 /**
  * @template T
  * @param {string} name
- * @param {jail.Directive<T>} directive
+ * @param {jail.Component<T>} component
  */
-export function createDirective(name, directive) {
-  const directives = inject(App).directives,
-    directiveCopy = directives[name]
-  directives[name] = directive
-  if (directiveCopy) {
-    onUnmount(() => directives[name] = directiveCopy)
+export function createComponent(name, component) {
+  const items = inject(App).components, copy = items[name]
+  items[name] = component
+  if (copy) {
+    onUnmount(() => items[name] = copy)
   }
 }
 
@@ -62,7 +71,7 @@ export function createDirective(name, directive) {
  */
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
-    provide(App, { directives })
+    provide(App, { directives, components: {} })
     const anchor = rootElement.appendChild(new Text())
     let currentNodes = null
     createEffect(() => {
@@ -87,26 +96,76 @@ export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
   const fragment = template.fragment.cloneNode(true)
   if (template.hasInsertions) {
-    for (const elt of fragment.querySelectorAll(`slot[name^=${Ins}]`)) {
+    for (const elt of fragment.querySelectorAll(insertionQuery)) {
       insertChild(elt, args[elt.name.slice(InsLength)])
     }
   }
   if (template.hasAttributes) {
-    for (const elt of fragment.querySelectorAll(`[${Atr}]`)) {
-      elt.removeAttribute(Atr)
-      for (const key in elt.dataset) {
-        if (key.startsWith(Atr) === false) {
-          continue
-        }
-        const data = elt.getAttribute(`data-${key}`)
-        const prop = data.split(" ", 1)[0]
-        const value = data.slice(prop.length + 1)
-        elt.removeAttribute(`data-${key}`)
-        insertAttribute(elt, prop, createValue(value, args))
-      }
-    }
+    renderAttributes(fragment, args)
+  }
+  if (template.hasComponents) {
+    renderComponents(fragment, args)
   }
   return fragment
+}
+
+/**
+ * @param {jail.Fragment} fragment
+ * @param {any[]} args
+ */
+function renderAttributes(fragment, args) {
+  for (const elt of fragment.querySelectorAll(attributeQuery)) {
+    elt.removeAttribute(Atr)
+    for (const key in elt.dataset) {
+      if (key.startsWith(Atr) === false) {
+        continue
+      }
+      const data = elt.getAttribute(`data-${key}`)
+      const prop = data.split(" ", 1)[0]
+      const value = data.slice(prop.length + 1)
+      elt.removeAttribute(`data-${key}`)
+      insertAttribute(elt, prop, createValue(value, args))
+    }
+  }
+}
+
+/**
+ * @param {jail.Fragment} fragment
+ * @param {any[]} args
+ */
+function renderComponents(fragment, args) {
+  for (const elt of fragment.querySelectorAll(componentQuery)) {
+    const com = inject(App).components[elt.className.slice(5)]
+    if (com === undefined) {
+      elt.remove()
+      continue
+    }
+    const params = createComponentParams(elt, args)
+    const result = createRoot(() => com(params, ...elt.content.childNodes))
+    if (result != null) {
+      insertDynamicChild(elt, result)
+    } else {
+      elt.remove()
+    }
+  }
+}
+
+/**
+ * @param {HTMLTemplateElement} elt
+ * @param {any[]} args
+ * @returns {object}
+ */
+function createComponentParams(elt, args) {
+  const params = {}
+  for (const key in elt.dataset) {
+    if (key.startsWith("_arg_") === false) {
+      continue
+    }
+    const data = elt.getAttribute(`data-${key}`)
+    const prop = data.split(" ", 1)[0]
+    params[prop] = createValue(data.slice(prop.length + 1), args)
+  }
+  return params
 }
 
 /**
@@ -138,16 +197,25 @@ export function createTemplateString(strings) {
   }
   data = data + strings[arg]
   data = replace.call(data, /^[ \t]+/gm, "").trim()
-  data = replace.call(data, TagRegExp, (data) => {
-    data = replace.call(data, AtrRegExp, (data, name1, val, _, name2) => {
-      if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
-        return data
-      }
-      val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-      return ` data-${Atr}${atr++}="${name1 || name2}${val}" ${Atr}=""`
-    })
+  data = replace.call(data, ClosingComRegExp, "</template>")
+  data = replace.call(data, TagRegExp, (data, tagName) => {
+    if (ComRegExp.test(tagName)) {
+      data = replace.call(data, AtrRegExp, (_data, name1, val, _, name2) => {
+        val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
+        return ` data-_arg_${atr++}="${name1 || name2}${val}" _arg_=""`
+      })
+      data = replace.call(data, ComRegExp, `template class="${Com}$1"`)
+    } else {
+      data = replace.call(data, AtrRegExp, (data, name1, val, _, name2) => {
+        if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
+          return data
+        }
+        val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
+        return ` data-${Atr}${atr++}="${name1 || name2}${val}" ${Atr}=""`
+      })
+    }
     data = replace.call(data, RemainLastAttr, "")
-    data = replace.call(data, ArgRegExp, `__unknown__$1`)
+    data = replace.call(data, ArgRegExp, ` _ukn_$1 `)
     return replace.call(data, /\s+/g, " ")
   })
   data = replace.call(data, ArgRegExp, `<slot name="${Ins}$1"></slot>`)
@@ -164,8 +232,9 @@ function createTemplate(strings) {
   template.innerHTML = templateString
   const cacheItem = {
     fragment: template.content,
-    hasAttributes: templateString.includes(Atr),
-    hasInsertions: templateString.includes(Ins),
+    hasAttributes: templateString.includes(` data-${Atr}`),
+    hasInsertions: templateString.includes(`<slot name="${Ins}`),
+    hasComponents: templateString.includes(`<template class="${Com}`),
   }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
@@ -181,16 +250,25 @@ function insertChild(slot, value) {
   } else if (value instanceof Node) {
     slot.parentNode.replaceChild(value, slot)
   } else if (isReactive(value) || (Array.isArray(value) && value.length)) {
-    const anchor = new Text()
-    slot.parentNode.replaceChild(anchor, slot)
-    createEffect((currentNodes) => {
-      const nextNodes = createNodeArray([], toValue(value))
-      reconcileNodes(anchor, currentNodes, nextNodes)
-      return nextNodes
-    }, null)
+    insertDynamicChild(slot, value)
   } else {
     slot.parentNode.replaceChild(new Text(String(value)), slot)
   }
+}
+
+/**
+ * @template T
+ * @param {jail.DOMElement} elt
+ * @param {jail.Signal<T> | jail.Ref<T> | T} childElement
+ */
+function insertDynamicChild(elt, childElement) {
+  const anchor = new Text()
+  elt.parentNode.replaceChild(anchor, elt)
+  createEffect((currentNodes) => {
+    const nextNodes = createNodeArray([], toValue(childElement))
+    reconcileNodes(anchor, currentNodes, nextNodes)
+    return nextNodes
+  }, null)
 }
 
 /**
