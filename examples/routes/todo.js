@@ -8,12 +8,7 @@ const list = createSignal([
 
 const Item = (props) => {
   const deleteItem = () => list(list().filter((item) => item.id !== props.id))
-  const toggleItem = () => {
-    list((items) => {
-      props.done = !props.done
-      return items
-    })
-  }
+  const toggleItem = () => list((items) => (props.done = !props.done, items))
 
   return template`
     <div class="todo-item" id="item_${props.id}">

@@ -151,9 +151,10 @@ export function createComputed(callback, initialValue) {
 }
 
 /**
- * @this {jail.Node | null}
- * @param {string | symbol} key
- * @returns
+ * @template T, K
+ * @this {jail.Node<T> | null}
+ * @param {K & keyof jail.Injections} key
+ * @returns {jail.Injections[K] | undefined}
  */
 function lookup(key) {
   return this !== null
