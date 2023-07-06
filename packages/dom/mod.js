@@ -39,13 +39,14 @@ const TemplateCache = new Map()
 const App = Symbol()
 
 /**
- * @template T
+ * @template K
+ * @param {K & keyof jail.AppInjection} key
  * @param {string} name
- * @param {jail.Directive<T>} directive
+ * @param {jail.AppInjection[K]} item
  */
-export function createDirective(name, directive) {
-  const items = inject(App).directives, copy = items[name]
-  items[name] = directive
+function extendApp(key, name, item) {
+  const items = inject(App)[key], copy = items[name]
+  items[name] = item
   if (copy) {
     onUnmount(() => items[name] = copy)
   }
@@ -54,14 +55,19 @@ export function createDirective(name, directive) {
 /**
  * @template T
  * @param {string} name
+ * @param {jail.Directive<T>} directive
+ */
+export function createDirective(name, directive) {
+  extendApp("directives", name, directive)
+}
+
+/**
+ * @template T
+ * @param {string} name
  * @param {jail.Component<T>} component
  */
 export function createComponent(name, component) {
-  const items = inject(App).components, copy = items[name]
-  items[name] = component
-  if (copy) {
-    onUnmount(() => items[name] = copy)
-  }
+  extendApp("components", name, component)
 }
 
 /**
