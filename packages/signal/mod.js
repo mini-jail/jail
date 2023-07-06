@@ -297,7 +297,7 @@ export function createRef(initialValue) {
  * @param {any} error
  */
 function handleError(error) {
-  const errorCallbacks = lookup.call(activeNode, Error)
+  const errorCallbacks = inject(Error)
   if (!errorCallbacks) {
     return reportError(error)
   }
@@ -476,8 +476,10 @@ function dispose() {
 }
 
 /**
- * @param {string | symbol} key
- * @param {any} [defaultValue]
+ * @template K
+ * @param {K & keyof jail.Injections} key
+ * @param {jail.Injections[K]} [defaultValue]
+ * @returns {jail.Injections[K] | undefined}
  */
 export function inject(key, defaultValue) {
   return lookup.call(activeNode, key) || defaultValue
