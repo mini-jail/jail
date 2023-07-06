@@ -505,9 +505,7 @@ export function provide(key, value) {
  */
 export function createCallback(callback) {
   const boundNode = activeNode
-  return function Callback() {
-    return withNode(boundNode, () => {
-      return callback(arguments)
-    })
+  return function Callback(...args) {
+    return withNode(boundNode, () => callback(...args))
   }
 }
