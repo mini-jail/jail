@@ -102,7 +102,7 @@ export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
   const fragment = template.fragment.cloneNode(true)
   if (template.hasInsertions) {
-    renderChildren(fragment, args)
+    renderInsertions(fragment, args)
   }
   if (template.hasAttributes) {
     renderAttributes(fragment, args)
@@ -117,7 +117,7 @@ export function template(strings, ...args) {
  * @param {jail.Fragment} fragment
  * @param {any[]} args
  */
-function renderChildren(fragment, args) {
+function renderInsertions(fragment, args) {
   for (const elt of fragment.querySelectorAll(insertionQuery)) {
     insertChild(elt, args[elt.name.slice(InsLength)])
   }
@@ -156,7 +156,7 @@ function renderComponents(fragment, args) {
     }
     const params = createComponentParams(elt, args)
     const result = createRoot(() => {
-      renderChildren(elt.content, args)
+      renderInsertions(elt.content, args)
       return component(params, ...elt.content.childNodes)
     })
     if (result != null) {
@@ -170,16 +170,17 @@ function renderComponents(fragment, args) {
 /**
  * @param {HTMLTemplateElement} elt
  * @param {any[]} args
- * @returns {object}
+ * @returns {object | null}
  */
 function createComponentParams(elt, args) {
-  const params = {}
+  let params = null
   for (const key in elt.dataset) {
     if (key.startsWith("_arg_") === false) {
       continue
     }
     const data = elt.getAttribute(`data-${key}`)
     const prop = data.split(" ", 1)[0]
+    params = params || {}
     params[prop] = createValue(data.slice(prop.length + 1), args)
   }
   return params
