@@ -35,6 +35,8 @@ const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
 /** @type {Map<TemplateStringsArray, jail.Template>} */
 const TemplateCache = new Map()
+/** @type {Map<string, jail.Modifiers>} */
+const ModifierCache = new Map()
 /** @type {"jail/dom/app"} */
 const App = Symbol()
 
@@ -323,13 +325,14 @@ function insertAttribute(elt, prop, data) {
  * @returns {jail.Binding<T>}
  */
 function createBinding(prop, rawValue) {
-  let modifiers = null
+  let modifiers = ModifierCache.get(prop) || null
   const arg = prop.match(/:([^"'<>.]+)/)?.[1] || null
-  if (prop.includes(".")) {
+  if (prop.includes(".") && modifiers === null) {
     modifiers = {}
     for (const [_match, modifier] of prop.matchAll(/\.([^"'.]+)/g)) {
       modifiers[modifier] = true
     }
+    ModifierCache.set(prop, modifiers)
   }
   return {
     get value() {
