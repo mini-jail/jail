@@ -13,8 +13,10 @@ declare global {
       readonly value: T
       readonly rawValue: Signal<T> | Ref<T> | T
       readonly arg: string | null
-      readonly modifiers: { [key: string]: boolean } | null
+      readonly modifiers: Modifiers | null
     }
+
+    type Modifiers = { [key: string]: boolean }
 
     interface AppInjection {
       directives: Directives
