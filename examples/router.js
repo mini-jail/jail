@@ -15,5 +15,5 @@ export function installRouter() {
     removeEventListener("hashchange", listener)
   })
 
-  createComponent("hash-router", ({ routes }) => createRouter(routes))
+  createComponent("HashRouter", ({ routes }) => createRouter(routes))
 }

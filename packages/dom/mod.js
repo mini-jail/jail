@@ -28,8 +28,8 @@ const ArgRegExp = /{{(\d+)}}/g
 const SValRegExp = /^{(\d+)}$/
 const MValRegExp = /{(\d+)}/g
 const RemainLastAttr = RegExp(` ${Atr}=""(?=.* ${Atr}="")`, "g")
-const ComRegExp = /((?:[a-zA-Z]+)-(?:[a-zA-Z]+)|(?:[A-Z][a-z]+)+)/
-const ClosingComRegExp = /<\/((?:[a-zA-Z]+)-(?:[a-zA-Z]+)|(?:[A-Z][a-z]+)+)>/g
+const ComRegExp = /((?:[A-Z][a-z]+)+)/
+const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
 const TagRegExp = /<([a-zA-Z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g

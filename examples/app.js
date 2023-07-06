@@ -38,7 +38,7 @@ const App = () => {
       </nav>
     </header>
     <main>
-      <hash-router routes="${routes}"></hash-router>
+      <HashRouter routes="${routes}"></HashRouter>
     </main>
   `
 }
