@@ -102,9 +102,7 @@ export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
   const fragment = template.fragment.cloneNode(true)
   if (template.hasInsertions) {
-    for (const elt of fragment.querySelectorAll(insertionQuery)) {
-      insertChild(elt, args[elt.name.slice(InsLength)])
-    }
+    renderChildren(fragment, args)
   }
   if (template.hasAttributes) {
     renderAttributes(fragment, args)
@@ -113,6 +111,16 @@ export function template(strings, ...args) {
     renderComponents(fragment, args)
   }
   return fragment
+}
+
+/**
+ * @param {jail.Fragment} fragment
+ * @param {any[]} args
+ */
+function renderChildren(fragment, args) {
+  for (const elt of fragment.querySelectorAll(insertionQuery)) {
+    insertChild(elt, args[elt.name.slice(InsLength)])
+  }
 }
 
 /**
@@ -141,13 +149,16 @@ function renderAttributes(fragment, args) {
  */
 function renderComponents(fragment, args) {
   for (const elt of fragment.querySelectorAll(componentQuery)) {
-    const com = inject(App).components[elt.className.slice(5)]
-    if (com === undefined) {
+    const component = inject(App).components[elt.className.slice(5)]
+    if (component === undefined) {
       elt.remove()
       continue
     }
     const params = createComponentParams(elt, args)
-    const result = createRoot(() => com(params, ...elt.content.childNodes))
+    const result = createRoot(() => {
+      renderChildren(elt.content, args)
+      return component(params, ...elt.content.childNodes)
+    })
     if (result != null) {
       insertDynamicChild(elt, result)
     } else {
