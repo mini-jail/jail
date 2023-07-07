@@ -103,10 +103,6 @@ function showDirective(elt, binding) {
  * @param {jail.Binding<(event: Event) => void>} binding
  */
 function onDirective(elt, binding) {
-  if (binding.arg === null) {
-    console.info(`missing name: [d-|prefix]on:[arg=name]...`)
-    return
-  }
   const name = binding.arg
   const modifiers = binding.modifiers
   let id = name,
