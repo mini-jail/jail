@@ -325,12 +325,11 @@ function insertAttribute(elt, prop, data) {
  * @returns {jail.Binding<T>}
  */
 function createBinding(prop, rawValue) {
-  const modifiers =
-    prop.match(BindingModRegExp)?.reduce((modifiers, modifier) => {
-      modifiers[modifier.slice(1)] = true
-      return modifiers
-    }, {}) || null
   const arg = prop.match(BindingArgRegExp)?.[1] || null
+  const modifiers = prop.match(BindingModRegExp)?.reduce((modifiers, key) => {
+    modifiers[key.slice(1)] = true
+    return modifiers
+  }, {}) || null
   return {
     get value() {
       return toValue(rawValue)
