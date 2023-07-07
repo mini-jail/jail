@@ -12,10 +12,13 @@ import { getParams } from "jail/router"
 const Dot = (x, y, target) => {
   const counter = inject("counter")
   const hover = createSignal(false)
+  const clicked = createSignal(false)
   const onMouseOut = () => hover(false)
   const onMouseOver = () => hover(true)
+  const onMouseDown = () => clicked(true)
+  const onMouseUp = () => clicked(false)
   const text = () => hover() ? "*" + counter() + "*" : counter()
-  const bgColor = () => hover() === true ? "lightpink" : "white"
+  const bgColor = () => hover() ? clicked() ? "hotpink" : "lightpink" : "white"
 
   const css = `
     width: ${target}px;
@@ -34,6 +37,8 @@ const Dot = (x, y, target) => {
   return template`
     <div 
       d-my-text="${text}" style="${css}" d-style:background-color="${bgColor}"
+      d-on:mousedown.delegate="${onMouseDown}"
+      d-on:mouseup.delegate="${onMouseUp}"
       d-on:mouseover.delegate="${onMouseOver}"
       d-on:mouseout.delegate="${onMouseOut}"
     ></div>
