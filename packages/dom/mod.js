@@ -17,8 +17,8 @@ const Com = "_com_"
 /** @type {`slot[name^="${Ins}"]`} */
 const insertionQuery = `slot[name^="${Ins}"]`
 const attributeQuery = `[${Atr}]`
-/** @type {`template[class^="${Com}"]`} */
-const componentQuery = `template[class^="${Com}"]`
+/** @type {`template[data-${Com}]`} */
+const componentQuery = `template[data-${Com}]`
 const InsLength = Ins.length
 const DirPrefix = "d-"
 const DirPrefixLength = DirPrefix.length
@@ -27,16 +27,18 @@ const DirKeyRegExp = /[a-z\-\_]+/
 const ArgRegExp = /{{(\d+)}}/g
 const SValRegExp = /^{(\d+)}$/
 const MValRegExp = /{(\d+)}/g
+const BindingModRegExp = /\.(?:[^"'.])+/g
+const BindingArgRegExp = /:([^"'<>.]+)/
+const WSAndTabsRegExp = /^[\s\t]+/gm
+const MultiWSRegExp = /\s+/g
 const RemainLastAttr = RegExp(` ${Atr}=""(?=.* ${Atr}="")`, "g")
-const ComRegExp = /((?:[A-Z][a-z]+)+)/
+const ComRegExp = /<((?:[A-Z][a-z]+)+)/
 const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
-const TagRegExp = /<([a-zA-Z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*>/g
+const TagRegExp = /<[a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
 /** @type {Map<TemplateStringsArray, jail.Template>} */
 const TemplateCache = new Map()
-/** @type {Map<string, jail.Modifiers>} */
-const ModifierCache = new Map()
 /** @type {"jail/dom/app"} */
 const App = Symbol()
 
@@ -151,7 +153,7 @@ function renderAttributes(fragment, args) {
  */
 function renderComponents(fragment, args) {
   for (const elt of fragment.querySelectorAll(componentQuery)) {
-    const component = inject(App).components[elt.className.slice(5)]
+    const component = inject(App).components[elt.dataset[Com]]
     if (component === undefined) {
       elt.remove()
       continue
@@ -177,10 +179,11 @@ function renderComponents(fragment, args) {
 function createComponentParams(elt, args) {
   let params = null
   for (const key in elt.dataset) {
-    const data = elt.getAttribute(`data-${key}`)
-    const prop = data.split(" ", 1)[0]
+    if (key === Com) {
+      continue
+    }
     params = params || {}
-    params[prop] = createValue(data.slice(prop.length + 1), args)
+    params[key] = createValue(elt.dataset[key], args)
   }
   return params
 }
@@ -213,15 +216,15 @@ export function createTemplateString(strings) {
     data = data + strings[arg] + `{{${arg++}}}`
   }
   data = data + strings[arg]
-  data = replace.call(data, /^[ \t]+/gm, "").trim()
+  data = replace.call(data, WSAndTabsRegExp, "").trim()
   data = replace.call(data, ClosingComRegExp, "</template>")
-  data = replace.call(data, TagRegExp, (data, tagName) => {
-    if (ComRegExp.test(tagName)) {
+  data = replace.call(data, TagRegExp, (data) => {
+    if (ComRegExp.test(data)) {
       data = replace.call(data, AtrRegExp, (_data, name1, val, _, name2) => {
-        val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-        return ` data-_arg_${atr++}="${name1 || name2}${val}"`
+        val = val ? replace.call(val, ArgRegExp, "{$1}").trim() : ""
+        return ` data-${name1 || name2}="${val}"`
       })
-      data = replace.call(data, ComRegExp, `template class="${Com}$1"`)
+      data = replace.call(data, ComRegExp, `<template data-${Com}="$1"`)
     } else {
       data = replace.call(data, AtrRegExp, (data, name1, val, _, name2) => {
         if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
@@ -232,8 +235,8 @@ export function createTemplateString(strings) {
       })
     }
     data = replace.call(data, RemainLastAttr, "")
-    data = replace.call(data, ArgRegExp, ` _ukn_$1 `)
-    return replace.call(data, /\s+/g, " ")
+    data = replace.call(data, ArgRegExp, "")
+    return replace.call(data, MultiWSRegExp, " ")
   })
   data = replace.call(data, ArgRegExp, `<slot name="${Ins}$1"></slot>`)
   return data
@@ -251,7 +254,7 @@ function createTemplate(strings) {
     fragment: template.content,
     hasAttributes: templateString.includes(` data-${Atr}`),
     hasInsertions: templateString.includes(`<slot name="${Ins}`),
-    hasComponents: templateString.includes(`<template class="${Com}`),
+    hasComponents: templateString.includes(`<template data-${Com}=`),
   }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
@@ -322,15 +325,12 @@ function insertAttribute(elt, prop, data) {
  * @returns {jail.Binding<T>}
  */
 function createBinding(prop, rawValue) {
-  let modifiers = ModifierCache.get(prop) || null
-  const arg = prop.match(/:([^"'<>.]+)/)?.[1] || null
-  if (prop.includes(".") && modifiers === null) {
-    modifiers = {}
-    for (const [_match, modifier] of prop.matchAll(/\.([^"'.]+)/g)) {
-      modifiers[modifier] = true
-    }
-    ModifierCache.set(prop, modifiers)
-  }
+  const modifiers =
+    prop.match(BindingModRegExp)?.reduce((modifiers, modifier) => {
+      modifiers[modifier.slice(1)] = true
+      return modifiers
+    }, {}) || null
+  const arg = prop.match(BindingArgRegExp)?.[1] || null
   return {
     get value() {
       return toValue(rawValue)
