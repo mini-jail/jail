@@ -17,8 +17,9 @@ let activeNode = null
  * @returns {T | void}
  */
 export function createRoot(callback) {
-  const localNode = activeNode = createNode()
+  const previousNode = activeNode, localNode = createNode()
   try {
+    activeNode = localNode
     return batch(() =>
       callback(
         callback.length === 0 ? undefined : clean.bind(localNode, true),
@@ -27,7 +28,7 @@ export function createRoot(callback) {
   } catch (error) {
     handleError(error)
   } finally {
-    activeNode = localNode.parentNode
+    activeNode = previousNode
   }
 }
 
