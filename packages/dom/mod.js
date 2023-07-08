@@ -14,12 +14,11 @@ import { directives, replace, toKebabCase } from "./helpers.js"
 const Atr = "_atr_"
 const Ins = "_ins_"
 const Com = "_com_"
-/** @type {`slot[name^="${Ins}"]`} */
-const insertionQuery = `slot[name^="${Ins}"]`
+/** @type {`slot[${Ins}]`} */
+const insertionQuery = `slot[${Ins}]`
 const attributeQuery = `[${Atr}]`
-/** @type {`template[data-${Com}]`} */
-const componentQuery = `template[data-${Com}]`
-const InsLength = Ins.length
+/** @type {`template[${Com}]`} */
+const componentQuery = `template[${Com}]`
 const DirPrefix = "d-"
 const DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
@@ -31,8 +30,8 @@ const BindingModRegExp = /\.(?:[^"'.])+/g
 const BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm
 const MultiWSRegExp = /\s+/g
-const RemainLastAttr = RegExp(` ${Atr}=""(?=.* ${Atr}="")`, "g")
-const ComRegExp = /<((?:[A-Z][a-z]+)+)/
+const RemainLastAttr = RegExp(` ${Atr}(?=.* ${Atr})`, "g")
+const ComRegExp = /^<((?:[A-Z][a-z]+)+)/
 const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
 const TagRegExp = /<[a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AtrRegExp =
@@ -123,7 +122,7 @@ export function template(strings, ...args) {
  */
 function renderInsertions(fragment, args) {
   for (const elt of fragment.querySelectorAll(insertionQuery)) {
-    insertChild(elt, args[elt.name.slice(InsLength)])
+    insertChild(elt, args[elt.getAttribute(Ins)])
   }
 }
 
@@ -135,16 +134,25 @@ function renderAttributes(fragment, args) {
   for (const elt of fragment.querySelectorAll(attributeQuery)) {
     elt.removeAttribute(Atr)
     for (const key in elt.dataset) {
-      if (key.startsWith(Atr) === false) {
-        continue
+      if (key.startsWith("__")) {
+        insertAttribute(elt, ...getPropAndValue(elt, key, args))
       }
-      const data = elt.getAttribute(`data-${key}`)
-      const prop = data.split(" ", 1)[0]
-      const value = data.slice(prop.length + 1)
-      elt.removeAttribute(`data-${key}`)
-      insertAttribute(elt, prop, createValue(value, args))
     }
   }
+}
+
+/**
+ * @param {jail.DOMElement} elt
+ * @param {string} key
+ * @param {any[]} args
+ * @returns {[string, any]}
+ */
+function getPropAndValue(elt, key, args) {
+  const data = elt.getAttribute(`data-${key}`),
+    prop = data.split(" ", 1)[0],
+    value = data.slice(prop.length + 1)
+  elt.removeAttribute(`data-${key}`)
+  return [prop, createValue(value, args)]
 }
 
 /**
@@ -153,16 +161,16 @@ function renderAttributes(fragment, args) {
  */
 function renderComponents(fragment, args) {
   for (const elt of fragment.querySelectorAll(componentQuery)) {
-    const component = inject(App).components[elt.dataset[Com]]
+    const component = inject(App).components[elt.getAttribute(Com)]
     if (component === undefined) {
       elt.remove()
       continue
     }
-    const params = createComponentParams(elt, args)
-    const result = createRoot(() => {
-      renderInsertions(elt.content, args)
-      return component(params, ...elt.content.childNodes)
-    })
+    const params = createComponentParams(elt, args),
+      result = createRoot(() => {
+        renderInsertions(elt.content, args)
+        return component(params, ...elt.content.childNodes)
+      })
     if (result != null) {
       insertDynamicChild(elt, result)
     } else {
@@ -179,11 +187,9 @@ function renderComponents(fragment, args) {
 function createComponentParams(elt, args) {
   let params = null
   for (const key in elt.dataset) {
-    if (key === Com) {
-      continue
-    }
+    const propValueTuple = getPropAndValue(elt, key, args)
     params = params || {}
-    params[key] = createValue(elt.dataset[key], args)
+    params[propValueTuple[0]] = propValueTuple[1]
   }
   return params
 }
@@ -211,7 +217,7 @@ function createValue(value, args) {
  * @returns {string}
  */
 export function createTemplateString(strings) {
-  let data = "", arg = 0, atr = 0
+  let data = "", arg = 0, id = 0
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `{{${arg++}}}`
   }
@@ -219,26 +225,25 @@ export function createTemplateString(strings) {
   data = replace.call(data, WSAndTabsRegExp, "").trim()
   data = replace.call(data, ClosingComRegExp, "</template>")
   data = replace.call(data, TagRegExp, (data) => {
-    if (ComRegExp.test(data)) {
-      data = replace.call(data, AtrRegExp, (_data, name1, val, _, name2) => {
-        val = val ? replace.call(val, ArgRegExp, "{$1}").trim() : ""
-        return ` data-${name1 || name2}="${val}"`
-      })
-      data = replace.call(data, ComRegExp, `<template data-${Com}="$1"`)
-    } else {
-      data = replace.call(data, AtrRegExp, (data, name1, val, _, name2) => {
+    const isComponent = ComRegExp.test(data),
+      extension = isComponent ? "" : ` _atr_`
+    data = replace.call(data, AtrRegExp, (data, name1, val, _, name2) => {
+      if (isComponent === false) {
         if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
           return data
         }
-        val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-        return ` data-${Atr}${atr++}="${name1 || name2}${val}" ${Atr}=""`
-      })
+      }
+      val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
+      return ` data-__${id++}="${name1 || name2}${val}"${extension}`
+    })
+    if (isComponent) {
+      data = replace.call(data, ComRegExp, `<template ${Com}="$1"`)
     }
     data = replace.call(data, RemainLastAttr, "")
     data = replace.call(data, ArgRegExp, "")
     return replace.call(data, MultiWSRegExp, " ")
   })
-  data = replace.call(data, ArgRegExp, `<slot name="${Ins}$1"></slot>`)
+  data = replace.call(data, ArgRegExp, `<slot ${Ins}="$1"></slot>`)
   return data
 }
 
@@ -252,9 +257,9 @@ function createTemplate(strings) {
   template.innerHTML = templateString
   const cacheItem = {
     fragment: template.content,
-    hasAttributes: templateString.includes(` data-${Atr}`),
-    hasInsertions: templateString.includes(`<slot name="${Ins}`),
-    hasComponents: templateString.includes(`<template data-${Com}=`),
+    hasAttributes: templateString.includes(` ${Atr}`),
+    hasInsertions: templateString.includes(`<slot ${Ins}="`),
+    hasComponents: templateString.includes(`<template ${Com}="`),
   }
   TemplateCache.set(strings, cacheItem)
   return cacheItem
