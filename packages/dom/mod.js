@@ -166,16 +166,16 @@ function renderComponents(fragment, args) {
       elt.remove()
       continue
     }
-    const params = createComponentParams(elt, args),
-      result = createRoot(() => {
-        renderInsertions(elt.content, args)
-        return component(params, ...elt.content.childNodes)
-      })
-    if (result != null) {
-      insertDynamicChild(elt, result)
-    } else {
-      elt.remove()
-    }
+    createRoot(() => {
+      const params = createComponentParams(elt, args)
+      renderInsertions(elt.content, args)
+      const result = component(params, ...elt.content.childNodes)
+      if (result != null) {
+        insertDynamicChild(elt, result)
+      } else {
+        elt.remove()
+      }
+    })
   }
 }
 
