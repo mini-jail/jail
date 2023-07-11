@@ -401,12 +401,12 @@ function cleanSources() {
  * @param {boolean} complete
  */
 function cleanChildNodes(complete) {
-  const hasUpdateHandler = this.onupdate !== null
+  const hasUpdateHandler = this.onupdate != null
   while (this.childNodes.length) {
     const childNode = this.childNodes.pop()
     clean.call(
       childNode,
-      complete || (hasUpdateHandler && childNode.onupdate !== null),
+      complete || (hasUpdateHandler && childNode.onupdate != null),
     )
   }
 }
