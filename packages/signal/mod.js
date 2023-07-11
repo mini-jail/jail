@@ -361,7 +361,7 @@ function flush() {
  */
 function update(complete) {
   clean.call(this, complete)
-  if (this.onupdate === null) {
+  if (this.onupdate == null) {
     return
   }
   const previousNode = activeNode
