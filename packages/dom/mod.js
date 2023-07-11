@@ -277,7 +277,7 @@ function insertChild(slot, value) {
   } else if (isReactive(value) || (Array.isArray(value) && value.length)) {
     insertDynamicChild(slot, value)
   } else {
-    slot.parentNode.replaceChild(new Text(String(value)), slot)
+    slot.parentNode.replaceChild(new Text(value + ""), slot)
   }
 }
 
@@ -378,7 +378,12 @@ function createNodeArray(nodeArray, ...elements) {
     } else if (elt instanceof Node) {
       nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
-      nodeArray.push(new Text(String(elt)))
+      const previousNode = nodeArray.at(-1)
+      if (previousNode instanceof Text) {
+        previousNode.data = previousNode.data + elt
+      } else {
+        nodeArray.push(new Text(elt + ""))
+      }
     } else if (isReactive(elt)) {
       createNodeArray(nodeArray, toValue(elt))
     } else if (Symbol.iterator in elt) {
