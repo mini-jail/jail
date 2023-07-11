@@ -379,7 +379,7 @@ function createNodeArray(nodeArray, ...elements) {
       nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
       const previousNode = nodeArray.at(-1)
-      if (previousNode instanceof Text) {
+      if (previousNode instanceof CharacterData) {
         previousNode.data = previousNode.data + elt
       } else {
         nodeArray.push(new Text(elt + ""))
