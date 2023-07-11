@@ -12,9 +12,8 @@ let isRunning = false
 let activeNode = null
 
 /**
- * @template T
- * @param {(cleanup: jail.Cleanup) => T | void} callback
- * @returns {T | void}
+ * @param {(cleanup: jail.Cleanup) => unknown | void} callback
+ * @returns {unknown | void}
  */
 export function createRoot(callback) {
   const previousNode = activeNode, localNode = createNode()
@@ -40,10 +39,9 @@ export function nodeRef() {
 }
 
 /**
- * @template T
  * @param {jail.Node} node
- * @param {() => T} callback
- * @returns {T}
+ * @param {() => unknown} callback
+ * @returns {unknown}
  */
 export function withNode(node, callback) {
   const localNode = activeNode
@@ -60,10 +58,9 @@ export function withNode(node, callback) {
 }
 
 /**
- * @template T
- * @param {T} [initialValue]
- * @param {jail.Callback<T>} [onupdate]
- * @returns {jail.Node<T>}
+ * @param {unknown} [initialValue]
+ * @param {jail.Callback} [onupdate]
+ * @returns {jail.Node}
  */
 function createNode(initialValue, onupdate) {
   const localNode = {
@@ -102,17 +99,16 @@ export function onMount(callback) {
 }
 
 /**
- * @param {() => void} callback
+ * @param {jail.Cleanup} callback
  */
 export function onUnmount(callback) {
   onCleanup(() => untrack(callback))
 }
 
 /**
- * @template T
  * @param {() => void} dependency
- * @param {T & jail.Callback<T>} callback
- * @returns {T}
+ * @param {jail.Callback} callback
+ * @returns {jail.Callback}
  */
 export function on(dependency, callback) {
   return ((currentValue) => {
@@ -122,9 +118,8 @@ export function on(dependency, callback) {
 }
 
 /**
- * @template T
- * @param {jail.Callback<T>} callback
- * @param {T} [initialValue]
+ * @param {jail.Callback} callback
+ * @param {unknown} [initialValue]
  */
 export function createEffect(callback, initialValue) {
   if (activeNode !== null) {
@@ -140,10 +135,9 @@ export function createEffect(callback, initialValue) {
 }
 
 /**
- * @template T
- * @param {jail.Callback<T>} callback
- * @param {T} [initialValue]
- * @returns {() => T}
+ * @param {jail.Callback} callback
+ * @param {unknown} [initialValue]
+ * @returns {jail.CallableSignal}
  */
 export function createComputed(callback, initialValue) {
   const source = createSource(initialValue)
@@ -152,10 +146,9 @@ export function createComputed(callback, initialValue) {
 }
 
 /**
- * @template T, K
- * @this {jail.Node<T> | null}
- * @param {K & keyof jail.Injections} key
- * @returns {jail.Injections[K] | undefined}
+ * @this {jail.Node | null}
+ * @param {keyof jail.Injections} key
+ * @returns {jail.Injections[keyof jail.Injections] | undefined}
  */
 function lookup(key) {
   return this !== null
@@ -166,21 +159,19 @@ function lookup(key) {
 }
 
 /**
- * @template T
- * @param {T} [initialValue]
- * @returns {jail.Source<T>}
+ * @param {unknown} [initialValue]
+ * @returns {jail.Source}
  */
 function createSource(initialValue) {
   return { value: initialValue, nodes: null, nodeSlots: null }
 }
 
 /**
- * @template T
- * @this {jail.Source<T>}
- * @returns {T}
+ * @this {jail.Source}
+ * @returns {unknown}
  */
 function getValue() {
-  if (activeNode !== null && activeNode.onupdate !== null) {
+  if (activeNode !== null && activeNode.onupdate != null) {
     const sourceSlot = this.nodes?.length || 0,
       nodeSlot = activeNode.sources?.length || 0
     if (activeNode.sources === null) {
@@ -202,9 +193,8 @@ function getValue() {
 }
 
 /**
- * @template T
- * @this {jail.Source<T>}
- * @param {T | jail.Callback<T>} value
+ * @this {jail.Source}
+ * @param {unknown | jail.Callback} value
  */
 function setValue(value) {
   if (typeof value === "function") {
@@ -219,22 +209,12 @@ function setValue(value) {
  * @returns {boolean}
  */
 export function isReactive(data) {
-  if (data == null) {
-    return false
-  }
-  if (typeof data === "function") {
-    return true
-  }
-  if (typeof data === "object" && "value" in data) {
-    return true
-  }
-  return false
+  return typeof data === "function"
 }
 
 /**
- * @template T
- * @param {jail.CallableSignal<T> | T} data
- * @returns {T}
+ * @param {jail.CallableSignal | unknown} data
+ * @returns {unknown}
  */
 export function toValue(data) {
   return typeof data === "function" ? data() : data
@@ -254,10 +234,9 @@ function queueNodes() {
 }
 
 /**
- * @template T
- * @this {jail.Source<T>}
- * @param {T | jail.Callback<T>} [value]
- * @returns {T | void}
+ * @this {jail.Source}
+ * @param {unknown | jail.Callback} [value]
+ * @returns {unknown | void}
  */
 function sourceValue(value) {
   return arguments.length === 1
@@ -266,9 +245,8 @@ function sourceValue(value) {
 }
 
 /**
- * @template T
- * @param {T} [initialValue]
- * @returns {jail.Signal<T>}
+ * @param {unknown} [initialValue]
+ * @returns {jail.Signal}
  */
 export function createSignal(initialValue) {
   return sourceValue.bind(createSource(initialValue))
@@ -316,9 +294,8 @@ export function onCleanup(callback) {
 }
 
 /**
- * @template T
- * @param {() => T} callback
- * @returns {T}
+ * @param {() => unknown} callback
+ * @returns {unknown}
  */
 export function untrack(callback) {
   const localNode = activeNode
@@ -329,9 +306,8 @@ export function untrack(callback) {
 }
 
 /**
- * @template T
- * @param {() => T} callback
- * @returns {T}
+ * @param {() => unknown} callback
+ * @returns {unknown}
  */
 function batch(callback) {
   if (isRunning) {
@@ -355,8 +331,7 @@ function flush() {
 }
 
 /**
- * @template T
- * @this {jail.Node<T>}
+ * @this {jail.Node}
  * @param {boolean} complete
  */
 function update(complete) {
@@ -376,8 +351,7 @@ function update(complete) {
 }
 
 /**
- * @template T
- * @this {jail.Node<T>}
+ * @this {jail.Node}
  */
 function cleanSources() {
   while (this.sources.length) {
@@ -396,8 +370,7 @@ function cleanSources() {
 }
 
 /**
- * @template T
- * @this {jail.Node<T>}
+ * @this {jail.Node}
  * @param {boolean} complete
  */
 function cleanChildNodes(complete) {
@@ -412,8 +385,7 @@ function cleanChildNodes(complete) {
 }
 
 /**
- * @template T
- * @this {jail.Node<T>}
+ * @this {jail.Node}
  * @param {boolean} complete
  */
 function clean(complete) {
@@ -433,8 +405,7 @@ function clean(complete) {
 }
 
 /**
- * @template T
- * @this {jail.Node<T>}
+ * @this {jail.Node}
  */
 function cleanup() {
   while (this.cleanups.length) {
@@ -443,8 +414,7 @@ function cleanup() {
 }
 
 /**
- * @template T
- * @this {jail.Node<T>}
+ * @this {jail.Node}
  */
 function dispose() {
   this.value = null
@@ -457,10 +427,9 @@ function dispose() {
 }
 
 /**
- * @template K
- * @param {K & keyof jail.Injections} key
- * @param {jail.Injections[K]} [defaultValue]
- * @returns {jail.Injections[K] | undefined}
+ * @param {keyof jail.Injections} key
+ * @param {jail.Injections[keyof jail.Injections}]} [defaultValue]
+ * @returns {jail.Injections[keyof jail.Injections}] | undefined}
  */
 export function inject(key, defaultValue) {
   return lookup.call(activeNode, key) || defaultValue
@@ -482,9 +451,8 @@ export function provide(key, value) {
 }
 
 /**
- * @template T
- * @param {T & (...args: any[]) => any} callback
- * @returns {T}
+ * @param {(...args: unknown[]) => unknown} callback
+ * @returns {(...args: unknown[]) => unknown}
  */
 export function createCallback(callback) {
   const boundNode = activeNode

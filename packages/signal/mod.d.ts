@@ -4,14 +4,14 @@ declare global {
 
     type Callback<T> = (currentValue: T | undefined) => T
 
-    type CallableSignal<T = unknown> = () => T
-
     type SettableSignal<T = unknown> = (value: T) => void
 
     type UpdatableSignal<T = unknown> = (callback: Callback<T>) => void
 
     interface Signal<T = unknown>
-      extends CallableSignal<T>, SettableSignal<T>, UpdatableSignal<T> {}
+      extends SettableSignal<T>, UpdatableSignal<T> {
+      (): T
+    }
 
     type Source<T = unknown> = {
       value: T | undefined | null
@@ -109,7 +109,7 @@ export function onMount(callback: () => void): void
  * });
  * ```
  */
-export function onUnmount(callback: () => void): void
+export function onUnmount(callback: jail.Cleanup): void
 
 /**
  * @example
@@ -167,9 +167,9 @@ export function createComputed<T>(
   initialValue: T,
 ): () => T
 
-export function isReactive<T>(data: unknown): data is jail.CallableSignal<T>
+export function isReactive<T>(data: unknown): data is () => T
 
-export function toValue<T>(data: jail.CallableSignal<T> | T): T
+export function toValue<T>(data: (() => T) | T): T
 
 /**
  * @example
