@@ -1,25 +1,29 @@
-import { createComputed, createRef } from "jail/signal"
+import { createComputed, createSignal } from "jail/signal"
 import { template } from "jail/dom"
 
 const code = `
-import { createRef } from "jail/signal"
+import { createSignal } from "jail/signal"
 import { template } from "jail/dom"
 
 function Counter() {
-  const counter = createRef(0)
+  const counter = createSignal(0)
+  const up = () => counter(value => ++value)
+  const down = () => counter(value => --value)
 
   return template\`
-    <button d-on:click.delegate="\${() => counter.value--}">-</button>
+    <button d-on:click.delegate="\${down}">-</button>
     <span>current value: \${counter}</span>
-    <button d-on:click.delegate="\${() => counter.value++}">+</button>
+    <button d-on:click.delegate="\${up}">+</button>
   \`
 }`.trim()
 
 export default () => {
-  const counter = createRef(0)
-  const show = createRef(false)
+  const counter = createSignal(0)
+  const show = createSignal(false)
+  const up = () => counter((value) => ++value)
+  const down = () => counter((value) => --value)
   const clicked = createComputed((currentValue) => {
-    counter.value
+    counter()
     return currentValue + 1
   }, -1)
 
@@ -28,13 +32,13 @@ export default () => {
       <h4>
         counter example
         <sub>(...what else?)</sub>
-        <button d-on:click.delegate="${() => show.value = !show.value}">
-          ${() => show.value ? "hide" : "show"} code
+        <button d-on:click.delegate="${() => show((value) => !value)}">
+          ${() => show() ? "hide" : "show"} code
         </button>
       </h4>
-      <button d-on:click.delegate="${() => counter.value--}">-</button>
+      <button d-on:click.delegate="${down}">-</button>
       <span>current value: ${counter}</span>
-      <button d-on:click.delegate="${() => counter.value++}">+</button>
+      <button d-on:click.delegate="${up}">+</button>
       <div>> you have clicked ${clicked} times.</div>
       ${() => clicked() >= 10 && template`<div>> why do you do this?????</div>`}
       ${() => clicked() >= 20 && template`<div>> pls stop T_T</div>`}

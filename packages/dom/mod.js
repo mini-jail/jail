@@ -284,7 +284,7 @@ function insertChild(slot, value) {
 /**
  * @template T
  * @param {jail.DOMElement} elt
- * @param {jail.Signal<T> | jail.Ref<T> | T} childElement
+ * @param {jail.CallableSignal<T> | T} childElement
  */
 function insertDynamicChild(elt, childElement) {
   const anchor = new Text()

@@ -11,7 +11,7 @@ declare global {
 
     interface Binding<T> {
       readonly value: T
-      readonly rawValue: Signal<T> | Ref<T> | T
+      readonly rawValue: CallableSignal<T> | T
       readonly arg: string | null
       readonly modifiers: Modifiers | null
     }
@@ -45,7 +45,7 @@ declare global {
 
     interface ExtendableDirectiveMap {
       on: (this: DOMElement, event: Event) => void
-      ref: Ref<DOMElement> | Signal<DOMElement> | ((elt: DOMElement) => void)
+      ref: CallableSignal<DOMElement> | ((elt: DOMElement) => void)
       show: boolean
       html: string
       text: string

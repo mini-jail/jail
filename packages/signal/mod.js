@@ -233,15 +233,11 @@ export function isReactive(data) {
 
 /**
  * @template T
- * @param {jail.Signal<T> | jail.Ref<T> | T} data
+ * @param {jail.CallableSignal<T> | T} data
  * @returns {T}
  */
 export function toValue(data) {
-  return typeof data === "function"
-    ? data()
-    : data && typeof data === "object" && "value" in data
-    ? data.value
-    : data
+  return typeof data === "function" ? data() : data
 }
 
 /**
@@ -276,23 +272,6 @@ function sourceValue(value) {
  */
 export function createSignal(initialValue) {
   return sourceValue.bind(createSource(initialValue))
-}
-
-/**
- * @template T
- * @param {T} [initialValue]
- * @returns {jail.Ref<T>}
- */
-export function createRef(initialValue) {
-  const source = createSource(initialValue)
-  return {
-    get value() {
-      return getValue.call(source)
-    },
-    set value(nextValue) {
-      setValue.call(source, nextValue)
-    },
-  }
 }
 
 /**

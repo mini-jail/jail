@@ -1,18 +1,17 @@
 declare global {
   namespace jail {
-    type Cleanup = {
-      (): void
-    }
+    type Cleanup = () => void
 
-    type Callback<T> = {
-      (currentValue: T | undefined): T
-    }
+    type Callback<T> = (currentValue: T | undefined) => T
 
-    type Signal<T = unknown> = {
-      (): T
-      (value: T): void
-      (update: Callback<T>): void
-    }
+    type CallableSignal<T = unknown> = () => T
+
+    type SettableSignal<T = unknown> = (value: T) => void
+
+    type UpdatableSignal<T = unknown> = (callback: Callback<T>) => void
+
+    interface Signal<T = unknown>
+      extends CallableSignal<T>, SettableSignal<T>, UpdatableSignal<T> {}
 
     type Source<T = unknown> = {
       value: T | undefined | null
@@ -29,10 +28,6 @@ declare global {
       onupdate: Callback<T> | null
       sources: Source[] | null
       sourceSlots: number[] | null
-    }
-
-    type Ref<T = unknown> = {
-      value: T
     }
 
     type Injections = ExtendableInjectionMap
@@ -172,11 +167,9 @@ export function createComputed<T>(
   initialValue: T,
 ): () => T
 
-export function isReactive<T>(
-  data: unknown,
-): data is jail.Ref<T> | jail.Signal<T>
+export function isReactive<T>(data: unknown): data is jail.CallableSignal<T>
 
-export function toValue<T>(data: jail.Ref<T> | jail.Signal<T> | T): T
+export function toValue<T>(data: jail.CallableSignal<T> | T): T
 
 /**
  * @example
@@ -193,19 +186,6 @@ export function toValue<T>(data: jail.Ref<T> | jail.Signal<T> | T): T
  */
 export function createSignal<T>(): jail.Signal<T | undefined>
 export function createSignal<T>(initialValue: T): jail.Signal<T>
-
-/**
- * @example
- * ```js
- * const word = createRef("hello world");
- * createEffect(() => {
- *   word.value;
- * })
- * word.value = "bye world"; //triggers
- * ```
- */
-export function createRef<T>(): jail.Ref<T | undefined>
-export function createRef<T>(initialValue?: T): jail.Ref<T>
 
 /**
  * @example
