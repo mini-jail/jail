@@ -42,10 +42,9 @@ const TemplateCache = new Map()
 const App = Symbol()
 
 /**
- * @template K
- * @param {K & keyof jail.AppInjection} key
+ * @param {keyof jail.AppInjection} key
  * @param {string} name
- * @param {jail.AppInjection[K]} item
+ * @param {jail.AppInjection[jail.AppInjection]} item
  */
 function extendApp(key, name, item) {
   const items = inject(App)[key], copy = items[name]
@@ -56,18 +55,16 @@ function extendApp(key, name, item) {
 }
 
 /**
- * @template T
  * @param {string} name
- * @param {jail.Directive<T>} directive
+ * @param {jail.Directive} directive
  */
 export function createDirective(name, directive) {
   extendApp("directives", name, directive)
 }
 
 /**
- * @template T
  * @param {string} name
- * @param {jail.Component<T>} component
+ * @param {jail.Component} component
  */
 export function createComponent(name, component) {
   extendApp("components", name, component)
@@ -98,7 +95,7 @@ export function mount(rootElement, rootComponent) {
 
 /**
  * @param {TemplateStringsArray} strings
- * @param  {...any} args
+ * @param  {...unknown} args
  * @returns {DocumentFragment}
  */
 export function template(strings, ...args) {
@@ -118,7 +115,7 @@ export function template(strings, ...args) {
 
 /**
  * @param {jail.Fragment} fragment
- * @param {any[]} args
+ * @param {unknown[]} args
  */
 function renderInsertions(fragment, args) {
   for (const elt of fragment.querySelectorAll(insertionQuery)) {
@@ -128,7 +125,7 @@ function renderInsertions(fragment, args) {
 
 /**
  * @param {jail.Fragment} fragment
- * @param {any[]} args
+ * @param {unknown[]} args
  */
 function renderAttributes(fragment, args) {
   for (const elt of fragment.querySelectorAll(attributeQuery)) {
@@ -144,8 +141,8 @@ function renderAttributes(fragment, args) {
 /**
  * @param {jail.DOMElement} elt
  * @param {string} key
- * @param {any[]} args
- * @returns {[string, any]}
+ * @param {unknown[]} args
+ * @returns {[string, unknown]}
  */
 function getPropAndValue(elt, key, args) {
   const data = elt.getAttribute(`data-${key}`),
@@ -157,7 +154,7 @@ function getPropAndValue(elt, key, args) {
 
 /**
  * @param {jail.Fragment} fragment
- * @param {any[]} args
+ * @param {unknown[]} args
  */
 function renderComponents(fragment, args) {
   for (const elt of fragment.querySelectorAll(componentQuery)) {
@@ -181,7 +178,7 @@ function renderComponents(fragment, args) {
 
 /**
  * @param {HTMLTemplateElement} elt
- * @param {any[]} args
+ * @param {unknown[]} args
  * @returns {object | null}
  */
 function createComponentParams(elt, args) {
@@ -196,8 +193,8 @@ function createComponentParams(elt, args) {
 
 /**
  * @param {string} value
- * @param {any[]} args
- * @returns {any | (() => any)}
+ * @param {unknown[]} args
+ * @returns {unknown | (() => unknown)}
  */
 function createValue(value, args) {
   const arg = value.match(SValRegExp)?.[1]
@@ -267,7 +264,7 @@ function createTemplate(strings) {
 
 /**
  * @param {HTMLSlotElement} slot
- * @param {any} value
+ * @param {unknown} value
  */
 function insertChild(slot, value) {
   if (value == null || typeof value === "boolean") {
@@ -282,9 +279,8 @@ function insertChild(slot, value) {
 }
 
 /**
- * @template T
  * @param {jail.DOMElement} elt
- * @param {jail.CallableSignal<T> | T} childElement
+ * @param {(() => unknown) | unknown} childElement
  */
 function insertDynamicChild(elt, childElement) {
   const anchor = new Text()
@@ -299,7 +295,7 @@ function insertDynamicChild(elt, childElement) {
 /**
  * @param {jail.DOMElement} elt
  * @param {string} prop
- * @param {any} data
+ * @param {unknown} data
  */
 function insertAttribute(elt, prop, data) {
   if (prop.startsWith(DirPrefix)) {
@@ -324,10 +320,9 @@ function insertAttribute(elt, prop, data) {
 }
 
 /**
- * @template T
  * @param {string} prop
- * @param {T} rawValue
- * @returns {jail.Binding<T>}
+ * @param {unknown} rawValue
+ * @returns {jail.Binding}
  */
 function createBinding(prop, rawValue) {
   const arg = prop.match(BindingArgRegExp)?.[1] || null
@@ -348,7 +343,7 @@ function createBinding(prop, rawValue) {
 /**
  * @param {jail.DOMElement} elt
  * @param {string} prop
- * @param {any} value
+ * @param {unknown} value
  */
 function setProperty(elt, prop, value) {
   if (prop in elt) {
@@ -365,7 +360,7 @@ function setProperty(elt, prop, value) {
 
 /**
  * @param {Node[]} nodeArray
- * @param  {...any} elements
+ * @param  {...unknown} elements
  * @returns {Node[]}
  */
 function createNodeArray(nodeArray, ...elements) {

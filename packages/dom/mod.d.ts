@@ -9,7 +9,7 @@ declare global {
       hasComponents: boolean
     }
 
-    interface Binding<T> {
+    interface Binding<T = unknown> {
       readonly value: T
       readonly rawValue: (() => T) | T
       readonly arg: string | null
