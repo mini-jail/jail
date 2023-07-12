@@ -414,7 +414,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
       if (currentNodes[j] === null) {
         continue
       }
-      if (bothAreCharacterData(currentNodes[j], nextNodes[i])) {
+      if (sameCharacterDataType(currentNodes[j], nextNodes[i])) {
         currentNodes[j].data = nextNodes[i].data
         nextNodes[i] = currentNodes[j]
       } else if (currentNodes[j].isEqualNode(nextNodes[i])) {
@@ -440,7 +440,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
  * @param {Node} otherNode
  * @returns {boolean}
  */
-function bothAreCharacterData(node, otherNode) {
+function sameCharacterDataType(node, otherNode) {
   const type = node.nodeType
   return (type === 3 || type === 8) && otherNode.nodeType === type
 }
