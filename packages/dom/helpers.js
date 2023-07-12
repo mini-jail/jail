@@ -1,5 +1,6 @@
 const RegisteredEvents = {}
 const Events = Symbol("Events")
+const If = Symbol("If")
 
 export const replace = String.prototype.replace
 
@@ -100,6 +101,17 @@ function showDirective(elt, binding) {
 
 /**
  * @param {jail.DOMElement} elt
+ * @param {jail.Binding<boolean>} binding
+ */
+function ifDirective(elt, binding) {
+  elt[If] = elt[If] || new Text()
+  const value = binding.value,
+    target = value ? elt[If] : elt
+  target.replaceWith(value ? elt : elt[If])
+}
+
+/**
+ * @param {jail.DOMElement} elt
  * @param {jail.Binding<(event: Event) => void>} binding
  */
 function onDirective(elt, binding) {
@@ -172,4 +184,5 @@ export const directives = {
   text: textDirective,
   style: styleDirective,
   bind: bindDirective,
+  if: ifDirective,
 }

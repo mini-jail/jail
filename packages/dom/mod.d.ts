@@ -51,6 +51,7 @@ declare global {
       on: (this: DOMElement, event: Event) => void
       ref: (elt: DOMElement) => void
       show: boolean
+      if: boolean
       html: string
       text: string
       style: string
