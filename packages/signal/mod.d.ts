@@ -2,7 +2,7 @@ declare global {
   namespace jail {
     type Cleanup = () => void
 
-    type Callback<T> = (currentValue: T | undefined) => T
+    type Callback<T> = (currentValue: T) => T
 
     type SettableSignal<T = unknown> = (value: T) => void
 
