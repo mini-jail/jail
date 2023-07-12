@@ -34,7 +34,7 @@ function eventLoop(event) {
 
 /**
  * @param {jail.DOMElement} elt
- * @param {jail.Binding<jail.DOMElement>} binding
+ * @param {jail.Binding<(elt: jail.DOMElement) => void>} binding
  */
 function refDirective(elt, binding) {
   binding.rawValue(elt)
