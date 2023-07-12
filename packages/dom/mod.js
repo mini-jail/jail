@@ -166,8 +166,7 @@ function renderComponents(fragment, args) {
     createRoot(() => {
       const params = createComponentParams(elt, args)
       renderInsertions(elt.content, args)
-      const result = component(params, ...elt.content.childNodes)
-      insertChild(elt, result)
+      insertChild(elt, component(params, ...elt.content.childNodes))
     })
   }
 }
