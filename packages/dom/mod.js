@@ -167,11 +167,7 @@ function renderComponents(fragment, args) {
       const params = createComponentParams(elt, args)
       renderInsertions(elt.content, args)
       const result = component(params, ...elt.content.childNodes)
-      if (result != null) {
-        insertDynamicChild(elt, result)
-      } else {
-        elt.remove()
-      }
+      insertChild(elt, result)
     })
   }
 }
