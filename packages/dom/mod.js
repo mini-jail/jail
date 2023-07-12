@@ -164,15 +164,13 @@ function renderComponents(fragment, args) {
       continue
     }
     createRoot(() => {
-      const params = createComponentParams(elt, args)
-      let children = null
+      const props = createComponentProps(elt, args)
       if (elt.content.hasChildNodes()) {
         renderInsertions(elt.content, args)
-        children = elt.content.childNodes
-      } else {
-        children = []
+        props = props || {}
+        props.children = elt.content.childNodes
       }
-      insertChild(elt, component(params, ...children))
+      insertChild(elt, component(props))
     })
   }
 }
@@ -182,14 +180,14 @@ function renderComponents(fragment, args) {
  * @param {unknown[]} args
  * @returns {object | null}
  */
-function createComponentParams(elt, args) {
-  let params = null
+function createComponentProps(elt, args) {
+  let props = null
   for (const key in elt.dataset) {
     const propValueTuple = getPropAndValue(elt, key, args)
-    params = params || {}
-    params[propValueTuple[0]] = propValueTuple[1]
+    props = props || {}
+    props[propValueTuple[0]] = propValueTuple[1]
   }
-  return params
+  return props
 }
 
 /**
