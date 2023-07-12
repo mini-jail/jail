@@ -22,7 +22,6 @@ const App = () => {
     "/about": About,
     "/todo": Todo,
     "/compiler": Compiler,
-    "/:url": NotFound,
   }
 
   return template`
@@ -38,12 +37,12 @@ const App = () => {
       </nav>
     </header>
     <main>
-      <HashRouter routes="${routes}"></HashRouter>
+      <Router type="hash" fallback="${NotFound}" routes="${routes}"></Router>
     </main>
   `
 }
 
 mount(document.body, () => {
   installRouter()
-  return App
+  return App()
 })

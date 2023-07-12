@@ -3,17 +3,23 @@ import { createRouter, path } from "jail/router"
 import { createComponent } from "jail/dom"
 
 export function installRouter() {
-  const getHash = () => location.hash.slice(1) || "/"
-  const listener = () => path(getHash())
+  createComponent("Router", (props) => {
+    if (props.type === "hash") {
+      const getHash = () => location.hash.slice(1) || "/"
+      const listener = () => path(getHash())
+      onMount(() => {
+        path(getHash())
+        addEventListener("hashchange", listener)
+      })
+      onCleanup(() => {
+        removeEventListener("hashchange", listener)
+      })
+    }
 
-  onMount(() => {
-    path(getHash())
-    addEventListener("hashchange", listener)
+    const router = createRouter(props.routes, {
+      fallback: props.fallback,
+    })
+
+    return [props.children, router]
   })
-
-  onCleanup(() => {
-    removeEventListener("hashchange", listener)
-  })
-
-  createComponent("HashRouter", ({ routes }) => createRouter(routes))
 }

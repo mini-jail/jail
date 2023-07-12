@@ -4,14 +4,15 @@ import { createSignal, untrack } from "jail/signal"
 export default () => {
   const showExplanation = createSignal(false)
   const text = createSignal(
-    `<div d-focus data-cool="user is \${} cool!" id="\${}">\n  you are \${} cool!\n</div>`,
+    `<div data-cool="user is \${state} cool!">\n  you are \${state} cool!\n</div>`,
   )
   const inputLength = () => text().length
   const time = createSignal(0)
   const timeMs = () => `millisecond${time() === 1 ? "" : "s"}`
   const compiled = () => {
     const start = performance.now()
-    const result = createTemplateString(text().split("${}"))
+    const data = text().replace(/\$\{[^${}]+\}/gm, "${}").split("${}")
+    const result = createTemplateString(data)
     const end = performance.now()
     untrack(() => time(end - start))
     return result

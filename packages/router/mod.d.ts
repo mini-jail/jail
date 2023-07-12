@@ -18,6 +18,10 @@ declare global {
       [path: string]: RouteHandler<T>
     }
 
+    type RouterOptions<T> = {
+      fallback?: RouteHandler<T>
+    }
+
     interface ExtendableInjectionMap {
       "jail/router/params": Params
     }
@@ -29,8 +33,11 @@ export const path: jail.Signal<string>
 export function getParams(): jail.Params
 
 export function createRoute<T>(
-  path: string,
-  handler: jail.RouteHandler<T>,
+  routePath: string,
+  routeHandler: jail.RouteHandler<T>,
 ): () => T | undefined
 
-export function createRouter<T>(routeMap: jail.RouteMap<T>): () => T | undefined
+export function createRouter<T>(
+  routeMap: jail.RouteMap<T>,
+  options?: jail.RouterOptions<T>,
+): () => T | undefined

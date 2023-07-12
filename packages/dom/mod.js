@@ -11,9 +11,9 @@ import {
 } from "jail/signal"
 import { directives, replace, toKebabCase } from "./helpers.js"
 
-const Atr = "_atr_"
-const Ins = "_ins_"
-const Com = "_com_"
+const Atr = "__a__"
+const Ins = "__i__"
+const Com = "__c__"
 /** @type {`slot[${Ins}]`} */
 const insertionQuery = `slot[${Ins}]`
 const attributeQuery = `[${Atr}]`
@@ -30,6 +30,7 @@ const BindingModRegExp = /\.(?:[^"'.])+/g
 const BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm
 const MultiWSRegExp = /\s+/g
+const QuoteRegExp = /["']/
 const RemainLastAttr = RegExp(` ${Atr}(?=.* ${Atr})`, "g")
 const ComRegExp = /^<((?:[A-Z][a-z]+)+)/
 const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
@@ -78,7 +79,7 @@ export function createComponent(name, component) {
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
     provide(App, { directives, components: {} })
-    const anchor = rootElement.appendChild(new Text())
+    let anchor = rootElement.appendChild(new Text())
     let currentNodes = null
     createEffect(() => {
       const nextNodes = createNodeArray([], rootComponent())
@@ -88,6 +89,8 @@ export function mount(rootElement, rootComponent) {
     onCleanup(() => {
       reconcileNodes(anchor, currentNodes, [])
       anchor.remove()
+      anchor = null
+      currentNodes = null
     })
     return cleanup
   })
@@ -164,11 +167,13 @@ function renderComponents(fragment, args) {
       continue
     }
     createRoot(() => {
-      const props = createComponentProps(elt, args)
+      let props = createComponentProps(elt, args)
       if (elt.content.hasChildNodes()) {
         renderInsertions(elt.content, args)
+        renderAttributes(elt.content, args)
+        renderComponents(elt.content, args)
         props = props || {}
-        props.children = elt.content.childNodes
+        props.children = [...elt.content.childNodes]
       }
       insertChild(elt, component(props))
     })
@@ -213,31 +218,33 @@ function createValue(value, args) {
  * @returns {string}
  */
 export function createTemplateString(strings) {
-  let data = "", arg = 0, id = 0
+  let data = "", arg = 0
   while (arg < strings.length - 1) {
     data = data + strings[arg] + `{{${arg++}}}`
   }
   data = data + strings[arg]
   data = replace.call(data, WSAndTabsRegExp, "").trim()
   data = replace.call(data, ClosingComRegExp, "</template>")
-  data = replace.call(data, TagRegExp, (data) => {
-    const isComponent = ComRegExp.test(data),
-      extension = isComponent ? "" : ` _atr_`
-    data = replace.call(data, AtrRegExp, (data, name1, val, _, name2) => {
+  data = replace.call(data, TagRegExp, (match) => {
+    const isComponent = ComRegExp.test(match),
+      type = isComponent ? "" : Atr
+    let id = 0
+    match = replace.call(match, AtrRegExp, (data, name, val, _, altName) => {
       if (isComponent === false) {
         if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
           return data
         }
       }
+      const quote = data.match(QuoteRegExp)[0]
       val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-      return ` data-__${id++}="${name1 || name2}${val}"${extension}`
+      return ` data-__${id++}=${quote}${name || altName}${val}${quote} ${type}`
     })
     if (isComponent) {
-      data = replace.call(data, ComRegExp, `<template ${Com}="$1"`)
+      match = replace.call(match, ComRegExp, `<template ${Com}="$1"`)
     }
-    data = replace.call(data, RemainLastAttr, "")
-    data = replace.call(data, ArgRegExp, "")
-    return replace.call(data, MultiWSRegExp, " ")
+    match = replace.call(match, RemainLastAttr, "")
+    match = replace.call(match, ArgRegExp, "")
+    return replace.call(match, MultiWSRegExp, " ")
   })
   data = replace.call(data, ArgRegExp, `<slot ${Ins}="$1"></slot>`)
   return data
@@ -262,28 +269,28 @@ function createTemplate(strings) {
 }
 
 /**
- * @param {HTMLSlotElement} slot
+ * @param {HTMLSlotElement} elt
  * @param {unknown} value
  */
-function insertChild(slot, value) {
+function insertChild(elt, value) {
   if (value == null || typeof value === "boolean") {
-    slot.remove()
+    elt.remove()
   } else if (value instanceof Node) {
-    slot.parentNode.replaceChild(value, slot)
+    elt.replaceWith(value)
   } else if (isReactive(value) || (Array.isArray(value) && value.length)) {
-    insertDynamicChild(slot, value)
+    insertDynamicChild(elt, value)
   } else {
-    slot.parentNode.replaceChild(new Text(value + ""), slot)
+    elt.replaceWith(value + "")
   }
 }
 
 /**
  * @param {jail.DOMElement} elt
- * @param {(() => unknown) | unknown} childElement
+ * @param {(() => unknown) | unknown[]} childElement
  */
 function insertDynamicChild(elt, childElement) {
   const anchor = new Text()
-  elt.parentNode.replaceChild(anchor, elt)
+  elt.replaceWith(anchor)
   createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], toValue(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)

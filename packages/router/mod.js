@@ -26,9 +26,8 @@ function createMatcher(path) {
 }
 
 /**
- * @template T
- * @param {jail.RouteMap<T>} routeMap
- * @returns {jail.Route<T>[]}
+ * @param {jail.RouteMap} routeMap
+ * @returns {jail.Route[]}
  */
 function createRoutes(routeMap) {
   return Object.keys(routeMap).map((path) => ({
@@ -39,40 +38,42 @@ function createRoutes(routeMap) {
 }
 
 /**
- * @template T
  * @param {string} path
- * @param {jail.RouteHandler<T>} handler
- * @returns {() => T | undefined}
+ * @param {jail.RouteHandler} handler
+ * @returns {() => unknown | undefined}
  */
-export function createRoute(path, handler) {
-  const matcher = createMatcher(path)
+export function createRoute(routePath, routeHandler) {
+  const matcher = createMatcher(routePath)
   return createComputed(() => {
     const nextPath = path()
     if (matcher.test(nextPath)) {
       return createRoot(() => {
         provide(Params, matcher.exec(nextPath)?.groups)
-        return handler()
+        return routeHandler()
       })
     }
   })
 }
 
 /**
- * @template T
- * @param {jail.RouteMap<T>} routeMap
- * @returns {() => T | undefined}
+ * @param {jail.RouteMap} routeMap
+ * @param {jail.RouterOptions} [options]
+ * @returns {() => unknown | undefined}
  */
-export function createRouter(routeMap) {
+export function createRouter(routeMap, options) {
   const routeArray = createRoutes(routeMap)
   return createComputed(() => {
     const nextPath = path()
-    for (const route of routeArray) {
-      if (route.regexp.test(nextPath)) {
-        return createRoot(() => {
+    return createRoot(() => {
+      for (const route of routeArray) {
+        if (route.regexp.test(nextPath)) {
           provide(Params, route.regexp.exec(nextPath)?.groups)
           return route.handler()
-        })
+        }
       }
-    }
+      if (options.fallback) {
+        return options.fallback()
+      }
+    })
   })
 }

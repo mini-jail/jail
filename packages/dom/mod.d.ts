@@ -28,7 +28,11 @@ declare global {
     }
 
     interface Component<P extends object = {}> {
-      (params: P, ...children: globalThis.Node[]): any
+      (props: P & Props): any
+    }
+
+    type Props = {
+      children?: any
     }
 
     type Fragment = {
