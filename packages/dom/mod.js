@@ -406,10 +406,11 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
     }
     return
   }
+  let i = 0, j = 0, c = currentNodes.length, n = nextNodes.length
   next:
-  for (let i = 0; i < nextNodes.length; i++) {
+  for (; i < n; i++) {
     const currentNode = currentNodes[i]
-    for (let j = 0; j < currentNodes.length; j++) {
+    for (; j < c; j++) {
       if (currentNodes[j] === null) {
         continue
       }
