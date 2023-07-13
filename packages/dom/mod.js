@@ -189,7 +189,7 @@ function createComponentProps(elt, args) {
 /**
  * @param {string} value
  * @param {unknown[]} args
- * @returns {unknown | (() => unknown)}
+ * @returns {unknown | string | (() => string)}
  */
 function createValue(value, args) {
   const arg = value.match(SValRegExp)?.[1]
@@ -200,10 +200,8 @@ function createValue(value, args) {
   if (matches.length === 0) {
     return value
   }
-  for (const match of matches) {
-    if (isReactive(args[match[1]])) {
-      return replace.bind(value, MValRegExp, (_, arg) => toValue(args[arg]))
-    }
+  if (matches.some((match) => isReactive(args[match[1]]))) {
+    return replace.bind(value, MValRegExp, (_, arg) => toValue(args[arg]))
   }
   return replace.call(value, MValRegExp, (_, arg) => args[arg])
 }
