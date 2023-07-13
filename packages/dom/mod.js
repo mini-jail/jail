@@ -196,8 +196,12 @@ function createValue(value, args) {
   if (arg) {
     return args[arg]
   }
-  for (const [_match, arg] of value.matchAll(MValRegExp)) {
-    if (isReactive(args[arg])) {
+  const matches = [...value.matchAll(MValRegExp)]
+  if (matches.length === 0) {
+    return value
+  }
+  for (const match of matches) {
+    if (isReactive(args[match[1]])) {
       return replace.bind(value, MValRegExp, (_, arg) => toValue(args[arg]))
     }
   }
