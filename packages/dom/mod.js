@@ -37,7 +37,7 @@ const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
 const TagRegExp = /<[a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
-/** @type {Map<TemplateStringsArray, jail.Template>} */
+/** @type {Map<TemplateStringsArray, jail.Fragment>} */
 const TemplateCache = new Map()
 /** @type {"jail/dom/app"} */
 const App = Symbol()
@@ -103,27 +103,9 @@ export function mount(rootElement, rootComponent) {
  */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
-  const fragment = template.fragment.cloneNode(true)
-  if (template.hasInsertions) {
-    renderInsertions(fragment, args)
-  }
-  if (template.hasAttributes) {
-    renderAttributes(fragment, args)
-  }
-  if (template.hasComponents) {
-    renderComponents(fragment, args)
-  }
+  const fragment = template.cloneNode(true)
+  render(fragment, args)
   return fragment
-}
-
-/**
- * @param {jail.Fragment} fragment
- * @param {unknown[]} args
- */
-function renderInsertions(fragment, args) {
-  for (const elt of fragment.querySelectorAll(insertionQuery)) {
-    insertChild(elt, args[elt.getAttribute(Ins)])
-  }
 }
 
 /**
@@ -169,15 +151,25 @@ function renderComponents(fragment, args) {
     createRoot(() => {
       let props = createComponentProps(elt, args)
       if (elt.content.hasChildNodes()) {
-        renderInsertions(elt.content, args)
-        renderAttributes(elt.content, args)
-        renderComponents(elt.content, args)
+        render(elt.content, args)
         props = props || {}
         props.children = [...elt.content.childNodes]
       }
       insertChild(elt, component(props))
     })
   }
+}
+
+/**
+ * @param {jail.Fragment} fragment
+ * @param {unknown[]} args
+ */
+function render(fragment, args) {
+  for (const elt of fragment.querySelectorAll(insertionQuery)) {
+    insertChild(elt, args[elt.getAttribute(Ins)])
+  }
+  renderAttributes(fragment, args)
+  renderComponents(fragment, args)
 }
 
 /**
@@ -252,20 +244,15 @@ export function createTemplateString(strings) {
 
 /**
  * @param {TemplateStringsArray} strings
- * @returns {jail.Template}
+ * @returns {jail.Fragment}
  */
 function createTemplate(strings) {
   const template = document.createElement("template")
   const templateString = createTemplateString(strings)
   template.innerHTML = templateString
-  const cacheItem = {
-    fragment: template.content,
-    hasAttributes: templateString.includes(` ${Atr}`),
-    hasInsertions: templateString.includes(`<slot ${Ins}="`),
-    hasComponents: templateString.includes(`<template ${Com}="`),
-  }
-  TemplateCache.set(strings, cacheItem)
-  return cacheItem
+  const fragment = template.content
+  TemplateCache.set(strings, fragment)
+  return fragment
 }
 
 /**

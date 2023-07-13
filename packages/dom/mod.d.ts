@@ -2,13 +2,6 @@ declare global {
   namespace jail {
     type DOMElement = HTMLElement | SVGElement
 
-    interface Template {
-      fragment: Fragment
-      hasAttributes: boolean
-      hasInsertions: boolean
-      hasComponents: boolean
-    }
-
     interface Binding<T = unknown> {
       readonly value: T
       readonly rawValue: (() => T) | T

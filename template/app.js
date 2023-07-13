@@ -6,7 +6,7 @@ const App = () => {
 
   return template`
     <h1>Template</h1>
-    <p d-on:click="${() => counter(counter() + 1)}" data-counter="${counter}">
+    <p d-on:click="${() => counter((v) => ++v)}">
       Hell${counter} W${counter}rld!
     </p>
   `
