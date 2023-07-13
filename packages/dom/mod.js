@@ -24,14 +24,14 @@ const DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
 const ArgRegExp = /{{(\d+)}}/g
-const SValRegExp = /^{(\d+)}$/
-const MValRegExp = /{(\d+)}/g
+const SingleValueRegExp = /^{(\d+)}$/
+const MultiValueRegExp = /{(\d+)}/g
 const BindingModRegExp = /\.(?:[^"'.])+/g
 const BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm
 const MultiWSRegExp = /\s+/g
 const QuoteRegExp = /["']/
-const RemainLastAttr = RegExp(` ${Atr}(?=.* ${Atr})`, "g")
+const LastAtrRegExp = RegExp(` ${Atr}(?=.* ${Atr})`, "g")
 const ComRegExp = /^<((?:[A-Z][a-z]+)+)/
 const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
 const TagRegExp = /<[a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*>/g
@@ -192,18 +192,18 @@ function createComponentProps(elt, args) {
  * @returns {unknown | string | (() => string)}
  */
 function createValue(value, args) {
-  const arg = value.match(SValRegExp)?.[1]
+  const arg = value.match(SingleValueRegExp)?.[1]
   if (arg) {
     return args[arg]
   }
-  const matches = [...value.matchAll(MValRegExp)]
+  const matches = [...value.matchAll(MultiValueRegExp)]
   if (matches.length === 0) {
     return value
   }
   if (matches.some((match) => isReactive(args[match[1]]))) {
-    return replace.bind(value, MValRegExp, (_, arg) => toValue(args[arg]))
+    return replace.bind(value, MultiValueRegExp, (_, arg) => toValue(args[arg]))
   }
-  return replace.call(value, MValRegExp, (_, arg) => args[arg])
+  return replace.call(value, MultiValueRegExp, (_, arg) => args[arg])
 }
 
 /**
@@ -237,7 +237,7 @@ export function createTemplateString(strings) {
     if (isComponent) {
       match = replace.call(match, ComRegExp, `<template ${Com}="$1"`)
     }
-    match = replace.call(match, RemainLastAttr, "")
+    match = replace.call(match, LastAtrRegExp, "")
     match = replace.call(match, ArgRegExp, "")
     return replace.call(match, MultiWSRegExp, " ")
   })
