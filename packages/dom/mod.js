@@ -220,15 +220,17 @@ export function createTemplateString(strings) {
     const isComponent = ComRegExp.test(match),
       type = isComponent ? "" : " " + Atr
     let id = 0
-    match = replace.call(match, AtrRegExp, (data, name, val, _, altName) => {
+    match = replace.call(match, AtrRegExp, (data, name, val, val2, name2) => {
       if (isComponent === false) {
         if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
           return data
         }
       }
       const quote = data.match(QuoteRegExp)[0]
+      val = val || val2
+      name = name || name2
       val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-      return ` data-__${id++}=${quote}${name || altName}${val}${quote}${type}`
+      return ` data-__${id++}=${quote}${name}${val}${quote}${type}`
     })
     if (isComponent) {
       match = replace.call(match, ComRegExp, `<template ${Com}="$1"`)
