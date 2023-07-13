@@ -219,7 +219,7 @@ export function createTemplateString(strings) {
   data = replace.call(data, ClosingComRegExp, "</template>")
   data = replace.call(data, TagRegExp, (match) => {
     const isComponent = ComRegExp.test(match),
-      type = isComponent ? "" : Atr
+      type = isComponent ? "" : " " + Atr
     let id = 0
     match = replace.call(match, AtrRegExp, (data, name, val, _, altName) => {
       if (isComponent === false) {
@@ -229,7 +229,7 @@ export function createTemplateString(strings) {
       }
       const quote = data.match(QuoteRegExp)[0]
       val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-      return ` data-__${id++}=${quote}${name || altName}${val}${quote} ${type}`
+      return ` data-__${id++}=${quote}${name || altName}${val}${quote}${type}`
     })
     if (isComponent) {
       match = replace.call(match, ComRegExp, `<template ${Com}="$1"`)
