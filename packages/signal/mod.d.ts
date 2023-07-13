@@ -32,9 +32,7 @@ declare global {
 
     type Injections = ExtendableInjectionMap
 
-    interface ExtendableInjectionMap {
-      "jail/signal/error": ((error: any) => void)[]
-    }
+    interface ExtendableInjectionMap {}
   }
 }
 

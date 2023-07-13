@@ -51,9 +51,7 @@ declare global {
       bind: any
     }
 
-    interface ExtendableInjectionMap {
-      "jail/dom/app": AppInjection
-    }
+    interface ExtendableInjectionMap {}
 
     interface ExtendableComponentMap {}
   }

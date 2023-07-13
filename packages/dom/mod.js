@@ -39,7 +39,6 @@ const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
 /** @type {Map<TemplateStringsArray, jail.Fragment>} */
 const TemplateCache = new Map()
-/** @type {"jail/dom/app"} */
 const App = Symbol()
 
 /**

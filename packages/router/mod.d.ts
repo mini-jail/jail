@@ -21,10 +21,6 @@ declare global {
     type RouterOptions<T> = {
       fallback?: RouteHandler<T>
     }
-
-    interface ExtendableInjectionMap {
-      "jail/router/params": Params
-    }
   }
 }
 

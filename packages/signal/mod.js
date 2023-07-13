@@ -1,5 +1,4 @@
 /// <reference types="./mod.d.ts" />
-/** @type {"jail/signal/error"} */
 const Error = Symbol()
 /**
  * @type {Set<jail.Node>}

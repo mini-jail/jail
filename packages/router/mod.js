@@ -7,7 +7,6 @@ import {
   provide,
 } from "jail/signal"
 
-/** @type {"jail/router/params"} */
 const Params = Symbol()
 export const path = createSignal("")
 
