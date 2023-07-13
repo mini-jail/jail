@@ -248,11 +248,9 @@ export function createTemplateString(strings) {
  */
 function createTemplate(strings) {
   const template = document.createElement("template")
-  const templateString = createTemplateString(strings)
-  template.innerHTML = templateString
-  const fragment = template.content
-  TemplateCache.set(strings, fragment)
-  return fragment
+  template.innerHTML = createTemplateString(strings)
+  TemplateCache.set(strings, template.content)
+  return template.content
 }
 
 /**
