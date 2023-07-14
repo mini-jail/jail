@@ -16,8 +16,8 @@ const Atr = "a", Ins = "i", Com = "c"
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /#{([^}]+)}/g
-const SingleValueRegExp = /^{([^}]+)}$/, MultiValueRegExp = /{([^}]+)}/g
+const ArgRegExp = /{{(\d+)}}/g
+const SingleValueRegExp = /^#{(\d+)}$/, MultiValueRegExp = /#{(\d+)}/g
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm, MultiWSRegExp = /\s+/g
 const QuoteRegExp = /["']/
@@ -185,7 +185,7 @@ function createValue(value, args) {
   if (matches.length === 0) {
     return value
   }
-  if (matches.some((match) => isReactive(match[1]))) {
+  if (matches.some((match) => isReactive(args[match[1]]))) {
     return replace.bind(value, MultiValueRegExp, (_, id) => toValue(args[id]))
   }
   return replace.call(value, MultiValueRegExp, (_, id) => args[id])
@@ -198,7 +198,7 @@ function createValue(value, args) {
 export function createTemplateString(strings) {
   let data = "", arg = 0
   while (arg < strings.length - 1) {
-    data = data + strings[arg] + `#{${arg++}}`
+    data = data + strings[arg] + `{{${arg++}}}`
   }
   data = data + strings[arg]
   data = replace.call(data, WSAndTabsRegExp, "").trim()
@@ -214,10 +214,8 @@ export function createTemplateString(strings) {
         }
       }
       const quote = data.match(QuoteRegExp)[0]
-      val = val || val2
-      name = name || name2
-      val = val ? " " + replace.call(val, ArgRegExp, "{$1}").trim() : ""
-      return ` data-__${id++}=${quote}${name}${val}${quote}${type}`
+      val = replace.call(val || val2, ArgRegExp, "#{$1}")
+      return ` data-__${id++}=${quote}${name || name2} ${val}${quote}${type}`
     })
     if (isComponent) {
       match = replace.call(match, ComRegExp, Component[0])
