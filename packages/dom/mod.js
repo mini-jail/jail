@@ -113,26 +113,6 @@ function getPropAndValue(elt, key, args) {
 }
 
 /**
- * @param {string} id
- * @param {unknown[]} args
- * @returns {unknown}
- */
-function getValue(id, args) {
-  if (id in args) {
-    return args[id]
-  }
-  const value = inject(id)
-  if (value) {
-    return value
-  }
-  const [mainId, ...subIds] = id.split(".")
-  let result = inject(mainId)
-  if (result && typeof result === "object") {
-    return subIds.reduce((obj, id) => obj?.[id], result)
-  }
-}
-
-/**
  * @param {jail.Fragment} fragment
  * @param {unknown[]} args
  * @returns {Node | Node[] | undefined}
@@ -149,7 +129,7 @@ function render(fragment, args) {
         }
       }
     } else if (type === "i") {
-      insertChild(elt, getValue(value, args))
+      insertChild(elt, args[value])
     } else if (type === "c") {
       const component = inject(App).components[value]
       if (component === undefined) {
@@ -199,20 +179,16 @@ function createComponentProps(elt, args) {
 function createValue(value, args) {
   const id = value.match(SingleValueRegExp)?.[1]
   if (id) {
-    return getValue(id, args)
+    return args[id]
   }
   const matches = [...value.matchAll(MultiValueRegExp)]
   if (matches.length === 0) {
     return value
   }
-  if (matches.some((match) => isReactive(getValue(match[1], args)))) {
-    return replace.bind(
-      value,
-      MultiValueRegExp,
-      (_, id) => toValue(getValue(id, args)),
-    )
+  if (matches.some((match) => isReactive(match[1]))) {
+    return replace.bind(value, MultiValueRegExp, (_, id) => toValue(args[id]))
   }
-  return replace.call(value, MultiValueRegExp, (_, id) => getValue(id, args))
+  return replace.call(value, MultiValueRegExp, (_, id) => args[id])
 }
 
 /**
