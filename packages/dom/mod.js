@@ -11,32 +11,25 @@ import {
 } from "jail/signal"
 import { directives, replace, toKebabCase } from "./helpers.js"
 
-const Atr = "__a"
-const Ins = "__i"
-const Com = "__c"
-/** @type {`slot[${Ins}]`} */
-const insertionQuery = `slot[${Ins}]`
-const attributeQuery = `[${Atr}]`
-/** @type {`template[${Com}]`} */
-const componentQuery = `template[${Com}]`
-const DirPrefix = "d-"
-const DirPrefixLength = DirPrefix.length
+const Type = "__t", Value = "__v", Query = `[${Type}]`
+const Atr = "a", Ins = "i", Com = "c"
+const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /{{(\d+)}}/g
-const SingleValueRegExp = /^{(\d+)}$/
-const MultiValueRegExp = /{(\d+)}/g
-const BindingModRegExp = /\.(?:[^"'.])+/g
-const BindingArgRegExp = /:([^"'<>.]+)/
-const WSAndTabsRegExp = /^[\s\t]+/gm
-const MultiWSRegExp = /\s+/g
+const ArgRegExp = /#{(.+)}/g
+const SingleValueRegExp = /^{(.+)}$/, MultiValueRegExp = /{(.+)}/g
+const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
+const WSAndTabsRegExp = /^[\s\t]+/gm, MultiWSRegExp = /\s+/g
 const QuoteRegExp = /["']/
-const LastAtrRegExp = RegExp(` ${Atr}(?=.* ${Atr})`, "g")
+const LastAtrRegExp = RegExp(` ${Type}(?=.* ${Type})`, "g")
 const ComRegExp = /^<((?:[A-Z][a-z]+)+)/
 const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
 const TagRegExp = /<[a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
+const Attribute = ` ${Type}="${Atr}"`
+const Insertion = `<slot ${Type}="${Ins}" ${Value}="$1"></slot>`
+const Component = [`<template ${Type}="${Com}" ${Value}="$1"`, "</template>"]
 /** @type {Map<TemplateStringsArray, jail.Fragment>} */
 const TemplateCache = new Map()
 const App = Symbol()
@@ -120,16 +113,59 @@ function getPropAndValue(elt, key, args) {
 }
 
 /**
+ * @param {string} id
+ * @param {unknown[]} args
+ * @returns {unknown}
+ */
+function getValue(id, args) {
+  if (id in args) {
+    return args[id]
+  }
+  const value = inject(id)
+  if (value) {
+    return value
+  }
+  const [mainId, ...subIds] = id.split(".")
+  let result = inject(mainId)
+  if (result && typeof result === "object") {
+    return subIds.reduce((obj, id) => obj?.[id], result)
+  }
+}
+
+/**
  * @param {jail.Fragment} fragment
  * @param {unknown[]} args
  * @returns {Node | Node[] | undefined}
  */
 function render(fragment, args) {
-  for (const elt of fragment.querySelectorAll(insertionQuery)) {
-    insertChild(elt, args[elt.getAttribute(Ins)])
+  for (const elt of fragment.querySelectorAll(Query)) {
+    const type = elt.getAttribute(Type)
+    const value = elt.getAttribute(Value)
+    elt.removeAttribute(Type)
+    if (type === "a") {
+      for (const key in elt.dataset) {
+        if (key.startsWith("__")) {
+          insertAttribute(elt, ...getPropAndValue(elt, key, args))
+        }
+      }
+    } else if (type === "i") {
+      insertChild(elt, getValue(value, args))
+    } else if (type === "c") {
+      const component = inject(App).components[value]
+      if (component === undefined) {
+        elt.remove()
+        continue
+      }
+      createRoot(() => {
+        let props = createComponentProps(elt, args)
+        if (elt.content.hasChildNodes()) {
+          props = props || {}
+          props.children = render(elt.content, args)
+        }
+        insertChild(elt, component(props))
+      })
+    }
   }
-  renderAttributes(fragment, args)
-  renderComponents(fragment, args)
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
     return
@@ -138,43 +174,6 @@ function render(fragment, args) {
     return nodeList[0]
   }
   return Array.from(nodeList)
-}
-
-/**
- * @param {jail.Fragment} fragment
- * @param {unknown[]} args
- */
-function renderAttributes(fragment, args) {
-  for (const elt of fragment.querySelectorAll(attributeQuery)) {
-    elt.removeAttribute(Atr)
-    for (const key in elt.dataset) {
-      if (key.startsWith("__")) {
-        insertAttribute(elt, ...getPropAndValue(elt, key, args))
-      }
-    }
-  }
-}
-
-/**
- * @param {jail.Fragment} fragment
- * @param {unknown[]} args
- */
-function renderComponents(fragment, args) {
-  for (const elt of fragment.querySelectorAll(componentQuery)) {
-    const component = inject(App).components[elt.getAttribute(Com)]
-    if (component === undefined) {
-      elt.remove()
-      continue
-    }
-    createRoot(() => {
-      let props = createComponentProps(elt, args)
-      if (elt.content.hasChildNodes()) {
-        props = props || {}
-        props.children = render(elt.content, args)
-      }
-      insertChild(elt, component(props))
-    })
-  }
 }
 
 /**
@@ -198,18 +197,22 @@ function createComponentProps(elt, args) {
  * @returns {unknown | string | (() => string)}
  */
 function createValue(value, args) {
-  const arg = value.match(SingleValueRegExp)?.[1]
-  if (arg) {
-    return args[arg]
+  const id = value.match(SingleValueRegExp)?.[1]
+  if (id) {
+    return getValue(id, args)
   }
   const matches = [...value.matchAll(MultiValueRegExp)]
   if (matches.length === 0) {
     return value
   }
   if (matches.some((match) => isReactive(args[match[1]]))) {
-    return replace.bind(value, MultiValueRegExp, (_, arg) => toValue(args[arg]))
+    return replace.bind(
+      value,
+      MultiValueRegExp,
+      (_, id) => toValue(getValue(id, args)),
+    )
   }
-  return replace.call(value, MultiValueRegExp, (_, arg) => args[arg])
+  return replace.call(value, MultiValueRegExp, (_, id) => getValue(id, args))
 }
 
 /**
@@ -219,14 +222,14 @@ function createValue(value, args) {
 export function createTemplateString(strings) {
   let data = "", arg = 0
   while (arg < strings.length - 1) {
-    data = data + strings[arg] + `{{${arg++}}}`
+    data = data + strings[arg] + `#{${arg++}}`
   }
   data = data + strings[arg]
   data = replace.call(data, WSAndTabsRegExp, "").trim()
-  data = replace.call(data, ClosingComRegExp, "</template>")
+  data = replace.call(data, ClosingComRegExp, Component[1])
   data = replace.call(data, TagRegExp, (match) => {
     const isComponent = ComRegExp.test(match),
-      type = isComponent ? "" : " " + Atr
+      type = isComponent ? "" : Attribute
     let id = 0
     match = replace.call(match, AtrRegExp, (data, name, val, val2, name2) => {
       if (isComponent === false) {
@@ -241,13 +244,13 @@ export function createTemplateString(strings) {
       return ` data-__${id++}=${quote}${name}${val}${quote}${type}`
     })
     if (isComponent) {
-      match = replace.call(match, ComRegExp, `<template ${Com}="$1"`)
+      match = replace.call(match, ComRegExp, Component[0])
     }
     match = replace.call(match, LastAtrRegExp, "")
     match = replace.call(match, ArgRegExp, "")
     return replace.call(match, MultiWSRegExp, " ")
   })
-  data = replace.call(data, ArgRegExp, `<slot ${Ins}="$1"></slot>`)
+  data = replace.call(data, ArgRegExp, Insertion)
   return data
 }
 

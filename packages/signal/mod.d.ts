@@ -245,9 +245,9 @@ export function inject(key: string | symbol, defaultValue: any): any
 export function provide<K extends keyof jail.Injections>(
   key: K,
   value: jail.Injections[K],
-): void
-export function provide<T>(key: string | symbol, value: T): void
-export function provide(key: string | symbol, value: any): void
+): jail.Injections[K]
+export function provide<T>(key: string | symbol, value: T): T
+export function provide(key: string | symbol, value: any): any
 
 export function createCallback<T extends (...args: any[]) => any>(
   callback: T,

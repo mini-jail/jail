@@ -437,6 +437,7 @@ export function inject(key, defaultValue) {
 /**
  * @param {string | symbol} key
  * @param {any} value
+ * @returns {unknown}
  */
 export function provide(key, value) {
   if (activeNode === null) {
@@ -447,6 +448,7 @@ export function provide(key, value) {
   } else {
     activeNode.injections[key] = value
   }
+  return value
 }
 
 /**

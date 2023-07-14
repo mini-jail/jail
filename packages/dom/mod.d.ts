@@ -29,10 +29,6 @@ declare global {
     }
 
     type Fragment = {
-      querySelectorAll(selectors: `slot${string}`): Iterable<HTMLSlotElement>
-      querySelectorAll(
-        selectors: `template${string}`,
-      ): Iterable<HTMLTemplateElement>
       querySelectorAll(selectors: string): Iterable<DOMElement>
       cloneNode(deep?: boolean): Fragment
     } & DocumentFragment
