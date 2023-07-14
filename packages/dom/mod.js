@@ -16,8 +16,8 @@ const Atr = "a", Ins = "i", Com = "c"
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /#{(.+)}/g
-const SingleValueRegExp = /^{(.+)}$/, MultiValueRegExp = /{(.+)}/g
+const ArgRegExp = /#{([^}]+)}/g
+const SingleValueRegExp = /^{([^}]+)}$/, MultiValueRegExp = /{([^}]+)}/g
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm, MultiWSRegExp = /\s+/g
 const QuoteRegExp = /["']/
@@ -205,7 +205,7 @@ function createValue(value, args) {
   if (matches.length === 0) {
     return value
   }
-  if (matches.some((match) => isReactive(args[match[1]]))) {
+  if (matches.some((match) => isReactive(getValue(match[1], args)))) {
     return replace.bind(
       value,
       MultiValueRegExp,
