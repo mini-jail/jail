@@ -106,6 +106,41 @@ export function template(strings, ...args) {
 }
 
 /**
+ * @param {jail.DOMElement} elt
+ * @param {string} key
+ * @param {unknown[]} args
+ * @returns {[string, unknown]}
+ */
+function getPropAndValue(elt, key, args) {
+  const data = elt.getAttribute(`data-${key}`),
+    prop = data.split(" ", 1)[0],
+    value = data.slice(prop.length + 1)
+  elt.removeAttribute(`data-${key}`)
+  return [prop, createValue(value, args)]
+}
+
+/**
+ * @param {jail.Fragment} fragment
+ * @param {unknown[]} args
+ * @returns {Node | Node[] | undefined}
+ */
+function render(fragment, args) {
+  for (const elt of fragment.querySelectorAll(insertionQuery)) {
+    insertChild(elt, args[elt.getAttribute(Ins)])
+  }
+  renderAttributes(fragment, args)
+  renderComponents(fragment, args)
+  const nodeList = fragment.childNodes
+  if (nodeList.length === 0) {
+    return
+  }
+  if (nodeList.length === 1) {
+    return nodeList[0]
+  }
+  return Array.from(nodeList)
+}
+
+/**
  * @param {jail.Fragment} fragment
  * @param {unknown[]} args
  */
@@ -118,20 +153,6 @@ function renderAttributes(fragment, args) {
       }
     }
   }
-}
-
-/**
- * @param {jail.DOMElement} elt
- * @param {string} key
- * @param {unknown[]} args
- * @returns {[string, unknown]}
- */
-function getPropAndValue(elt, key, args) {
-  const data = elt.getAttribute(`data-${key}`),
-    prop = data.split(" ", 1)[0],
-    value = data.slice(prop.length + 1)
-  elt.removeAttribute(`data-${key}`)
-  return [prop, createValue(value, args)]
 }
 
 /**
@@ -154,27 +175,6 @@ function renderComponents(fragment, args) {
       insertChild(elt, component(props))
     })
   }
-}
-
-/**
- * @param {jail.Fragment} fragment
- * @param {unknown[]} args
- * @returns {Node | Node[] | undefined}
- */
-function render(fragment, args) {
-  for (const elt of fragment.querySelectorAll(insertionQuery)) {
-    insertChild(elt, args[elt.getAttribute(Ins)])
-  }
-  renderAttributes(fragment, args)
-  renderComponents(fragment, args)
-  const nodeList = fragment.childNodes
-  if (nodeList.length === 0) {
-    return
-  }
-  if (nodeList.length === 1) {
-    return nodeList[0]
-  }
-  return Array.from(nodeList)
 }
 
 /**
