@@ -1,4 +1,5 @@
 import {
+  createComputed,
   createEffect,
   createSignal,
   mount,
@@ -18,7 +19,7 @@ import NotFound from "./routes/notfound.js"
 
 const App = () => {
   const iff = createSignal(true)
-  createEffect(() => document.title = `jail${path()}`)
+  provide("title", createComputed(() => document.title = `jail${path()}`))
 
   const routes = {
     "/": Home,
@@ -33,7 +34,7 @@ const App = () => {
   }
 
   return template`
-    <header>
+    <header title="#{title}">
       <h3 d-on:click="${() => iff((x) => !x)}">jail${path}</h3>
       <nav d-if="${iff}">
         <a href="#/">home</a>

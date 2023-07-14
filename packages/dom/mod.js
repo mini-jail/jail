@@ -16,8 +16,8 @@ const Atr = "a", Ins = "i", Com = "c"
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /{{(\d+)}}/g
-const SingleValueRegExp = /^#{(\d+)}$/, MultiValueRegExp = /#{(\d+)}/g
+const ArgRegExp = /#{([\d\w]+)}/g
+const SValRegExp = /^@{([\d\w]+)}$/, MValRegExp = /@{([\d\w]+)}/g
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm, MultiWSRegExp = /\s+/g
 const QuoteRegExp = /["']/
@@ -129,7 +129,7 @@ function render(fragment, args) {
         }
       }
     } else if (type === "i") {
-      insertChild(elt, args[value])
+      insertChild(elt, getValue(value, args))
     } else if (type === "c") {
       const component = inject(App).components[value]
       if (component === undefined) {
@@ -177,18 +177,36 @@ function createComponentProps(elt, args) {
  * @returns {unknown | string | (() => string)}
  */
 function createValue(value, args) {
-  const id = value.match(SingleValueRegExp)?.[1]
+  const id = value.match(SValRegExp)?.[1]
   if (id) {
-    return args[id]
+    return getValue(id, args)
   }
-  const matches = [...value.matchAll(MultiValueRegExp)]
+  const matches = [...value.matchAll(MValRegExp)]
   if (matches.length === 0) {
     return value
   }
-  if (matches.some((match) => isReactive(args[match[1]]))) {
-    return replace.bind(value, MultiValueRegExp, (_, id) => toValue(args[id]))
+  if (matches.some((match) => isReactive(getValue(match[1], args)))) {
+    return attributeValue.bind(value, args)
   }
-  return replace.call(value, MultiValueRegExp, (_, id) => args[id])
+  return attributeValue.call(value, args)
+}
+
+/**
+ * @this {string}
+ * @param {unknown[]} args
+ * @returns {string}
+ */
+function attributeValue(args) {
+  return replace.call(this, MValRegExp, (_, id) => toValue(getValue(id, args)))
+}
+
+/**
+ * @param {string} id
+ * @param {unknown[]} args
+ * @returns {unknown}
+ */
+function getValue(id, args) {
+  return id in args ? args[id] : inject(id)
 }
 
 /**
@@ -198,7 +216,7 @@ function createValue(value, args) {
 export function createTemplateString(strings) {
   let data = "", arg = 0
   while (arg < strings.length - 1) {
-    data = data + strings[arg] + `{{${arg++}}}`
+    data = data + strings[arg] + `#{${arg++}}`
   }
   data = data + strings[arg]
   data = replace.call(data, WSAndTabsRegExp, "").trim()
@@ -214,7 +232,7 @@ export function createTemplateString(strings) {
         }
       }
       const quote = data.match(QuoteRegExp)[0]
-      val = replace.call(val || val2, ArgRegExp, "#{$1}")
+      val = replace.call(val || val2, ArgRegExp, "@{$1}")
       return ` data-__${id++}=${quote}${name || name2} ${val}${quote}${type}`
     })
     if (isComponent) {
@@ -225,6 +243,7 @@ export function createTemplateString(strings) {
     return replace.call(match, MultiWSRegExp, " ")
   })
   data = replace.call(data, ArgRegExp, Insertion)
+  console.log(data)
   return data
 }
 
