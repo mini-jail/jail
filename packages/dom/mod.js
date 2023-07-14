@@ -102,16 +102,7 @@ export function mount(rootElement, rootComponent) {
  */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
-  const fragment = template.cloneNode(true)
-  render(fragment, args)
-  const nodes = Array.from(fragment.childNodes)
-  if (nodes.length === 0) {
-    return undefined
-  }
-  if (nodes.length === 1) {
-    return nodes[0]
-  }
-  return nodes
+  return render(template.cloneNode(true), args)
 }
 
 /**
@@ -157,9 +148,8 @@ function renderComponents(fragment, args) {
     createRoot(() => {
       let props = createComponentProps(elt, args)
       if (elt.content.hasChildNodes()) {
-        render(elt.content, args)
         props = props || {}
-        props.children = [...elt.content.childNodes]
+        props.children = render(elt.content, args)
       }
       insertChild(elt, component(props))
     })
@@ -169,6 +159,7 @@ function renderComponents(fragment, args) {
 /**
  * @param {jail.Fragment} fragment
  * @param {unknown[]} args
+ * @returns {Node | Node[] | undefined}
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(insertionQuery)) {
@@ -176,6 +167,14 @@ function render(fragment, args) {
   }
   renderAttributes(fragment, args)
   renderComponents(fragment, args)
+  const nodeList = fragment.childNodes
+  if (nodeList.length === 0) {
+    return undefined
+  }
+  if (nodeList.length === 1) {
+    return nodeList[0]
+  }
+  return Array.from(nodeList)
 }
 
 /**
