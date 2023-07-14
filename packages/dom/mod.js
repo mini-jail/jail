@@ -174,7 +174,7 @@ function render(fragment, args) {
 /**
  * @param {HTMLTemplateElement} elt
  * @param {unknown[]} args
- * @returns {object | null}
+ * @returns {Partial<jail.Props> | null}
  */
 function createComponentProps(elt, args) {
   let props = null
@@ -265,8 +265,18 @@ function insertChild(elt, value) {
     elt.remove()
   } else if (value instanceof Node) {
     elt.replaceWith(value)
-  } else if (isReactive(value) || (Array.isArray(value) && value.length)) {
+  } else if (isReactive(value)) {
     insertDynamicChild(elt, value)
+  } else if (Array.isArray(value)) {
+    if (value.length === 0) {
+      elt.remove()
+    } else if (value.length === 1) {
+      insertChild(elt, value[0])
+    } else if (value.some((item) => isReactive(item))) {
+      insertDynamicChild(elt, value)
+    } else {
+      elt.replaceWith(...createNodeArray([], ...value))
+    }
   } else {
     elt.replaceWith(value + "")
   }
