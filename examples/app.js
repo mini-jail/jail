@@ -17,7 +17,7 @@ import Compiler from "./routes/compiler.js"
 import NotFound from "./routes/notfound.js"
 
 const App = () => {
-  const iff = provide("iff", createSignal(true))
+  const iff = createSignal(true)
   createEffect(() => document.title = `jail${path()}`)
 
   const routes = {
@@ -35,7 +35,7 @@ const App = () => {
   return template`
     <header>
       <h3 d-on:click="${() => iff((x) => !x)}">jail${path}</h3>
-      <nav d-if="#{iff}">
+      <nav d-if="${iff}">
         <a href="#/">home</a>
         <a href="#/counter">counter</a>
         <a href="#/sierpinski">sierpinski</a>
