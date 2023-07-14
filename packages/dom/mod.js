@@ -11,9 +11,9 @@ import {
 } from "jail/signal"
 import { directives, replace, toKebabCase } from "./helpers.js"
 
-const Atr = "__a__"
-const Ins = "__i__"
-const Com = "__c__"
+const Atr = "__a"
+const Ins = "__i"
+const Com = "__c"
 /** @type {`slot[${Ins}]`} */
 const insertionQuery = `slot[${Ins}]`
 const attributeQuery = `[${Atr}]`
@@ -98,13 +98,20 @@ export function mount(rootElement, rootComponent) {
 /**
  * @param {TemplateStringsArray} strings
  * @param  {...unknown} args
- * @returns {DocumentFragment}
+ * @returns {Node | Node[] | undefined}
  */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
   const fragment = template.cloneNode(true)
   render(fragment, args)
-  return fragment
+  const nodes = Array.from(fragment.childNodes)
+  if (nodes.length === 0) {
+    return undefined
+  }
+  if (nodes.length === 1) {
+    return nodes[0]
+  }
+  return nodes
 }
 
 /**
