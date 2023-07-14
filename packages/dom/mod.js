@@ -169,7 +169,7 @@ function render(fragment, args) {
   renderComponents(fragment, args)
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
-    return undefined
+    return
   }
   if (nodeList.length === 1) {
     return nodeList[0]
