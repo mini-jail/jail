@@ -243,7 +243,6 @@ export function createTemplateString(strings) {
     return replace.call(match, MultiWSRegExp, " ")
   })
   data = replace.call(data, ArgRegExp, Insertion)
-  console.log(data)
   return data
 }
 
