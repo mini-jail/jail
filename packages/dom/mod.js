@@ -11,27 +11,45 @@ import {
 } from "jail/signal"
 import { directives, replace, toKebabCase } from "./helpers.js"
 
-const Type = "__t", Value = "__v", Query = `[${Type}]`
-const Atr = "a", Ins = "i", Com = "c"
+const TYPES = {
+  ATTRIBUTE: "a",
+  INSERTION: "i",
+  COMPONENT: "c",
+}
+const ATTRS = {
+  TYPE: "__t",
+  VALUE: "__v",
+}
+const Query = `[${ATTRS.TYPE}]`
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /#{([\d\w]+)}/g
-const SValRegExp = /^@{([\d\w]+)}$/, MValRegExp = /@{([\d\w]+)}/g
+const ArgRegExp = /#{([\d\w]+)}/g,
+  SValRegExp = /^@{([\d\w]+)}$/,
+  MValRegExp = /@{([\d\w]+)}/g
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
-const WSAndTabsRegExp = /^[\s\t]+/gm, MultiWSRegExp = /\s+/g
-const QuoteRegExp = /["']/
-const LastAtrRegExp = RegExp(` ${Type}(?=.* ${Type})`, "g")
-const ComRegExp = /^<((?:[A-Z][a-z]+)+)/
-const ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
-const TagRegExp = /<[a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*>/g
+const WSAndTabsRegExp = /^[\s\t]+/gm
+const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/
+const ComRegExp = /^<((?:[A-Z][a-z]+)+)/,
+  ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
+const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
-const Attribute = ` ${Type}="${Atr}"`
-const Insertion = `<slot ${Type}="${Ins}" ${Value}="$1"></slot>`
-const Component = [`<template ${Type}="${Com}" ${Value}="$1"`, "</template>"]
-/** @type {Map<TemplateStringsArray, jail.Fragment>} */
+const AttributeReplacement = ` ${ATTRS.TYPE}="${TYPES.ATTRIBUTE}"`
+const InsertionReplacement =
+  `<slot ${ATTRS.TYPE}="${TYPES.INSERTION}" ${ATTRS.VALUE}="$1"></slot>`
+const ComponentReplacement = [
+  `<template ${ATTRS.TYPE}="${TYPES.COMPONENT}" ${ATTRS.VALUE}="$1"`,
+  "</template>",
+]
+/**
+ * @type {Map<TemplateStringsArray, jail.Fragment>}
+ */
 const TemplateCache = new Map()
+/**
+ * @type {Map<string, string | string[] | null>}
+ */
+const ValueCacheMap = new Map()
 const App = Symbol()
 
 /**
@@ -113,38 +131,46 @@ function getPropAndValue(elt, key, args) {
 }
 
 /**
+ * @type {{ [key: string]: (elt: jail.DOMElement, args: unknown[]) => void }}
+ */
+const insertMap = {
+  a(elt, args) {
+    const props = createProps(elt, args)
+    for (const key in props) {
+      insertAttribute(elt, key, props[key])
+    }
+  },
+  i(elt, args) {
+    const slotId = elt.getAttribute(ATTRS.VALUE)
+    insertChild(elt, getValue(slotId, args))
+  },
+  c(elt, args) {
+    const componentName = elt.getAttribute(ATTRS.VALUE)
+    const component = inject(App).components[componentName]
+    if (component === undefined) {
+      elt.remove()
+      return
+    }
+    createRoot(() => {
+      const props = createProps(elt, args)
+      if (elt.content.hasChildNodes()) {
+        props.children = render(elt.content, args)
+      }
+      insertChild(elt, component(props))
+    })
+  },
+}
+
+/**
  * @param {jail.Fragment} fragment
  * @param {unknown[]} args
  * @returns {Node | Node[] | undefined}
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(Query)) {
-    const type = elt.getAttribute(Type)
-    const value = elt.getAttribute(Value)
-    elt.removeAttribute(Type)
-    if (type === "a") {
-      for (const key in elt.dataset) {
-        if (key.startsWith("__")) {
-          insertAttribute(elt, ...getPropAndValue(elt, key, args))
-        }
-      }
-    } else if (type === "i") {
-      insertChild(elt, getValue(value, args))
-    } else if (type === "c") {
-      const component = inject(App).components[value]
-      if (component === undefined) {
-        elt.remove()
-        continue
-      }
-      createRoot(() => {
-        let props = createComponentProps(elt, args)
-        if (elt.content.hasChildNodes()) {
-          props = props || {}
-          props.children = render(elt.content, args)
-        }
-        insertChild(elt, component(props))
-      })
-    }
+    const type = elt.getAttribute(ATTRS.TYPE)
+    elt.removeAttribute(ATTRS.TYPE)
+    insertMap[type](elt, args)
   }
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
@@ -159,16 +185,40 @@ function render(fragment, args) {
 /**
  * @param {HTMLTemplateElement} elt
  * @param {unknown[]} args
- * @returns {Partial<jail.Props> | null}
+ * @returns {{ [key: string]: unknown }}
  */
-function createComponentProps(elt, args) {
-  let props = null
+function createProps(elt, args) {
+  const props = {}
   for (const key in elt.dataset) {
-    const propValueTuple = getPropAndValue(elt, key, args)
-    props = props || {}
-    props[propValueTuple[0]] = propValueTuple[1]
+    if (key.startsWith("__")) {
+      const propValueTuple = getPropAndValue(elt, key, args)
+      props[propValueTuple[0]] = propValueTuple[1]
+    }
   }
   return props
+}
+
+/**
+ * @param {string} value
+ * @returns {string | string[] | null}
+ */
+function getValueCache(value) {
+  if (ValueCacheMap.has(value)) {
+    return ValueCacheMap.get(value)
+  }
+  const id = value.match(SValRegExp)?.[1]
+  if (id) {
+    ValueCacheMap.set(value, id)
+    return id
+  }
+  const matches = [...value.matchAll(MValRegExp)]
+  if (matches.length === 0) {
+    ValueCacheMap.set(value, null)
+    return null
+  }
+  const ids = matches.map((match) => match[1])
+  ValueCacheMap.set(value, ids)
+  return ids
 }
 
 /**
@@ -177,15 +227,14 @@ function createComponentProps(elt, args) {
  * @returns {unknown | string | (() => string)}
  */
 function createValue(value, args) {
-  const id = value.match(SValRegExp)?.[1]
-  if (id) {
-    return getValue(id, args)
-  }
-  const matches = [...value.matchAll(MValRegExp)]
-  if (matches.length === 0) {
+  const cache = getValueCache(value)
+  if (cache === null) {
     return value
   }
-  if (matches.some((match) => isReactive(getValue(match[1], args)))) {
+  if (typeof cache === "string") {
+    return getValue(cache, args)
+  }
+  if (cache.some((id) => isReactive(getValue(id, args)))) {
     return attributeValue.bind(value, args)
   }
   return attributeValue.call(value, args)
@@ -219,11 +268,10 @@ export function createTemplateString(strings) {
     data = data + strings[arg] + `#{${arg++}}`
   }
   data = data + strings[arg]
-  data = replace.call(data, WSAndTabsRegExp, "").trim()
-  data = replace.call(data, ClosingComRegExp, Component[1])
+  data = replace.call(data, WSAndTabsRegExp, "")
+  data = replace.call(data, ClosingComRegExp, ComponentReplacement[1])
   data = replace.call(data, TagRegExp, (match) => {
-    const isComponent = ComRegExp.test(match),
-      type = isComponent ? "" : Attribute
+    const isComponent = ComRegExp.test(match)
     let id = 0
     match = replace.call(match, AtrRegExp, (data, name, val, val2, name2) => {
       if (isComponent === false) {
@@ -233,16 +281,17 @@ export function createTemplateString(strings) {
       }
       const quote = data.match(QuoteRegExp)[0]
       val = replace.call(val || val2, ArgRegExp, "@{$1}")
-      return ` data-__${id++}=${quote}${name || name2} ${val}${quote}${type}`
+      return ` data-__${id++}=${quote}${name || name2} ${val}${quote}`
     })
-    if (isComponent) {
-      match = replace.call(match, ComRegExp, Component[0])
+    if (DataRegExp.test(match)) {
+      match = replace.call(match, TagRegExp, `<$1${AttributeReplacement}>`)
     }
-    match = replace.call(match, LastAtrRegExp, "")
-    match = replace.call(match, ArgRegExp, "")
-    return replace.call(match, MultiWSRegExp, " ")
+    if (isComponent) {
+      match = replace.call(match, ComRegExp, ComponentReplacement[0])
+    }
+    return replace.call(match, ArgRegExp, "")
   })
-  data = replace.call(data, ArgRegExp, Insertion)
+  data = replace.call(data, ArgRegExp, InsertionReplacement)
   return data
 }
 
