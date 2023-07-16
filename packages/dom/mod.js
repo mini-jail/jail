@@ -283,7 +283,7 @@ export function createTemplateString(strings) {
       val = replace.call(val || val2, ArgRegExp, "@{$1}")
       return ` data-__${id++}=${quote}${name || name2} ${val}${quote}`
     })
-    if (DataRegExp.test(match)) {
+    if (isComponent === false && DataRegExp.test(match)) {
       match = replace.call(match, TagRegExp, `<$1${AttributeReplacement}>`)
     }
     if (isComponent) {
