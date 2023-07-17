@@ -2,19 +2,18 @@ import { onCleanup, onMount } from "jail/signal"
 import { createRouter, path } from "jail/router"
 import { createComponent } from "jail/dom"
 
-function useRouter(type) {
-  let listener, accessor, eventName
-
-  if (type === "hash") {
-    eventName = "hashchange"
-    accessor = () => location.hash.slice(1) || "/"
-    listener = () => path(accessor())
-  }
-
-  if (type === "pathname") {
-    eventName = "click"
-    accessor = () => location.pathname
-    listener = (event) => {
+const routeTypes = {
+  hash() {
+    const hash = () => location.hash.slice(1) || "/"
+    const listener = () => path(hash())
+    onMount(() => {
+      path(hash())
+      addEventListener("hashchange", listener)
+    })
+    onCleanup(() => removeEventListener("hashchange", listener))
+  },
+  pathname() {
+    const clickListener = (event) => {
       event.preventDefault()
       let elt = event.target, pathname = null
       while (elt !== null) {
@@ -24,25 +23,33 @@ function useRouter(type) {
         }
         elt = elt.parentNode
       }
-      if (pathname !== null && pathname !== accessor()) {
+      if (pathname !== null && pathname !== location.pathname) {
         path(pathname)
         history.pushState(null, "", pathname)
       }
     }
-  }
+    const popStateListener = (event) => {
+      event.preventDefault()
+      path(location.pathname)
+    }
 
-  onMount(() => {
-    path(accessor())
-    addEventListener(eventName, listener)
-  })
+    onMount(() => {
+      path(location.pathname)
+      addEventListener("click", clickListener)
+      addEventListener("popstate", popStateListener)
+    })
 
-  onCleanup(() => removeEventListener(eventName, listener))
+    onCleanup(() => {
+      removeEventListener("click", clickListener)
+      removeEventListener("popstate", popStateListener)
+    })
+  },
 }
 
 export function installRouter() {
   createComponent("Router", (props) => {
     const router = createRouter(props.routes, { fallback: props.fallback })
-    useRouter(props.type)
+    routeTypes[props.type]?.()
     return props.children ? [props.children, router] : router
   })
 }

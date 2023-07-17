@@ -28,16 +28,16 @@ const App = () => {
     <header>
       <h3>jail${path}</h3>
       <nav>
-        <a href="#/">home</a>
-        <a href="#/counter">counter</a>
-        <a href="#/sierpinski">sierpinski</a>
-        <a href="#/todo">todo</a>
-        <a href="#/about">about</a>
-        <a href="#/compiler">compiler</a>
+        <a href="/">home</a>
+        <a href="/counter">counter</a>
+        <a href="/sierpinski">sierpinski</a>
+        <a href="/todo">todo</a>
+        <a href="/about">about</a>
+        <a href="/compiler">compiler</a>
       </nav>
     </header>
     <main>
-      <Router type="hash" fallback="${NotFound}" routes="${routes}"></Router>
+      <Router type="pathname" fallback="${NotFound}" routes="${routes}"></Router>
     </main>
   `
 }
