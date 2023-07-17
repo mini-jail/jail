@@ -24,9 +24,9 @@ const Query = `[${ATTRS.TYPE}]`
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /#{([\d\w]+)}/g,
-  SValRegExp = /^@{([\d\w]+)}$/,
-  MValRegExp = /@{([\d\w]+)}/g
+const ArgRegExp = /#{([^}]+)}/g,
+  SValRegExp = /^@{([^}]+)}$/,
+  MValRegExp = /@{([^}]+)}/g
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm
 const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/
@@ -35,7 +35,7 @@ const ComRegExp = /^<((?:[A-Z][a-z]+)+)/,
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
-const AttributeReplacement = ` ${ATTRS.TYPE}="${TYPES.ATTRIBUTE}"`
+const AttributeDataReplacement = `<$1 ${ATTRS.TYPE}="${TYPES.ATTRIBUTE}">`
 const InsertionReplacement =
   `<slot ${ATTRS.TYPE}="${TYPES.INSERTION}" ${ATTRS.VALUE}="$1"></slot>`
 const ComponentReplacement = [
@@ -117,20 +117,6 @@ export function template(strings, ...args) {
 }
 
 /**
- * @param {jail.DOMElement} elt
- * @param {string} key
- * @param {unknown[]} args
- * @returns {[string, unknown]}
- */
-function getPropAndValue(elt, key, args) {
-  const data = elt.getAttribute(`data-${key}`),
-    prop = data.split(" ", 1)[0],
-    value = data.slice(prop.length + 1)
-  elt.removeAttribute(`data-${key}`)
-  return [prop, createValue(value, args)]
-}
-
-/**
  * @type {{ [key: string]: (elt: jail.DOMElement, args: unknown[]) => void }}
  */
 const insertMap = {
@@ -191,8 +177,11 @@ function createProps(elt, args) {
   const props = {}
   for (const key in elt.dataset) {
     if (key.startsWith("__")) {
-      const propValueTuple = getPropAndValue(elt, key, args)
-      props[propValueTuple[0]] = propValueTuple[1]
+      const data = elt.getAttribute(`data-${key}`),
+        prop = data.split(" ", 1)[0],
+        value = createValue(data.slice(prop.length + 1), args)
+      props[prop] = value
+      elt.removeAttribute(`data-${key}`)
     }
   }
   return props
@@ -227,14 +216,14 @@ function getValueCache(value) {
  * @returns {unknown | string | (() => string)}
  */
 function createValue(value, args) {
-  const cache = getValueCache(value)
-  if (cache === null) {
+  const cached = getValueCache(value)
+  if (cached === null) {
     return value
   }
-  if (typeof cache === "string") {
-    return getValue(cache, args)
+  if (typeof cached === "string") {
+    return getValue(cached, args)
   }
-  if (cache.some((id) => isReactive(getValue(id, args)))) {
+  if (cached.some((id) => isReactive(getValue(id, args)))) {
     return attributeValue.bind(value, args)
   }
   return attributeValue.call(value, args)
@@ -255,7 +244,24 @@ function attributeValue(args) {
  * @returns {unknown}
  */
 function getValue(id, args) {
-  return id in args ? args[id] : inject(id)
+  return id in args ? args[id] : getInjectedValue(id)
+}
+
+/**
+ * @param {string} id
+ * @returns {unknown}
+ */
+function getInjectedValue(id) {
+  const value = inject(id)
+  if (value) {
+    return value
+  }
+  const [mainId, ...subIds] = id.split(".")
+  const initialValue = inject(mainId)
+  if (initialValue == null) {
+    return
+  }
+  return subIds.reduce((value, id) => value[id], initialValue)
 }
 
 /**
@@ -283,11 +289,10 @@ export function createTemplateString(strings) {
       val = replace.call(val || val2, ArgRegExp, "@{$1}")
       return ` data-__${id++}=${quote}${name || name2} ${val}${quote}`
     })
-    if (isComponent === false && DataRegExp.test(match)) {
-      match = replace.call(match, TagRegExp, `<$1${AttributeReplacement}>`)
-    }
     if (isComponent) {
       match = replace.call(match, ComRegExp, ComponentReplacement[0])
+    } else if (DataRegExp.test(match)) {
+      match = replace.call(match, TagRegExp, AttributeDataReplacement)
     }
     return replace.call(match, ArgRegExp, "")
   })
