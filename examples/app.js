@@ -37,7 +37,7 @@ const App = () => {
       </nav>
     </header>
     <main>
-      <Router type="pathname" fallback="${NotFound}" routes="${routes}"></Router>
+      <Router type="hash" fallback="${NotFound}" routes="${routes}"></Router>
     </main>
   `
 }
