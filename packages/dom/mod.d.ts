@@ -78,11 +78,13 @@ export function mount(
   rootComponent: jail.Component,
 ): jail.Cleanup
 
-export function template(strings: TemplateStringsArray): DocumentFragment
+export function template(
+  strings: TemplateStringsArray,
+): Node | Node[] | undefined
 export function template(
   strings: TemplateStringsArray,
   ...args: unknown[]
-): DocumentFragment
+): Node | Node[] | undefined
 
 export function createTemplateString(strings: TemplateStringsArray): string
 export function createTemplateString(strings: string[]): string

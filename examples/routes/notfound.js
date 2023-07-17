@@ -1,6 +1,11 @@
 import { template } from "jail/dom"
+import { onMount, onUnmount } from "jail/signal"
 
 export default () => {
+  const originalColor = document.body.style.backgroundColor
+  onMount(() => document.body.style.backgroundColor = "indianred")
+  onUnmount(() => document.body.style.backgroundColor = originalColor)
+
   return template`
     <article>
       <h4>
@@ -9,12 +14,5 @@ export default () => {
       </h4>
       <p>There is no content for "${location}".</p>
     </article>
-
-    <style>
-      body {
-        background-color: indianred;
-        transition: 500ms;
-      }
-    </style>
   `
 }

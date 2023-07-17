@@ -12,13 +12,10 @@ import { getParams } from "jail/router"
 const Dot = (x, y, target) => {
   const counter = inject("counter")
   const hover = createSignal(false)
-  const clicked = createSignal(false)
   const onMouseOut = () => hover(false)
   const onMouseOver = () => hover(true)
-  const onMouseDown = () => clicked(true)
-  const onMouseUp = () => clicked(false)
   const text = () => hover() ? "*" + counter() + "*" : counter()
-  const bgColor = () => hover() ? clicked() ? "hotpink" : "lightpink" : "white"
+  const bgColor = () => hover() ? "lightpink" : "white"
 
   const css = `
     width: ${target}px;
@@ -37,8 +34,6 @@ const Dot = (x, y, target) => {
   return template`
     <div 
       d-text="${text}" style="${css}" d-style:background-color="${bgColor}"
-      d-on:mousedown.delegate="${onMouseDown}"
-      d-on:mouseup.delegate="${onMouseUp}"
       d-on:mouseover.delegate="${onMouseOver}"
       d-on:mouseout.delegate="${onMouseOut}"
     ></div>
@@ -50,11 +45,11 @@ const Triangle = (x, y, target, size) => {
     return Dot(x, y, target)
   }
   target = target / 2
-  return template`
-    ${Triangle(x, y - target / 2, target, size)}
-    ${Triangle(x - target, y + target / 2, target, size)}
-    ${Triangle(x + target, y + target / 2, target, size)}
-  `
+  return [
+    Triangle(x, y - target / 2, target, size),
+    Triangle(x - target, y + target / 2, target, size),
+    Triangle(x + target, y + target / 2, target, size),
+  ]
 }
 
 export default () => {
