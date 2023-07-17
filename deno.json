@@ -11,5 +11,8 @@
     "allowUnreachableCode": true,
     "allowJs": true,
     "noImplicitAny": false
+  },
+  "tasks": {
+    "deploy": "deno run -A deploy.ts"
   }
 }
