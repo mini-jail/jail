@@ -1,6 +1,5 @@
 import {
   createComputed,
-  createEffect,
   createSignal,
   mount,
   path,

@@ -119,16 +119,16 @@ export function template(strings, ...args) {
 /**
  * @type {{ [key: string]: (elt: jail.DOMElement, args: unknown[]) => void }}
  */
-const insertMap = {
+const renderMap = {
   a(elt, args) {
     const props = createProps(elt, args)
     for (const key in props) {
-      insertAttribute(elt, key, props[key])
+      renderAttribute(elt, key, props[key])
     }
   },
   i(elt, args) {
     const slotId = elt.getAttribute(ATTRS.VALUE)
-    insertChild(elt, getValue(slotId, args))
+    renderChild(elt, getValue(slotId, args))
   },
   c(elt, args) {
     const componentName = elt.getAttribute(ATTRS.VALUE)
@@ -142,9 +142,20 @@ const insertMap = {
       if (elt.content.hasChildNodes()) {
         props.children = render(elt.content, args)
       }
-      insertChild(elt, component(props))
+      renderChild(elt, component(props))
     })
   },
+}
+
+/**
+ * @param {jail.DOMElement} elt
+ * @param {string} name
+ * @returns {string}
+ */
+function attribute(elt, name) {
+  const value = elt.getAttribute(name)
+  elt.removeAttribute(name)
+  return value
 }
 
 /**
@@ -154,9 +165,7 @@ const insertMap = {
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(Query)) {
-    const type = elt.getAttribute(ATTRS.TYPE)
-    elt.removeAttribute(ATTRS.TYPE)
-    insertMap[type](elt, args)
+    renderMap[attribute(elt, ATTRS.TYPE)](elt, args)
   }
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
@@ -177,11 +186,9 @@ function createProps(elt, args) {
   const props = {}
   for (const key in elt.dataset) {
     if (key.startsWith("__")) {
-      const data = elt.getAttribute(`data-${key}`),
-        prop = data.split(" ", 1)[0],
-        value = createValue(data.slice(prop.length + 1), args)
-      props[prop] = value
-      elt.removeAttribute(`data-${key}`)
+      const data = attribute(elt, `data-${key}`),
+        prop = data.split(" ", 1)[0]
+      props[prop] = createValue(data.slice(prop.length + 1), args)
     }
   }
   return props
@@ -315,7 +322,7 @@ function createTemplate(strings) {
  * @param {HTMLSlotElement} elt
  * @param {unknown} value
  */
-function insertChild(elt, value) {
+function renderChild(elt, value) {
   if (value == null || typeof value === "boolean") {
     elt.remove()
   } else if (value instanceof Node) {
@@ -326,7 +333,7 @@ function insertChild(elt, value) {
     if (value.length === 0) {
       elt.remove()
     } else if (value.length === 1) {
-      insertChild(elt, value[0])
+      renderChild(elt, value[0])
     } else if (value.some((item) => isReactive(item))) {
       insertDynamicChild(elt, value)
     } else {
@@ -356,7 +363,7 @@ function insertDynamicChild(elt, childElement) {
  * @param {string} prop
  * @param {unknown} data
  */
-function insertAttribute(elt, prop, data) {
+function renderAttribute(elt, prop, data) {
   if (prop.startsWith(DirPrefix)) {
     prop = prop.slice(DirPrefixLength)
     const key = prop.match(DirKeyRegExp)[0]
