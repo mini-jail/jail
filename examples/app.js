@@ -1,11 +1,4 @@
-import {
-  createComputed,
-  createSignal,
-  mount,
-  path,
-  provide,
-  template,
-} from "jail"
+import { createEffect, createSignal, mount, path, template } from "jail"
 import { installRouter } from "./router.js"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
@@ -18,7 +11,7 @@ import NotFound from "./routes/notfound.js"
 
 const App = () => {
   const iff = createSignal(true)
-  provide("title", createComputed(() => document.title = `jail${path()}`))
+  createEffect(() => document.title = `jail${path()}`)
 
   const routes = {
     "/": Home,
@@ -33,11 +26,11 @@ const App = () => {
   }
 
   return template`
-    <header title="#{title}">
+    <header>
       <h3 d-on:click="${() => iff((x) => !x)}">jail${path}</h3>
       <nav d-if="${iff}">
         <a href="#/">home</a>
-        <a href="#/counter">counter</a>
+        <a href="#/counter" d-arc="/counter">counter</a>
         <a href="#/sierpinski">sierpinski</a>
         <a href="#/todo">todo</a>
         <a href="#/about">about</a>

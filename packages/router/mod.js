@@ -70,9 +70,7 @@ export function createRouter(routeMap, options) {
           return route.handler()
         }
       }
-      if (options.fallback) {
-        return options.fallback()
-      }
+      return options?.fallback?.()
     })
   })
 }
