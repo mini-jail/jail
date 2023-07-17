@@ -256,12 +256,12 @@ function getInjectedValue(id) {
   if (value) {
     return value
   }
-  const [mainId, ...subIds] = id.split(".")
+  const [mainId, ...keys] = id.split(".")
   const initialValue = inject(mainId)
-  if (initialValue == null) {
+  if (initialValue == null || keys.length === 0) {
     return
   }
-  return subIds.reduce((value, id) => value[id], initialValue)
+  return keys.reduce((value, key) => value[key], initialValue)
 }
 
 /**
