@@ -39,6 +39,7 @@ export default () => {
   const onInput = (ev) => textValue(ev.target.value)
   const length = () => list().length
   const done = () => list().filter((item) => item.done).length
+  const ToDoItems = () => list().map((item) => Item(item))
 
   return template`
     <article class="todo-app">
@@ -52,9 +53,7 @@ export default () => {
           required class="todo_input" value="${textValue}"
           d-on:keyup="${addItem}" d-on:input="${onInput}"
         />
-        <div class="todo-items">
-          ${() => list().map((item) => Item(item))}
-        </div>
+        <div class="todo-items">${ToDoItems}</div>
         <label>progress: ${done}/${length}</label>
         <progress max="${length}" value="${done}"></progress>
       </div>
