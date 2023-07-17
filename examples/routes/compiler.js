@@ -39,20 +39,16 @@ export default () => {
       </h4>
       <button d-on:click="${onClick}" d-style:margin="0 auto">show/hide explanation</button>
       <pre d-show="${showExplanation}" style="${explainCSS}">
-        0.   standard html stays standard html!
-        1.   join string literals with "{{\\d+}}"
+        1.   join string literals with "${"#{\\d+}"}"
         2.   go inside tags with this regexp (in general): 
-        .    <span d-style:color="red">${/<[a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*>/g}</span>
+        .    <span d-style:color="red">${/<([a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*)>/g}</span>
         3.   look for valid attributes with this regexp:
         .    <span d-style:color="red">${/\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g}</span>
-        3.1. replace dynamic values inside attributes with "{\\d+}"
-        4.   replace all other "{{\\d+}}" with <span d-style:color="red">${`<slot name="\${Ins}\\d+"></slot>`}</span>
-        5.   insert code into template element and extract its fragment
-        6.   tell compiler if it has insertable attributes &| children
-        7.   insert attributes inside fragment
-        8.   insert children inside fragment
-        9.   insert result to target???
-        10.  drink water
+        4.   replace dynamic values inside attributes with "${"#{\\d+}"}"
+        5.   replace all other "${"#{\\d+}"}" with <span d-style:color="red">${`<slot __t="i" __v="\\d+"></slot>`}</span>
+        6.   insert code into template element and extract its fragment
+        7.   insert attributes, children and components inside fragment
+        8.   ${"template`...`"} might return a single node, a node-array or undefined
       </pre>
       <pre style="display: flex; gap: 16px; flex-direction: column;">
         <label style="flex: 1;">input: (${inputLength} characters)</label>
