@@ -1,6 +1,7 @@
 declare global {
   namespace jail {
     type DOMElement = HTMLElement | SVGElement
+    type TemplateResult = Node | Node[] | undefined
 
     interface Binding<T = unknown> {
       readonly value: T
@@ -78,13 +79,11 @@ export function mount(
   rootComponent: jail.Component,
 ): jail.Cleanup
 
-export function template(
-  strings: TemplateStringsArray,
-): Node | Node[] | undefined
+export function template(strings: TemplateStringsArray): jail.TemplateResult
 export function template(
   strings: TemplateStringsArray,
   ...args: unknown[]
-): Node | Node[] | undefined
+): jail.TemplateResult
 
 export function createTemplateString(strings: TemplateStringsArray): string
 export function createTemplateString(strings: string[]): string

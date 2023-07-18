@@ -109,7 +109,7 @@ export function mount(rootElement, rootComponent) {
 /**
  * @param {TemplateStringsArray} strings
  * @param  {...unknown} args
- * @returns {Node | Node[] | undefined}
+ * @returns {jail.TemplateResult}
  */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
@@ -161,7 +161,7 @@ function attribute(elt, name) {
 /**
  * @param {jail.Fragment} fragment
  * @param {unknown[]} args
- * @returns {Node | Node[] | undefined}
+ * @returns {jail.TemplateResult}
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(Query)) {
