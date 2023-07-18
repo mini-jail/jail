@@ -15,19 +15,18 @@ const routeTypeHandlerMap = {
   pathname() {
     const url = new URL(location)
     const clickListener = (event) => {
-      let elt = event.target, pathname = null
-      while (elt !== null) {
+      let elt = event.target, pathname
+      while (elt != null) {
         pathname = elt.getAttribute?.("href")
         if (pathname?.startsWith("/")) {
           event.preventDefault()
-          break
+          if (pathname !== url.pathname) {
+            path(pathname)
+            url.pathname = pathname
+            return history.pushState(null, "", url)
+          }
         }
-        elt = elt.parentNode
-      }
-      if (pathname && pathname !== url.pathname) {
-        path(pathname)
-        url.pathname = pathname
-        history.pushState(null, "", url)
+        elt = elt?.parentNode
       }
     }
     const popStateListener = (event) => {
