@@ -3,7 +3,7 @@ import { createRouter, path } from "jail/router"
 import { createComponent } from "jail/dom"
 
 const routeTypes = {
-  hash() {
+  hash(props) {
     const hash = () => location.hash.slice(1) || "/"
     const listener = () => path(hash())
     onMount(() => {
@@ -12,20 +12,26 @@ const routeTypes = {
     })
     onCleanup(() => removeEventListener("hashchange", listener))
   },
-  pathname() {
+  pathname(props) {
+    const { host } = new URL(location)
     const clickListener = (event) => {
-      event.preventDefault()
-      let elt = event.target, pathname = null
+      let elt = event.target, url = null, pathname = location.pathname
       while (elt !== null) {
-        pathname = elt.getAttribute?.("href") || null
-        if (pathname !== null) {
-          break
+        url = elt.href || null
+        if (url !== null) {
+          url = new URL(url)
+          if (url.host === host && url.pathname !== pathname) {
+            event.preventDefault()
+            break
+          } else {
+            url = null
+          }
         }
         elt = elt.parentNode
       }
-      if (pathname !== null && pathname !== location.pathname) {
-        path(pathname)
-        history.pushState(null, "", pathname)
+      if (url !== null) {
+        path(url.pathname)
+        history.pushState(null, "", url.pathname)
       }
     }
     const popStateListener = (event) => {
@@ -49,7 +55,7 @@ const routeTypes = {
 export function installRouter() {
   createComponent("Router", (props) => {
     const router = createRouter(props.routes, { fallback: props.fallback })
-    routeTypes[props.type]?.()
+    routeTypes[props.type]?.(props)
     return props.children ? [props.children, router] : router
   })
 }
