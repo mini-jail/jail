@@ -1,4 +1,4 @@
-import { createEffect, mount, path, template } from "jail"
+import { createDirective, createEffect, mount, path, template } from "jail"
 import { installRouter } from "./router.js"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
@@ -24,6 +24,17 @@ const App = () => {
     "/compiler": Compiler,
   }
 
+  const animation = () => {
+    path()
+    return {
+      frames: [
+        { opacity: 0, transform: "translateY(-10px)" },
+        { opacity: 1, transform: "unset" },
+      ],
+      options: { duration: 250, delay: 50, fill: "both" },
+    }
+  }
+
   return template`
     <header>
       <h3>jail${path}</h3>
@@ -36,7 +47,7 @@ const App = () => {
         <a href="/compiler">compiler</a>
       </nav>
     </header>
-    <main>
+    <main d-animate="${animation}">
       <Router type="pathname" fallback="${NotFound}" routeMap="${routeMap}"></Router>
     </main>
   `
@@ -44,5 +55,9 @@ const App = () => {
 
 mount(document.body, () => {
   installRouter()
+  createDirective("animate", (elt, binding) => {
+    const { frames, options } = binding.value
+    elt.animate(frames, options)
+  })
   return App()
 })
