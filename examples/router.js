@@ -15,23 +15,25 @@ const routeTypes = {
   pathname(props) {
     const { host } = new URL(location)
     const clickListener = (event) => {
-      let elt = event.target, url = null, pathname = location.pathname
+      let elt = event.target,
+        url = null,
+        pathname = location.pathname,
+        nextPathName = null
       while (elt !== null) {
         url = elt.href || null
         if (url !== null) {
           url = new URL(url)
-          if (url.host === host && url.pathname !== pathname) {
+          if (url.host === host) {
+            nextPathName = url.pathname
             event.preventDefault()
             break
-          } else {
-            url = null
           }
         }
         elt = elt.parentNode
       }
-      if (url !== null) {
-        path(url.pathname)
-        history.pushState(null, "", url.pathname)
+      if (nextPathName !== null && pathname !== nextPathName) {
+        path(nextPathName)
+        history.pushState(null, "", nextPathName)
       }
     }
     const popStateListener = (event) => {
