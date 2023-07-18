@@ -2,7 +2,7 @@ import { onCleanup, onMount } from "jail/signal"
 import { createRouter, path } from "jail/router"
 import { createComponent } from "jail/dom"
 
-const routeTypes = {
+const routeTypeHandlerMap = {
   hash() {
     const hash = () => location.hash.slice(1) || "/"
     const listener = () => path(hash())
@@ -17,14 +17,14 @@ const routeTypes = {
     const clickListener = (event) => {
       let elt = event.target, pathname = null
       while (elt !== null) {
-        pathname = elt.getAttribute?.("href") || null
+        pathname = elt.getAttribute?.("href")
         if (pathname?.startsWith("/")) {
           event.preventDefault()
           break
         }
         elt = elt.parentNode
       }
-      if (pathname !== null && pathname !== url.pathname) {
+      if (pathname && pathname !== url.pathname) {
         path(pathname)
         url.pathname = pathname
         history.pushState(null, "", url)
@@ -51,7 +51,7 @@ const routeTypes = {
 export function installRouter() {
   createComponent("Router", (props) => {
     const router = createRouter(props.routes, { fallback: props.fallback })
-    routeTypes[props.type]?.()
+    routeTypeHandlerMap[props.type]?.()
     return props.children ? [props.children, router] : router
   })
 }
