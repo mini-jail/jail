@@ -12,7 +12,7 @@ import NotFound from "./routes/notfound.js"
 const App = () => {
   createEffect(() => document.title = `jail${path()}`)
 
-  const routes = {
+  const routeMap = {
     "/": Home,
     "/counter": Counter,
     "/counter/simple": SimpleCounter,
@@ -37,7 +37,7 @@ const App = () => {
       </nav>
     </header>
     <main>
-      <Router type="pathname" fallback="${NotFound}" routes="${routes}"></Router>
+      <Router type="pathname" fallback="${NotFound}" routeMap="${routeMap}"></Router>
     </main>
   `
 }

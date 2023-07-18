@@ -48,10 +48,20 @@ const routeTypeHandlerMap = {
   },
 }
 
+/**
+ * @param {object} props
+ * @param {string} [props.type] - standard listener logic
+ * @param {jail.RouteMap} props.routeMap
+ * @param {unknown} [props.children]
+ * @param {jail.RouteHandler} [props.fallback]
+ * @returns {unknown | [unknown, () => unknown] | (() => unknown)}
+ */
+function Router(props) {
+  const router = createRouter(props.routeMap, { fallback: props.fallback })
+  routeTypeHandlerMap[props.type]?.(props)
+  return props.children ? [props.children, router] : router
+}
+
 export function installRouter() {
-  createComponent("Router", (props) => {
-    const router = createRouter(props.routes, { fallback: props.fallback })
-    routeTypeHandlerMap[props.type]?.()
-    return props.children ? [props.children, router] : router
-  })
+  createComponent("Router", Router)
 }
