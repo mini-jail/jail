@@ -11,16 +11,9 @@ import {
 } from "jail/signal"
 import { directives, replace, toKebabCase } from "./helpers.js"
 
-const TYPES = {
-  ATTRIBUTE: "a",
-  INSERTION: "i",
-  COMPONENT: "c",
-}
-const ATTRS = {
-  TYPE: "__t",
-  VALUE: "__v",
-}
-const Query = `[${ATTRS.TYPE}]`
+const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c"
+const TYPE = "__T", VALUE = "__v"
+const Query = `[${TYPE}]`
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${replace.call(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
@@ -35,11 +28,11 @@ const ComRegExp = /^<((?:[A-Z][a-z]+)+)/,
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
 const AtrRegExp =
   /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
-const AttributeDataReplacement = `<$1 ${ATTRS.TYPE}="${TYPES.ATTRIBUTE}">`
+const AttributeDataReplacement = `<$1 ${TYPE}="${ATTRIBUTE}">`
 const InsertionReplacement =
-  `<slot ${ATTRS.TYPE}="${TYPES.INSERTION}" ${ATTRS.VALUE}="$1"></slot>`
+  `<slot ${TYPE}="${INSERTION}" ${VALUE}="$1"></slot>`
 const ComponentReplacement = [
-  `<template ${ATTRS.TYPE}="${TYPES.COMPONENT}" ${ATTRS.VALUE}="$1"`,
+  `<template ${TYPE}="${COMPONENT}" ${VALUE}="$1"`,
   "</template>",
 ]
 /**
@@ -127,12 +120,12 @@ const renderMap = {
     }
   },
   i(elt, args) {
-    const slotId = elt.getAttribute(ATTRS.VALUE)
-    renderChild(elt, getValue(slotId, args))
+    const slot = elt.getAttribute(VALUE)
+    renderChild(elt, getValue(slot, args))
   },
   c(elt, args) {
-    const componentName = elt.getAttribute(ATTRS.VALUE)
-    const component = inject(App).components[componentName]
+    const name = elt.getAttribute(VALUE)
+    const component = inject(App).components[name]
     if (component === undefined) {
       elt.remove()
       return
@@ -165,7 +158,7 @@ function attribute(elt, name) {
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(Query)) {
-    renderMap[attribute(elt, ATTRS.TYPE)](elt, args)
+    renderMap[attribute(elt, TYPE)](elt, args)
   }
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
