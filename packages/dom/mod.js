@@ -5,6 +5,7 @@ import {
   inject,
   isReactive,
   onCleanup,
+  onMount,
   onUnmount,
   provide,
   toValue,
@@ -321,14 +322,14 @@ function renderChild(elt, value) {
   } else if (value instanceof Node) {
     elt.replaceWith(value)
   } else if (isReactive(value)) {
-    insertDynamicChild(elt, value)
+    renderDynamicChild(elt, value)
   } else if (Array.isArray(value)) {
     if (value.length === 0) {
       elt.remove()
     } else if (value.length === 1) {
       renderChild(elt, value[0])
     } else if (value.some((item) => isReactive(item))) {
-      insertDynamicChild(elt, value)
+      renderDynamicChild(elt, value)
     } else {
       elt.replaceWith(...createNodeArray([], ...value))
     }
@@ -341,7 +342,7 @@ function renderChild(elt, value) {
  * @param {jail.DOMElement} elt
  * @param {(() => unknown) | unknown[]} childElement
  */
-function insertDynamicChild(elt, childElement) {
+function renderDynamicChild(elt, childElement) {
   const anchor = new Text()
   elt.replaceWith(anchor)
   createEffect((currentNodes) => {
@@ -358,12 +359,15 @@ function insertDynamicChild(elt, childElement) {
  */
 function renderAttribute(elt, prop, data) {
   if (prop.startsWith(DirPrefix)) {
-    prop = prop.slice(DirPrefixLength)
-    const key = prop.match(DirKeyRegExp)[0]
+    const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0]
     const directive = inject(App).directives[key]
     if (directive) {
       const binding = createBinding(prop, data)
-      createEffect(() => directive(elt, binding))
+      if (isReactive(data)) {
+        createEffect(() => directive(elt, binding))
+      } else {
+        onMount(() => directive(elt, binding))
+      }
     }
   } else if (isReactive(data)) {
     createEffect((currentValue) => {
