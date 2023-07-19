@@ -1,5 +1,5 @@
 import { createDirective, createEffect, mount, on, path, template } from "jail"
-import { installRouter } from "./router.js"
+import Router from "jail/dom-router"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
 import SimpleCounter from "./routes/simple-counter.js"
@@ -51,7 +51,7 @@ const App = () => {
 }
 
 mount(document.body, () => {
-  installRouter()
+  Router()
   createDirective("animate", (elt, binding) => {
     const { frames, options } = binding.value
     elt.animate(frames, options)

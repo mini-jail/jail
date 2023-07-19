@@ -3,6 +3,7 @@
     "jail/signal": "./packages/signal/mod.js",
     "jail/router": "./packages/router/mod.js",
     "jail/dom": "./packages/dom/mod.js",
+    "jail/dom-router": "./packages/dom-router/mod.js",
     "jail": "./packages/jail/mod.js"
   }
 }

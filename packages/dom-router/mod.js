@@ -1,3 +1,4 @@
+/// <reference types="./mod.d.ts" />
 import { onCleanup, onMount } from "jail/signal"
 import { createRouter, path } from "jail/router"
 import { createComponent } from "jail/dom"
@@ -48,19 +49,36 @@ const routeTypeHandlerMap = {
 }
 
 /**
- * @param {object} props
- * @param {string} [props.type] - standard listener logic
- * @param {jail.RouteMap} props.routeMap
- * @param {unknown} [props.children]
- * @param {jail.RouteHandler} [props.fallback]
- * @returns {unknown | [unknown, () => unknown] | (() => unknown)}
+ * Installs Router Component
+ * @example
+ * ```javascript
+ * import Router from "jail/dom-router"
+ *
+ * const App = () => {
+ *   const routeMap = {
+ *     "/": () => "home"
+ *   }
+ *   const fallback = () => "route not found"
+ *
+ *   return template`
+ *     <Router
+ *       type="pathname"
+ *       routeMap="${routeMap}"
+ *       fallback="${fallback}">
+ *     </Router>
+ *   `
+ * }
+ *
+ * mount(() => {
+ *   Router()
+ *   return App()
+ * })
+ * ```
  */
-function Router(props) {
-  const router = createRouter(props.routeMap, { fallback: props.fallback })
-  routeTypeHandlerMap[props.type]?.(props)
-  return props.children ? [props.children, router] : router
-}
-
-export function installRouter() {
-  createComponent("Router", Router)
+export default function () {
+  createComponent("Router", (props) => {
+    const router = createRouter(props.routeMap, { fallback: props.fallback })
+    routeTypeHandlerMap[props.type]?.(props)
+    return props.children ? [props.children, router] : router
+  })
 }
