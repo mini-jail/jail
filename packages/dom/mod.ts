@@ -11,7 +11,7 @@ import {
 } from "jail/signal"
 
 const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c"
-const TYPE = "__T", VALUE = "__v"
+const TYPE = "__t", VALUE = "__v"
 const Query = `[${TYPE}]`
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
 const DirRegExp = RegExp(`${DirPrefix.replace("-", "\\-")}[^"'<>=\\s]`)
