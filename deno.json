@@ -13,6 +13,7 @@
     "noImplicitAny": false
   },
   "tasks": {
-    "deploy": "deno run -A deploy.ts"
+    "deploy": "deno run -A deploy.ts",
+    "build": "deno run -A build.ts"
   }
 }
