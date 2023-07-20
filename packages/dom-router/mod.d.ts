@@ -1,20 +1,48 @@
 declare global {
   namespace jail {
-    interface ExtendableComponentMap {
-      Router: {
-        fallback?: () => unknown
-        type?: "pathname" | "hash"
-        routeMap: { [path: string]: () => unknown }
-      }
+    type RouteHandler<T = unknown> = {
+      (): T
+    }
+
+    type Params = {
+      [param: string]: string
+    }
+
+    type Route<T = unknown> = {
+      path: string
+      regexp: RegExp
+      handler: RouteHandler<T>
+    }
+
+    type RouteMap<T = unknown> = {
+      [path: string]: RouteHandler<T>
+    }
+
+    type RouterOptions<T> = {
+      fallback?: RouteHandler<T>
+    }
+
+    interface RouterParameters<T = unknown> {
+      type: "pathname" | "hash"
+      fallback?: RouteHandler<T>
+      routeMap: RouteMap<T>
+    }
+
+    interface Components {
+      Router: RouterParameters
     }
   }
 }
+
+export const path: jail.Signal<string>
+
+export function getParams(): jail.Params
 
 /**
  * Installs Router Component
  * @example
  * ```javascript
- * import Router from "jail/dom-router"
+ * import installRouter from "jail/dom-router"
  *
  * const App = () => {
  *   const routeMap = {
@@ -32,9 +60,9 @@ declare global {
  * }
  *
  * mount(() => {
- *   Router()
+ *   installRouter()
  *   return App()
  * })
  * ```
  */
-export default VoidFunction
+export default function installRouter(): void

@@ -34,10 +34,7 @@ declare global {
       cloneNode(deep?: boolean): Fragment
     } & DocumentFragment
 
-    type Directives = ExtendableDirectiveMap
-    type Components = ExtendableComponentMap
-
-    interface ExtendableDirectiveMap {
+    interface Directives {
       on: (this: DOMElement, event: Event) => void
       ref: (elt: DOMElement) => void
       show: boolean
@@ -48,9 +45,9 @@ declare global {
       bind: any
     }
 
-    interface ExtendableInjectionMap {}
+    interface Injections {}
 
-    interface ExtendableComponentMap {}
+    interface Components {}
   }
 }
 
@@ -64,9 +61,9 @@ export function createDirective<T>(
 ): void
 export function createDirective(name: string, directive: jail.Directive): void
 
-export function createComponent<K extends keyof jail.ExtendableComponentMap>(
+export function createComponent<K extends keyof jail.Components>(
   name: K,
-  component: jail.Component<jail.ExtendableComponentMap[K]>,
+  component: jail.Component<jail.Components[K]>,
 ): void
 export function createComponent<T extends object>(
   name: string,

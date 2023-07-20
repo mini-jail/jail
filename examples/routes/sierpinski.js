@@ -7,7 +7,7 @@ import {
   provide,
 } from "jail/signal"
 import { createDirective, template } from "jail/dom"
-import { getParams } from "jail/router"
+import { getParams } from "jail/dom-router"
 
 const Dot = (x, y, target) => {
   const counter = inject("counter")

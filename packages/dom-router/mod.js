@@ -1,7 +1,17 @@
 /// <reference types="./mod.d.ts" />
-import { onCleanup, onMount } from "jail/signal"
-import { createRouter, path } from "jail/router"
+import {
+  createComputed,
+  createRoot,
+  createSignal,
+  inject,
+  onCleanup,
+  onMount,
+  provide,
+} from "jail/signal"
 import { createComponent } from "jail/dom"
+
+const Params = Symbol()
+export const path = createSignal("")
 
 const routeTypeHandlerMap = {
   hash() {
@@ -48,37 +58,57 @@ const routeTypeHandlerMap = {
   },
 }
 
+export function getParams() {
+  return inject(Params)
+}
+
 /**
- * Installs Router Component
- * @example
- * ```javascript
- * import Router from "jail/dom-router"
- *
- * const App = () => {
- *   const routeMap = {
- *     "/": () => "home"
- *   }
- *   const fallback = () => "route not found"
- *
- *   return template`
- *     <Router
- *       type="pathname"
- *       routeMap="${routeMap}"
- *       fallback="${fallback}">
- *     </Router>
- *   `
- * }
- *
- * mount(() => {
- *   Router()
- *   return App()
- * })
- * ```
+ * @param {string} path
+ * @returns {RegExp}
  */
-export default function () {
+function createMatcher(path) {
+  return RegExp(
+    "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
+  )
+}
+
+/**
+ * @param {jail.RouteMap} routeMap
+ * @returns {jail.Route[]}
+ */
+function createRoutes(routeMap) {
+  return Object.keys(routeMap).map((path) => ({
+    path,
+    regexp: createMatcher(path),
+    handler: routeMap[path],
+  }))
+}
+
+/**
+ * @param {jail.RouteMap} routeMap
+ * @param {jail.RouterOptions} [options]
+ * @returns {() => unknown | undefined}
+ */
+function createRouter(routeMap, options) {
+  const routeArray = createRoutes(routeMap)
+  return createComputed(() => {
+    const nextPath = path()
+    return createRoot(() => {
+      for (const route of routeArray) {
+        if (route.regexp.test(nextPath)) {
+          provide(Params, route.regexp.exec(nextPath)?.groups)
+          return route.handler()
+        }
+      }
+      return options?.fallback?.()
+    })
+  })
+}
+
+export default function installRouter() {
   createComponent("Router", (props) => {
     const router = createRouter(props.routeMap, { fallback: props.fallback })
-    routeTypeHandlerMap[props.type]?.(props)
+    routeTypeHandlerMap[props.type](props)
     return props.children ? [props.children, router] : router
   })
 }

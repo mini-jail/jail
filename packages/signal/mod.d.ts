@@ -30,9 +30,7 @@ declare global {
       sourceSlots: number[] | null
     }
 
-    type Injections = ExtendableInjectionMap
-
-    interface ExtendableInjectionMap {}
+    interface Injections {}
   }
 }
 
