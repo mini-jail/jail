@@ -1113,7 +1113,7 @@ const __default5 = ()=>{
         .    <span d-style:color="red">${/<([a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*)>/g}</span>
         3.   look for valid attributes with this regexp:
         .    <span d-style:color="red">${/\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g}</span>
-        4.   replace dynamic values inside attributes with "${"#{\\d+}"}"
+        4.   replace dynamic values inside attributes with "${"@{\\d+}"}"
         5.   replace all other "${"#{\\d+}"}" with <span d-style:color="red">${`<slot __t="i" __v="\\d+"></slot>`}</span>
         6.   insert code into template element and extract its fragment
         7.   insert attributes, children and components inside fragment
