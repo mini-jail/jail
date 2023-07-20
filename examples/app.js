@@ -1129,9 +1129,9 @@ const __default5 = ()=>{
   `;
 };
 const __default6 = ()=>{
-    const originalColor = document.body.style.backgroundColor;
+    const { backgroundColor  } = document.body.style;
     onMount(()=>document.body.style.backgroundColor = "indianred");
-    onUnmount(()=>document.body.style.backgroundColor = originalColor);
+    onUnmount(()=>document.body.style.backgroundColor = backgroundColor);
     return template`
     <article>
       <h4>
