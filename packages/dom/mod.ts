@@ -178,7 +178,7 @@ export function createDirective<K extends keyof jail.Directives>(
   directive: Directive<jail.Directives[K]>,
 ): void
 export function createDirective<T>(name: string, directive: Directive<T>): void
-export function createDirective(name: string, directive: Directive) {
+export function createDirective(name: string, directive: Directive): void {
   extendApp("directives", name, directive)
 }
 
@@ -190,7 +190,7 @@ export function createComponent<T extends object>(
   name: string,
   component: Component<T>,
 ): void
-export function createComponent(name: string, component: Component) {
+export function createComponent(name: string, component: Component): void {
   extendApp("components", name, component)
 }
 
@@ -443,7 +443,7 @@ function renderAttribute(elt: DOMElement, prop: string, data: any): void {
       createEffect(() => directive(elt, binding))
     }
   } else if (isReactive(data)) {
-    createEffect((currentValue) => {
+    createEffect<any>((currentValue) => {
       const nextValue = toValue(data)
       if (nextValue !== currentValue) {
         setProperty(elt, prop, nextValue)
@@ -550,10 +550,7 @@ function reconcileNodes(
   }
 }
 
-function sameCharacterDataType(
-  node: Node,
-  otherNode: Node,
-): node is CharacterData {
+function sameCharacterDataType(node: Node, otherNode: Node): boolean {
   const type = node.nodeType
   return (type === 3 || type === 8) && otherNode.nodeType === type
 }
@@ -562,7 +559,7 @@ export type DOMElement = HTMLElement | SVGElement
 
 export type TemplateResult = Node | Node[] | undefined
 
-export interface Binding<T = unknown> {
+export interface Binding<T = any> {
   readonly value: T
   readonly rawValue: (() => T) | T
   readonly arg: string | null
@@ -576,7 +573,7 @@ export interface AppInjection {
   components: jail.Components
 }
 
-export interface Directive<T = unknown> {
+export interface Directive<T = any> {
   (elt: DOMElement, binding: Binding<T>): void
 }
 

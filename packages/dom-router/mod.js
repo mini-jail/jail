@@ -73,15 +73,16 @@ function createRouter(routeMap, options) {
         });
     });
 }
-export default function installRouter() {
-    createComponent("Router", (props)=>{
-        const router = createRouter(props.routeMap, {
-            fallback: props.fallback
-        });
-        routeTypeHandlerMap[props.type]();
-        return props.children ? [
-            props.children,
-            router
-        ] : router;
+export function Router(props) {
+    const router = createRouter(props.routeMap, {
+        fallback: props.fallback
     });
+    routeTypeHandlerMap[props.type]();
+    return props.children ? [
+        props.children,
+        router
+    ] : router;
+}
+export default function installRouter() {
+    createComponent("Router", Router);
 }

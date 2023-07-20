@@ -788,17 +788,18 @@ function createRouter(routeMap, options) {
         });
     });
 }
-function installRouter() {
-    createComponent("Router", (props)=>{
-        const router = createRouter(props.routeMap, {
-            fallback: props.fallback
-        });
-        routeTypeHandlerMap[props.type]();
-        return props.children ? [
-            props.children,
-            router
-        ] : router;
+function Router(props) {
+    const router = createRouter(props.routeMap, {
+        fallback: props.fallback
     });
+    routeTypeHandlerMap[props.type]();
+    return props.children ? [
+        props.children,
+        router
+    ] : router;
+}
+function installRouter() {
+    createComponent("Router", Router);
 }
 const __default = ()=>{
     return template`

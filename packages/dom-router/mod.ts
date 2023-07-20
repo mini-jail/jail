@@ -7,7 +7,7 @@ import {
   onMount,
   provide,
 } from "jail/signal"
-import { createComponent } from "jail/dom"
+import { createComponent, type Props } from "jail/dom"
 
 const Params = Symbol("Params")
 export const path = createSignal("")
@@ -94,12 +94,18 @@ function createRouter<T>(
   })
 }
 
-export default function installRouter() {
-  createComponent("Router", (props) => {
-    const router = createRouter(props.routeMap, { fallback: props.fallback })
-    routeTypeHandlerMap[props.type]()
-    return props.children ? [props.children, router] : router
-  })
+export function Router<T>(props: RouterProps<T>): () => T | undefined
+export function Router<T, C>(
+  props: RouterProps<T> & { children: C },
+): [C, (() => T | undefined)]
+export function Router(props: RouterProps & Props): any {
+  const router = createRouter(props.routeMap, { fallback: props.fallback })
+  routeTypeHandlerMap[props.type]()
+  return props.children ? [props.children, router] : router
+}
+
+export default function installRouter(): void {
+  createComponent("Router", Router)
 }
 
 export type RouteHandler<T = any> = {
