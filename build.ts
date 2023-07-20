@@ -21,9 +21,6 @@ for await (const entry of Deno.readDir(root)) {
         const fileName = path.at(-1)!
         const targetName = fileName.replace(".ts", ".js")
         const packageName = path.at(-2)!
-        if (fileMap.has(packageName)) {
-          continue
-        }
         let data = `/// <reference types="./${fileName}" />\n`
         data = data + result.get(key)
         fileMap.set(root + `${packageName}/${targetName}`, data)

@@ -8,7 +8,7 @@ const options: BundleOptions = { importMap }
 const { code } = await bundle(sourceFile, options)
 
 if (targetFile) {
-  Deno.writeTextFile(targetFile, code)
+  await Deno.writeTextFile(targetFile, code)
 } else {
   console.log(code)
 }
