@@ -428,9 +428,9 @@ function renderDynamicChild(
   const anchor = new Text()
   elt.replaceWith(anchor)
   createEffect<ChildNode[] | null>((currentNodes) => {
-    const nextNodes = createNodeArray([], toValue(childElement)) as ChildNode[]
+    const nextNodes = createNodeArray([], toValue(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
-    return nextNodes
+    return <ChildNode[]> nextNodes
   }, null)
 }
 
