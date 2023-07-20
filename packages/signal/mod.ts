@@ -81,7 +81,8 @@ export function on<T>(
   })
 }
 
-export function createEffect<T>(callback: Callback<T | undefined>): void
+export function createEffect(callback: () => void): void
+export function createEffect<T>(callback: Callback<T>): void
 export function createEffect<T>(callback: Callback<T>, initialValue: T): void
 export function createEffect<T>(callback: Callback<T>, initialValue?: T) {
   if (activeNode !== null) {
@@ -96,9 +97,7 @@ export function createEffect<T>(callback: Callback<T>, initialValue?: T) {
   }
 }
 
-export function createComputed<T>(
-  callback: Callback<T | undefined>,
-): () => T | undefined
+export function createComputed<T>(callback: Callback<T>): () => T | undefined
 export function createComputed<T>(
   callback: Callback<T>,
   initialValue: T,
