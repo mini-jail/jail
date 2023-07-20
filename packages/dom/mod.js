@@ -363,11 +363,7 @@ function renderAttribute(elt, prop, data) {
     const directive = inject(App).directives[key]
     if (directive) {
       const binding = createBinding(prop, data)
-      if (isReactive(data)) {
-        createEffect(() => directive(elt, binding))
-      } else {
-        onMount(() => directive(elt, binding))
-      }
+      createEffect(() => directive(elt, binding))
     }
   } else if (isReactive(data)) {
     createEffect((currentValue) => {
