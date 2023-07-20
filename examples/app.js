@@ -926,7 +926,7 @@ const __default2 = ()=>{
     const scale = createComputed(()=>{
         const e = elapsed() / 1000 % 10;
         return (1 + (e > 5 ? 10 - e : e) / 10) / 2;
-    });
+    }, 0);
     provide("counter", count);
     onMount(()=>{
         id = setInterval(()=>count(count() % 10 + 1), 1000);
@@ -939,7 +939,7 @@ const __default2 = ()=>{
     });
     onUnmount(()=>clearInterval(id));
     createDirective("text", (elt, binding)=>{
-        const value = String(binding.value);
+        const value = binding.value + "";
         if (elt.firstChild?.nodeType === 3) {
             elt.firstChild.data = value;
         } else {
@@ -948,7 +948,7 @@ const __default2 = ()=>{
     });
     return template`
     <div style="position: absolute; left: 50%; top: 50%;" d-style:transform="scale(${scale}) translateZ(0.1px)">
-      ${Triangle(0, 0, Number(target), Number(size))}
+      ${Triangle(0, 0, +target, +size)}
     </div>
   `;
 };

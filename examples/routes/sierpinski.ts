@@ -5,12 +5,13 @@ import {
   onMount,
   onUnmount,
   provide,
+  type Signal,
 } from "jail/signal"
 import { createDirective, template } from "jail/dom"
 import { getParams } from "jail/dom-router"
 
-const Dot = (x, y, target) => {
-  const counter = inject("counter")
+const Dot = (x: number, y: number, target: number) => {
+  const counter = inject<Signal<number>>("counter")!
   const hover = createSignal(false)
   const onMouseOut = () => hover(false)
   const onMouseOver = () => hover(true)
@@ -40,7 +41,7 @@ const Dot = (x, y, target) => {
   `
 }
 
-const Triangle = (x, y, target, size) => {
+const Triangle = (x: number, y: number, target: number, size: number) => {
   if (target <= size) {
     return Dot(x, y, target)
   }
@@ -54,13 +55,13 @@ const Triangle = (x, y, target, size) => {
 
 export default () => {
   const { target = "750", size = "25" } = getParams() || {}
-  let id
+  let id: number
   const elapsed = createSignal(0)
   const count = createSignal(0)
   const scale = createComputed(() => {
     const e = (elapsed() / 1000) % 10
     return (1 + (e > 5 ? 10 - e : e) / 10) / 2
-  })
+  }, 0)
 
   provide("counter", count)
 
@@ -77,7 +78,7 @@ export default () => {
   onUnmount(() => clearInterval(id))
 
   createDirective("text", (elt, binding) => {
-    const value = String(binding.value)
+    const value = binding.value + ""
     if (elt.firstChild?.nodeType === 3) {
       elt.firstChild.data = value
     } else {
@@ -87,7 +88,7 @@ export default () => {
 
   return template`
     <div style="position: absolute; left: 50%; top: 50%;" d-style:transform="scale(${scale}) translateZ(0.1px)">
-      ${Triangle(0, 0, Number(target), Number(size))}
+      ${Triangle(0, 0, +target, +size)}
     </div>
   `
 }
