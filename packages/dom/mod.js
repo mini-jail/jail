@@ -142,18 +142,18 @@ export function createDirective(name, directive) {
 export function createComponent(name, component) {
     extendApp("components", name, component);
 }
-const defaultDirectives = {
-    on: onDirective,
-    ref: refDirective,
-    show: showDirective,
-    html: htmlDirective,
-    text: textDirective,
-    style: styleDirective,
-    bind: bindDirective,
-    if: ifDirective
-};
 export function mount(rootElement, rootComponent) {
     return createRoot((cleanup)=>{
+        const defaultDirectives = {
+            on: onDirective,
+            ref: refDirective,
+            show: showDirective,
+            html: htmlDirective,
+            text: textDirective,
+            style: styleDirective,
+            bind: bindDirective,
+            if: ifDirective
+        };
         provide(App, {
             directives: defaultDirectives,
             components: {}

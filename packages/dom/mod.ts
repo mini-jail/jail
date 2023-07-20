@@ -165,11 +165,6 @@ function onDirective(elt: DOMElement, binding: Binding<EventListener>): void {
   }
 }
 
-function extendApp<
-  K extends keyof AppInjection,
-  N extends keyof AppInjection[K],
->(key: K, name: N, item: AppInjection[K][N]): void
-function extendApp(key: string, name: string, item: any): void
 function extendApp(key: string, name: string, item: any): void {
   const items = inject(App)![key], copy = items[name]
   items[name] = item
@@ -199,22 +194,21 @@ export function createComponent(name: string, component: Component) {
   extendApp("components", name, component)
 }
 
-const defaultDirectives = {
-  on: onDirective,
-  ref: refDirective,
-  show: showDirective,
-  html: htmlDirective,
-  text: textDirective,
-  style: styleDirective,
-  bind: bindDirective,
-  if: ifDirective,
-}
-
 export function mount(
   rootElement: DOMElement,
   rootComponent: RootComponent,
 ): Cleanup {
   return createRoot((cleanup) => {
+    const defaultDirectives = {
+      on: onDirective,
+      ref: refDirective,
+      show: showDirective,
+      html: htmlDirective,
+      text: textDirective,
+      style: styleDirective,
+      bind: bindDirective,
+      if: ifDirective,
+    }
     provide(App, { directives: defaultDirectives, components: {} })
     let anchor: ChildNode | null = rootElement.appendChild(new Text())
     let currentNodes: ChildNode[] | null = null
@@ -233,6 +227,11 @@ export function mount(
   })!
 }
 
+export function template(strings: TemplateStringsArray): TemplateResult
+export function template(
+  strings: TemplateStringsArray,
+  ...args: any[]
+): TemplateResult
 export function template(
   strings: TemplateStringsArray,
   ...args: any[]
