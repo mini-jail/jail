@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "jail/signal": "./packages/signal/mod.ts",
+    "jail/dom": "./packages/dom/mod.ts",
+    "jail/dom-router": "./packages/dom-router/mod.ts"
+  }
+}

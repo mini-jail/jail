@@ -3,15 +3,35 @@ import {
   type TranspileOptions,
 } from "https://deno.land/x/emit@0.24.0/mod.ts"
 
-const packageNames = ["signal", "dom", "dom-router"]
-const options: TranspileOptions = {
-  importMap: "./importmap.json",
-  compilerOptions: {},
+const [importMap = "./import_map.json"] = Deno.args
+const options: TranspileOptions = { importMap }
+const fileMap = new Map<string, string>()
+const root = "./packages/"
+
+for await (const entry of Deno.readDir(root)) {
+  if (entry.isDirectory) {
+    for await (const packageEntry of Deno.readDir(root + entry.name)) {
+      if (packageEntry.name.endsWith(".ts") === false) {
+        continue
+      }
+      const fileName = `./packages/${entry.name}/${packageEntry.name}`
+      const result = await transpile(fileName, options)
+      for (const key of result.keys()) {
+        const path = key.split("/")
+        const fileName = path.at(-1)!
+        const targetName = fileName.replace(".ts", ".js")
+        const packageName = path.at(-2)!
+        if (fileMap.has(packageName)) {
+          continue
+        }
+        let data = `/// <reference types="./${fileName}" />\n`
+        data = data + result.get(key)
+        fileMap.set(root + `${packageName}/${targetName}`, data)
+      }
+    }
+  }
 }
 
-for (const packageName of packageNames) {
-  const result = await transpile(`./packages/${packageName}/mod.ts`, options)
-  let data = `/// <reference types="./mod.ts" />\n`
-  data = data + result.get([...result.keys()][0])!
-  Deno.writeTextFile(`./packages/${packageName}/mod.js`, data)
+for (const [name, data] of fileMap) {
+  await Deno.writeTextFile(name, data)
 }

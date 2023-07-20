@@ -14,6 +14,7 @@
   },
   "tasks": {
     "deploy": "deno run -A deploy.ts",
-    "build": "deno run -A build.ts"
+    "build": "deno run -A build.ts",
+    "bundle": "deno run -A bundle.ts"
   }
 }
