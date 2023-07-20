@@ -179,6 +179,8 @@ function sourceValue(this: Source, value?: any): any | void {
     : getValue.call(this)
 }
 
+export function createSignal<T>(): Signal<T | undefined>
+export function createSignal<T>(initialValue: T): Signal<T>
 export function createSignal<T>(initialValue?: T): Signal<T> {
   return sourceValue.bind(createSource(initialValue)) as Signal<T>
 }
