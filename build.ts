@@ -14,7 +14,7 @@ for await (const entry of Deno.readDir(root)) {
       if (packageEntry.name.endsWith(".ts") === false) {
         continue
       }
-      const fileName = `./packages/${entry.name}/${packageEntry.name}`
+      const fileName = root + `${entry.name}/${packageEntry.name}`
       const result = await transpile(fileName, options)
       for (const key of result.keys()) {
         const path = key.split("/")
