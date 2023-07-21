@@ -24,7 +24,7 @@ let built = false
 await createBundle()
 
 if (dev === "true") {
-  for await (const event of Deno.watchFs([root, src!])) {
+  for await (const event of Deno.watchFs([root, src])) {
     await createBundle()
   }
 }
