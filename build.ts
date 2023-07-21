@@ -2,11 +2,11 @@ import {
   transpile,
   type TranspileOptions,
 } from "https://deno.land/x/emit@0.24.0/mod.ts"
+import { getParams } from "https://raw.githubusercontent.com/mini-jail/deno_params/main/mod.ts"
 
-const [importMap = "./import_map.json"] = Deno.args
+const { importMap = "./import_map.json", root = "./packages/" } = getParams()
 const options: TranspileOptions = { importMap }
 const fileMap = new Map<string, string>()
-const root = "./packages/"
 
 for await (const entry of Deno.readDir(root)) {
   if (entry.isDirectory === false) {

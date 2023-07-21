@@ -110,6 +110,7 @@
     "https://deno.land/x/oak@v10.2.0/util.ts": "3258084ebe4b9dc6e19bf1351e5519360fdac4fd8db03cc5844b66a058634836",
     "https://deno.land/x/path_to_regexp@v6.2.0/index.ts": "e94c04a44bbecac99ff2db2d831afe98b423e627b775cb57fc7935f848c64c51",
     "https://deno.land/x/wasmbuild@0.14.1/cache.ts": "89eea5f3ce6035a1164b3e655c95f21300498920575ade23161421f5b01967f4",
-    "https://deno.land/x/wasmbuild@0.14.1/loader.ts": "d98d195a715f823151cbc8baa3f32127337628379a02d9eb2a3c5902dbccfc02"
+    "https://deno.land/x/wasmbuild@0.14.1/loader.ts": "d98d195a715f823151cbc8baa3f32127337628379a02d9eb2a3c5902dbccfc02",
+    "https://raw.githubusercontent.com/mini-jail/deno_params/main/mod.ts": "5da597eb675e0a116007b217f585250bcfaf2a2148c3c9920b3f2c64a30646bb"
   }
 }

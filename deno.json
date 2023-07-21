@@ -14,8 +14,8 @@
   },
   "tasks": {
     "deploy": "deno run -A deploy.ts",
-    "build": "deno run -A build.ts",
+    "build": "deno run -A build.ts --root=./packages/",
     "bundle": "deno run -A bundle.ts",
-    "dev_examples": "deno task bundle ./examples/app.ts ./examples/app.js dev"
+    "dev_examples": "deno task bundle --src=./examples/app.ts --target=./examples/app.js --dev=true"
   }
 }
