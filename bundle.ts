@@ -11,23 +11,23 @@ const [
 ] = Deno.args
 const options: BundleOptions = { importMap }
 const root = sourceFile.split("/").at(-2)!
+let built = false
 
-await createBundle()
+createBundle()
 
 if (mode === "dev") {
-  let built = false
-  for await (const { kind } of Deno.watchFs([root, sourceFile])) {
-    if (built || ["access", "other"].includes(kind)) {
-      continue
-    }
+  for await (const event of Deno.watchFs([root, sourceFile])) {
     await createBundle()
-    built = true
-    setTimeout(() => built = false, 500)
   }
 }
 
 async function createBundle() {
+  if (built) {
+    return
+  }
+  built = true
   console.log(`creating "${targetFile}"`)
   const { code } = await bundle(sourceFile, options)
   await Deno.writeTextFile(targetFile, code)
+  setTimeout(() => built = false, 500)
 }
