@@ -12,18 +12,18 @@ const [
 const options: BundleOptions = { importMap }
 const root = sourceFile.split("/").at(-2)!
 
+await createBundle()
+
 if (mode === "dev") {
   let built = false
-  await createBundle()
   for await (const { kind } of Deno.watchFs([root, sourceFile])) {
-    if (["access", "other"].includes(kind)) continue
-    else if (built === true) continue
+    if (built || ["access", "other"].includes(kind)) {
+      continue
+    }
     await createBundle()
     built = true
     setTimeout(() => built = false, 500)
   }
-} else {
-  await createBundle()
 }
 
 async function createBundle() {
