@@ -1,4 +1,4 @@
-const Error = Symbol("Error");
+const ErrorInjectionKey = Symbol();
 const NodeQueue = new Set();
 let isRunning = false;
 let activeNode = null;
@@ -6,21 +6,21 @@ function createRoot(callback) {
     const previousNode = activeNode, localNode = createNode();
     try {
         activeNode = localNode;
-        return batch(()=>callback(callback.length === 0 ? undefined : clean.bind(localNode, true)));
+        return batch(()=>callback(callback.length === 0 ? undefined : ()=>cleanNode(localNode, true)));
     } catch (error) {
         handleError(error);
     } finally{
         activeNode = previousNode;
     }
 }
-function createNode(initialValue, onupdate) {
+function createNode(initialValue) {
     const localNode = {
         value: initialValue,
         parentNode: activeNode,
         childNodes: null,
-        injections: null,
+        injectionMap: null,
         cleanups: null,
-        onupdate: onupdate || null,
+        onupdate: null,
         sources: null,
         sourceSlots: null
     };
@@ -49,11 +49,12 @@ function on(dependency, callback) {
 }
 function createEffect(callback, initialValue) {
     if (activeNode !== null) {
-        const localNode = createNode(initialValue, callback);
+        const localNode = createNode(initialValue);
+        localNode.onupdate = callback;
         if (isRunning) {
             NodeQueue.add(localNode);
         } else {
-            queueMicrotask(()=>update(localNode, false));
+            queueMicrotask(()=>updateNode(localNode, false));
         }
     } else {
         queueMicrotask(()=>callback(initialValue));
@@ -61,11 +62,11 @@ function createEffect(callback, initialValue) {
 }
 function createComputed(callback, initialValue) {
     const source = createSource(initialValue);
-    createEffect(()=>setValue.call(source, callback(source.value)));
-    return getValue.bind(source);
+    createEffect(()=>setValue(source, callback(source.value)));
+    return ()=>getValue(source);
 }
 function lookup(node, key) {
-    return node !== null ? node.injections !== null && key in node.injections ? node.injections[key] : lookup(node.parentNode, key) : undefined;
+    return node !== null ? node.injectionMap !== null && key in node.injectionMap ? node.injectionMap[key] : lookup(node.parentNode, key) : undefined;
 }
 function createSource(initialValue) {
     return {
@@ -74,40 +75,42 @@ function createSource(initialValue) {
         nodeSlots: null
     };
 }
-function getValue() {
-    if (activeNode !== null && activeNode.onupdate != null) {
-        const sourceSlot = this.nodes?.length || 0, nodeSlot = activeNode.sources?.length || 0;
+function getValue(source) {
+    if (activeNode !== null && activeNode.onupdate !== null) {
+        const sourceSlot = source.nodes?.length || 0, nodeSlot = activeNode.sources?.length || 0;
         if (activeNode.sources === null) {
             activeNode.sources = [
-                this
+                source
             ];
             activeNode.sourceSlots = [
                 sourceSlot
             ];
         } else {
-            activeNode.sources.push(this);
+            activeNode.sources.push(source);
             activeNode.sourceSlots.push(sourceSlot);
         }
-        if (this.nodes === null) {
-            this.nodes = [
+        if (source.nodes === null) {
+            source.nodes = [
                 activeNode
             ];
-            this.nodeSlots = [
+            source.nodeSlots = [
                 nodeSlot
             ];
         } else {
-            this.nodes.push(activeNode);
-            this.nodeSlots.push(nodeSlot);
+            source.nodes.push(activeNode);
+            source.nodeSlots.push(nodeSlot);
         }
     }
-    return this.value;
+    return source.value;
 }
-function setValue(value) {
-    if (typeof value === "function") {
-        value = value(this.value);
+function setValue(source, nextValue) {
+    if (typeof nextValue === "function") {
+        nextValue = nextValue(source.value);
     }
-    this.value = value;
-    queueNodes(this);
+    if (source.value !== nextValue) {
+        source.value = nextValue;
+        queueNodes(source);
+    }
 }
 function isReactive(data) {
     return typeof data === "function";
@@ -124,14 +127,14 @@ function queueNodes(source) {
         });
     }
 }
-function sourceValue(value) {
-    return arguments.length === 1 ? setValue.call(this, value) : getValue.call(this);
-}
 function createSignal(initialValue) {
-    return sourceValue.bind(createSource(initialValue));
+    const source = createSource(initialValue);
+    return function Signal(value) {
+        return arguments.length === 1 ? setValue(source, value) : getValue(source);
+    };
 }
 function handleError(error) {
-    const errorCallbacks = inject(Error);
+    const errorCallbacks = inject(ErrorInjectionKey);
     if (!errorCallbacks) {
         return reportError(error);
     }
@@ -140,9 +143,6 @@ function handleError(error) {
     }
 }
 function onCleanup(cleanup) {
-    if (activeNode === null) {
-        return;
-    }
     if (activeNode.cleanups === null) {
         activeNode.cleanups = [
             cleanup
@@ -173,13 +173,13 @@ function flush() {
     }
     for (const node of NodeQueue){
         NodeQueue.delete(node);
-        update(node, false);
+        updateNode(node, false);
     }
     isRunning = false;
 }
-function update(node, complete) {
-    clean.call(node, complete);
-    if (node.onupdate == null) {
+function updateNode(node, complete) {
+    cleanNode(node, complete);
+    if (node.onupdate === null) {
         return;
     }
     const previousNode = activeNode;
@@ -208,92 +208,82 @@ function cleanSources(node) {
     }
 }
 function cleanChildNodes(node, complete) {
-    const hasUpdateHandler = node.onupdate != null;
+    const hasUpdateHandler = node.onupdate !== null;
     while(node.childNodes.length){
         const childNode = node.childNodes.pop();
-        clean.call(childNode, complete || hasUpdateHandler && childNode.onupdate != null);
+        cleanNode(childNode, complete || hasUpdateHandler && childNode.onupdate !== null);
     }
 }
-function clean(complete) {
-    if (this.sources?.length) {
-        cleanSources(this);
+function cleanNode(node, complete) {
+    if (node.sources?.length) {
+        cleanSources(node);
     }
-    if (this.childNodes?.length) {
-        cleanChildNodes(this, complete);
+    if (node.childNodes?.length) {
+        cleanChildNodes(node, complete);
     }
-    if (this.cleanups?.length) {
-        cleanup(this);
+    if (node.cleanups?.length) {
+        while(node.cleanups.length){
+            node.cleanups.pop()();
+        }
     }
-    this.injections = null;
+    node.injectionMap = null;
     if (complete) {
-        dispose(this);
+        node.value = null;
+        node.parentNode = null;
+        node.childNodes = null;
+        node.cleanups = null;
+        node.onupdate = null;
+        node.sources = null;
+        node.sourceSlots = null;
     }
-}
-function cleanup(node) {
-    while(node.cleanups.length){
-        node.cleanups.pop()();
-    }
-}
-function dispose(node) {
-    node.value = null;
-    node.parentNode = null;
-    node.childNodes = null;
-    node.cleanups = null;
-    node.onupdate = null;
-    node.sources = null;
-    node.sourceSlots = null;
 }
 function inject(key, defaultValue) {
     return lookup(activeNode, key) || defaultValue;
 }
 function provide(key, value) {
-    if (activeNode === null) {
-        return;
-    }
-    if (activeNode.injections === null) {
-        activeNode.injections = {
+    if (activeNode.injectionMap === null) {
+        activeNode.injectionMap = {
             [key]: value
         };
     } else {
-        activeNode.injections[key] = value;
+        activeNode.injectionMap[key] = value;
     }
 }
-const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c";
-const TYPE = "__t", VALUE = "__v";
-const Query = `[${TYPE}]`;
-const DirPrefix = "d-", DirPrefixLength = DirPrefix.length;
-const DirRegExp = RegExp(`${DirPrefix.replace("-", "\\-")}[^"'<>=\\s]`);
-const DirKeyRegExp = /[a-z\-\_]+/;
-const ArgRegExp = /#{([^}]+)}/g, SValRegExp = /^@{([^}]+)}$/, MValRegExp = /@{([^}]+)}/g;
-const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/;
-const WSAndTabsRegExp = /^[\s\t]+/gm;
-const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/;
-const ComRegExp = /^<((?:[A-Z][a-z]+)+)/, ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g;
-const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
-const AtrRegExp = /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g;
-const AttributeDataReplacement = `<$1 ${TYPE}="${ATTRIBUTE}">`;
-const InsertionReplacement = `<slot ${TYPE}="${INSERTION}" ${VALUE}="$1"></slot>`;
-const ComponentReplacement = [
-    `<template ${TYPE}="${COMPONENT}" ${VALUE}="$1"`,
-    "</template>"
-];
-const TemplateCache = new Map();
-const ValueCacheMap = new Map();
-const App = Symbol("App");
-const Events = Symbol("Events");
-const If = Symbol("If");
-const RegisteredEvents = {};
 function toCamelCase(data) {
     return data.replace(/-[a-z]/g, (match)=>match.slice(1).toUpperCase());
 }
 function toKebabCase(data) {
     return data.replace(/([A-Z])/g, "-$1").toLowerCase();
 }
-function eventLoop(event) {
+function setProperty(elt, prop, value) {
+    if (prop in elt) {
+        elt[prop] = value;
+        return;
+    }
+    const name = toKebabCase(prop);
+    if (value != null) {
+        elt.setAttribute(name, value + "");
+    } else {
+        elt.removeAttribute(name);
+    }
+}
+function attribute(elt, name) {
+    const value = elt.getAttribute(name);
+    elt.removeAttribute(name);
+    return value;
+}
+function sameCharacterDataType(node, otherNode) {
+    const type = node.nodeType;
+    return (type === 3 || type === 8) && otherNode.nodeType === type;
+}
+const Events = Symbol();
+const If = Symbol();
+const RegisteredEvents = {};
+function delegatedEventListener(event) {
     const type = event.type;
     let elt = event.target;
     while(elt !== null){
-        elt?.[Events]?.[type]?.call(elt, event);
+        elt?.[Events]?.[type]?.forEach?.((listener)=>listener.call(elt, event));
         elt = elt.parentNode;
     }
 }
@@ -370,35 +360,51 @@ function onDirective(elt, binding) {
     }
     if (modifiers?.delegate) {
         elt[Events] = elt[Events] || {};
-        if (elt[Events][name]) {
-            const listenerCopy = elt[Events][name];
-            elt[Events][name] = function(event) {
-                listenerCopy.call(elt, event);
-                listener.call(elt, event);
-            };
-        } else {
-            elt[Events][name] = listener;
-        }
+        elt[Events][name] = elt[Events][name] || [];
+        elt[Events][name].push(listener);
         if (RegisteredEvents[id] === undefined) {
-            addEventListener(name, eventLoop, eventOptions);
+            addEventListener(name, delegatedEventListener, eventOptions);
             RegisteredEvents[id] = true;
         }
     } else {
         elt.addEventListener(name, listener, eventOptions);
     }
 }
-function extendApp(key, name, item) {
-    const items = inject(App)[key], copy = items[name];
-    items[name] = item;
-    if (copy) {
-        onUnmount(()=>items[name] = copy);
+const AppInjectionKey = Symbol();
+const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c";
+const TYPE = "__t", VALUE = "__v";
+const Query = `[${TYPE}]`;
+const DirPrefix = "d-", DirPrefixLength = DirPrefix.length;
+const DirRegExp = RegExp(`${DirPrefix.replace("-", "\\-")}[^"'<>=\\s]`);
+const DirKeyRegExp = /[a-z\-\_]+/;
+const ArgRegExp = /#{([^}]+)}/g, SValRegExp = /^@{([^}]+)}$/, MValRegExp = /@{([^}]+)}/g;
+const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/;
+const WSAndTabsRegExp = /^[\s\t]+/gm;
+const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/;
+const ComRegExp = /^<((?:[A-Z][a-z]+)+)/, ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g;
+const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
+const AtrRegExp = /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g;
+const AttributeDataReplacement = `<$1 ${TYPE}="${ATTRIBUTE}">`;
+const InsertionReplacement = `<slot ${TYPE}="${INSERTION}" ${VALUE}="$1"></slot>`;
+const ComponentReplacement = [
+    `<template ${TYPE}="${COMPONENT}" ${VALUE}="$1"`,
+    "</template>"
+];
+const TemplateCache = new Map();
+const ValueCacheMap = new Map();
+function createDirective(name, directive) {
+    const directives = inject(AppInjectionKey).directives, directiveCopy = directives[name];
+    directives[name] = directive;
+    if (directiveCopy) {
+        onUnmount(()=>directives[name] = directiveCopy);
     }
 }
-function createDirective(name, directive) {
-    extendApp("directives", name, directive);
-}
 function createComponent(name, component) {
-    extendApp("components", name, component);
+    const components = inject(AppInjectionKey).components, componentCopy = components[name];
+    components[name] = component;
+    if (componentCopy) {
+        onUnmount(()=>components[name] = componentCopy);
+    }
 }
 function mount(rootElement, rootComponent) {
     return createRoot((cleanup)=>{
@@ -412,7 +418,7 @@ function mount(rootElement, rootComponent) {
             bind: bindDirective,
             if: ifDirective
         };
-        provide(App, {
+        provide(AppInjectionKey, {
             directives: defaultDirectives,
             components: {}
         });
@@ -449,7 +455,7 @@ const renderMap = {
     },
     c (elt, args) {
         const name = elt.getAttribute(VALUE);
-        const component = inject(App).components[name];
+        const component = inject(AppInjectionKey).components[name];
         if (component === undefined) {
             elt.remove();
             return;
@@ -463,11 +469,6 @@ const renderMap = {
         });
     }
 };
-function attribute(elt, name) {
-    const value = elt.getAttribute(name);
-    elt.removeAttribute(name);
-    return value;
-}
 function render(fragment, args) {
     for (const elt of fragment.querySelectorAll(Query)){
         renderMap[attribute(elt, TYPE)](elt, args);
@@ -609,7 +610,7 @@ function renderDynamicChild(elt, childElement) {
 function renderAttribute(elt, prop, data) {
     if (prop.startsWith(DirPrefix)) {
         const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0];
-        const directive = inject(App).directives[key];
+        const directive = inject(AppInjectionKey).directives[key];
         if (directive) {
             const binding = createBinding(prop, data);
             createEffect(()=>directive(elt, binding));
@@ -641,18 +642,6 @@ function createBinding(prop, rawValue) {
         modifiers
     };
 }
-function setProperty(elt, prop, value) {
-    if (prop in elt) {
-        elt[prop] = value;
-        return;
-    }
-    const name = toKebabCase(prop);
-    if (value != null) {
-        elt.setAttribute(name, value + "");
-    } else {
-        elt.removeAttribute(name);
-    }
-}
 function createNodeArray(nodeArray, ...elements) {
     for (const elt of elements){
         if (elt == null || typeof elt === "boolean") {
@@ -679,7 +668,7 @@ function createNodeArray(nodeArray, ...elements) {
 }
 function reconcileNodes(anchor, currentNodes, nextNodes) {
     const parentNode = anchor.parentNode;
-    if (currentNodes == null) {
+    if (currentNodes === null) {
         for (const nextNode of nextNodes){
             parentNode?.insertBefore(nextNode, anchor);
         }
@@ -712,11 +701,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
         currentNodes.pop()?.remove();
     }
 }
-function sameCharacterDataType(node, otherNode) {
-    const type = node.nodeType;
-    return (type === 3 || type === 8) && otherNode.nodeType === type;
-}
-const Params = Symbol("Params");
+const ParamsInjectionKey = Symbol();
 const path = createSignal("");
 const routeTypeHandlerMap = {
     hash () {
@@ -761,7 +746,7 @@ const routeTypeHandlerMap = {
     }
 };
 function getParams() {
-    return inject(Params);
+    return inject(ParamsInjectionKey);
 }
 function createMatcher(path) {
     return RegExp("^" + path.replace(/:([^/:]+)/g, (_, name)=>`(?<${name}>[^/]+)`) + "$");
@@ -780,7 +765,7 @@ function createRouter(routeMap, options) {
         return createRoot(()=>{
             for (const route of routeArray){
                 if (route.regexp.test(nextPath)) {
-                    provide(Params, route.regexp.exec(nextPath)?.groups);
+                    provide(ParamsInjectionKey, route.regexp.exec(nextPath)?.groups);
                     return route.handler();
                 }
             }
@@ -793,10 +778,10 @@ function Router(props) {
         fallback: props.fallback
     });
     routeTypeHandlerMap[props.type]();
-    return props.children ? [
+    return [
         props.children,
         router
-    ] : router;
+    ];
 }
 function installRouter() {
     createComponent("Router", Router);
@@ -1142,7 +1127,7 @@ const __default6 = ()=>{
     </article>
   `;
 };
-const App1 = ()=>{
+const App = ()=>{
     createEffect(()=>document.title = `jail${path()}`);
     const routeMap = {
         "/": __default,
@@ -1195,5 +1180,5 @@ mount(document.body, ()=>{
         const { frames , options  } = binding.value;
         elt.animate(frames, options);
     });
-    return App1();
+    return App;
 });

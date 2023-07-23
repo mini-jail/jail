@@ -22,26 +22,29 @@ if (target === undefined) {
 }
 
 const options: BundleOptions = { importMap }
-const root = src.split("/").at(-2)!
+const root = src.split("/").at(-2) || "./"
 let built = false
 
-await createBundle(target)
+await createBundle(src, target)
 
 if (dev === "true") {
   for await (const event of Deno.watchFs([root, src])) {
     if (built) {
       continue
     }
-    await createBundle(target)
+    await createBundle(src, target)
   }
 }
 
-async function createBundle(targetFile: string): Promise<void> {
+async function createBundle(
+  sourceFile: string,
+  targetFile: string,
+): Promise<void> {
   if (built) {
     return
   }
   built = true
-  const { code } = await bundle(targetFile, options)
+  const { code } = await bundle(sourceFile, options)
   console.log(`creating "${targetFile}" (${code.length})`)
   await Deno.writeTextFile(targetFile, code)
   setTimeout(() => built = false, 500)

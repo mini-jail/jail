@@ -1,4 +1,4 @@
-import { createEffect, on } from "jail/signal"
+import { createEffect, inject, on } from "jail/signal"
 import { createDirective, mount, template } from "jail/dom"
 import installRouter, { path } from "jail/dom-router"
 import Home from "./routes/home.js"
@@ -57,18 +57,16 @@ mount(document.body, () => {
     const { frames, options } = binding.value
     elt.animate(frames, options)
   })
-  return App()
+  return App
 })
 
-export interface AnimateDirective {
+interface AnimateDirective {
   frames: Keyframe[]
   options: KeyframeAnimationOptions
 }
 
 declare global {
-  namespace jail {
-    interface Directives {
-      animate: AnimateDirective
-    }
+  interface DirectiveMap {
+    animate: AnimateDirective
   }
 }
