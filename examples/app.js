@@ -1180,5 +1180,5 @@ mount(document.body, ()=>{
         const { frames , options  } = binding.value;
         elt.animate(frames, options);
     });
-    return App;
+    return App();
 });
