@@ -36,14 +36,14 @@ export type Properties = {
 
 declare global {
   interface DirectiveMap {
-    on?: (this: DOMElement, ev: Event) => void
-    ref?: (elt: DOMElement) => void
-    show?: boolean
-    if?: boolean
-    html?: string
-    text?: string
-    style?: string
-    bind?: any
+    on: (this: DOMElement, ev: Event) => void
+    ref: (elt: DOMElement) => void
+    show: boolean
+    if: boolean
+    html: string
+    text: string
+    style: string
+    bind: any
   }
 
   interface ComponentMap {
