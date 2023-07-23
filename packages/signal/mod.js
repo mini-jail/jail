@@ -315,9 +315,9 @@ function handleError(error) {
  */
 export function catchError(callback) {
   if (activeNode.injectionMap === null) {
-    activeNode.injectionMap = { [Error]: [callback] }
+    activeNode.injectionMap = { [ErrorInjectionKey]: [callback] }
   } else {
-    activeNode.injectionMap[Error].push(callback)
+    activeNode.injectionMap[ErrorInjectionKey].push(callback)
   }
 }
 
