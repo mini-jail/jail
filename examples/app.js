@@ -247,127 +247,6 @@ function provide(key, value) {
         activeNode.injectionMap[key] = value;
     }
 }
-function toCamelCase(data) {
-    return data.replace(/-[a-z]/g, (match)=>match.slice(1).toUpperCase());
-}
-function toKebabCase(data) {
-    return data.replace(/([A-Z])/g, "-$1").toLowerCase();
-}
-function setProperty(elt, prop, value) {
-    if (prop in elt) {
-        elt[prop] = value;
-        return;
-    }
-    const name = toKebabCase(prop);
-    if (value != null) {
-        elt.setAttribute(name, value + "");
-    } else {
-        elt.removeAttribute(name);
-    }
-}
-function getAndRemoveAttribute(elt, name) {
-    const value = elt.getAttribute(name);
-    elt.removeAttribute(name);
-    return value;
-}
-function sameCharacterDataType(node, otherNode) {
-    const type = node.nodeType;
-    return (type === 3 || type === 8) && otherNode.nodeType === type;
-}
-const DelegatedEvents = Symbol();
-const IfDirectiveSymbol = Symbol();
-const RegisteredEvents = {};
-function delegatedEventListener(event) {
-    const type = event.type;
-    let elt = event.target;
-    while(elt !== null){
-        elt?.[DelegatedEvents]?.[type]?.forEach?.((fn)=>fn.call(elt, event));
-        elt = elt.parentNode;
-    }
-}
-function refDirective(elt, binding) {
-    binding.rawValue?.(elt);
-}
-function styleDirective(elt, binding) {
-    elt.style[binding.arg] = binding.value || null;
-}
-function bindDirective(elt, binding) {
-    let prop = binding.arg;
-    if (binding.modifiers?.camel) {
-        prop = toCamelCase(prop);
-    }
-    if (binding.modifiers?.attr) {
-        prop = toKebabCase(prop);
-    }
-    if (binding.modifiers?.prop === true || prop in elt && binding.modifiers?.attr === false) {
-        elt[prop] = binding.value;
-    } else {
-        elt.setAttribute(prop, binding.value + "");
-    }
-}
-function htmlDirective(elt, binding) {
-    elt.innerHTML = binding.value;
-}
-function textDirective(elt, binding) {
-    elt.textContent = binding.value;
-}
-function showDirective(elt, binding) {
-    elt.style.display = binding.value ? "" : "none";
-}
-function ifDirective(elt, binding) {
-    elt[IfDirectiveSymbol] = elt[IfDirectiveSymbol] || new Text();
-    const value = binding.value, target = value ? elt[IfDirectiveSymbol] : elt;
-    target.replaceWith(value ? elt : elt[IfDirectiveSymbol]);
-}
-function onDirective(elt, binding) {
-    const name = binding.arg;
-    const modifiers = binding.modifiers;
-    let id = name, listener = binding.rawValue, eventOptions;
-    if (modifiers) {
-        if (modifiers.prevent) {
-            id = id + "-prevent";
-            const listenerCopy = listener;
-            listener = function(event) {
-                event.preventDefault();
-                listenerCopy.call(elt, event);
-            };
-        }
-        if (modifiers.stop) {
-            id = id + "-stop";
-            const listenerCopy = listener;
-            listener = function(event) {
-                event.stopPropagation();
-                listenerCopy.call(elt, event);
-            };
-        }
-        if (modifiers.once) {
-            id = id + "-once";
-            eventOptions = eventOptions || {};
-            eventOptions.once = true;
-        }
-        if (modifiers.capture) {
-            id = id + "-capture";
-            eventOptions = eventOptions || {};
-            eventOptions.capture = true;
-        }
-        if (modifiers.passive) {
-            id = id + "-passive";
-            eventOptions = eventOptions || {};
-            eventOptions.passive = true;
-        }
-    }
-    if (modifiers?.delegate) {
-        elt[DelegatedEvents] = elt[DelegatedEvents] || {};
-        elt[DelegatedEvents][name] = elt[DelegatedEvents][name] || [];
-        elt[DelegatedEvents][name].push(listener);
-        if (RegisteredEvents[id] === undefined) {
-            addEventListener(name, delegatedEventListener, eventOptions);
-            RegisteredEvents[id] = true;
-        }
-    } else {
-        elt.addEventListener(name, listener, eventOptions);
-    }
-}
 const AppInjectionKey = Symbol();
 const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c";
 const TYPE = "__t", VALUE = "__v";
@@ -390,6 +269,9 @@ const ComponentReplacement = [
 ];
 const TemplateCache = new Map();
 const ValueCacheMap = new Map();
+const DelegatedEvents = Symbol();
+const IfDirectiveSymbol = Symbol();
+const RegisteredEvents = {};
 function createDirective(name, directive) {
     const directives = inject(AppInjectionKey).directives, directiveCopy = directives[name];
     directives[name] = directive;
@@ -697,6 +579,124 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
     }
     while(currentNodes.length){
         currentNodes.pop()?.remove();
+    }
+}
+function toCamelCase(data) {
+    return data.replace(/-[a-z]/g, (match)=>match.slice(1).toUpperCase());
+}
+function toKebabCase(data) {
+    return data.replace(/([A-Z])/g, "-$1").toLowerCase();
+}
+function setProperty(elt, prop, value) {
+    if (prop in elt) {
+        elt[prop] = value;
+        return;
+    }
+    const name = toKebabCase(prop);
+    if (value != null) {
+        elt.setAttribute(name, value + "");
+    } else {
+        elt.removeAttribute(name);
+    }
+}
+function getAndRemoveAttribute(elt, name) {
+    const value = elt.getAttribute(name);
+    elt.removeAttribute(name);
+    return value;
+}
+function sameCharacterDataType(node, otherNode) {
+    const type = node.nodeType;
+    return (type === 3 || type === 8) && otherNode.nodeType === type;
+}
+function delegatedEventListener(event) {
+    const type = event.type;
+    let elt = event.target;
+    while(elt !== null){
+        elt?.[DelegatedEvents]?.[type]?.forEach?.((fn)=>fn.call(elt, event));
+        elt = elt.parentNode;
+    }
+}
+function refDirective(elt, binding) {
+    binding.rawValue?.(elt);
+}
+function styleDirective(elt, binding) {
+    elt.style[binding.arg] = binding.value || null;
+}
+function bindDirective(elt, binding) {
+    let prop = binding.arg;
+    if (binding.modifiers?.camel) {
+        prop = toCamelCase(prop);
+    }
+    if (binding.modifiers?.attr) {
+        prop = toKebabCase(prop);
+    }
+    if (binding.modifiers?.prop === true || prop in elt && binding.modifiers?.attr === false) {
+        elt[prop] = binding.value;
+    } else {
+        elt.setAttribute(prop, binding.value + "");
+    }
+}
+function htmlDirective(elt, binding) {
+    elt.innerHTML = binding.value;
+}
+function textDirective(elt, binding) {
+    elt.textContent = binding.value;
+}
+function showDirective(elt, binding) {
+    elt.style.display = binding.value ? "" : "none";
+}
+function ifDirective(elt, binding) {
+    elt[IfDirectiveSymbol] = elt[IfDirectiveSymbol] || new Text();
+    const value = binding.value, target = value ? elt[IfDirectiveSymbol] : elt;
+    target.replaceWith(value ? elt : elt[IfDirectiveSymbol]);
+}
+function onDirective(elt, binding) {
+    const name = binding.arg;
+    const modifiers = binding.modifiers;
+    let id = name, listener = binding.rawValue, eventOptions;
+    if (modifiers) {
+        if (modifiers.prevent) {
+            id = id + "-prevent";
+            const listenerCopy = listener;
+            listener = function(event) {
+                event.preventDefault();
+                listenerCopy.call(elt, event);
+            };
+        }
+        if (modifiers.stop) {
+            id = id + "-stop";
+            const listenerCopy = listener;
+            listener = function(event) {
+                event.stopPropagation();
+                listenerCopy.call(elt, event);
+            };
+        }
+        if (modifiers.once) {
+            id = id + "-once";
+            eventOptions = eventOptions || {};
+            eventOptions.once = true;
+        }
+        if (modifiers.capture) {
+            id = id + "-capture";
+            eventOptions = eventOptions || {};
+            eventOptions.capture = true;
+        }
+        if (modifiers.passive) {
+            id = id + "-passive";
+            eventOptions = eventOptions || {};
+            eventOptions.passive = true;
+        }
+    }
+    if (modifiers?.delegate) {
+        elt[DelegatedEvents] = elt[DelegatedEvents] || {};
+        elt[DelegatedEvents][name] = elt[DelegatedEvents][name] || [];
+        elt[DelegatedEvents][name].push(listener);
+        if (RegisteredEvents[id] === undefined) {
+            addEventListener(name, delegatedEventListener, eventOptions);
+            RegisteredEvents[id] = true;
+        }
+    } else {
+        elt.addEventListener(name, listener, eventOptions);
     }
 }
 const ParamsInjectionKey = Symbol();

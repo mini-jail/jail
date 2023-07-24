@@ -1,5 +1,5 @@
-import { Cleanup, createEffect, on } from "jail/signal"
-import { createComponent, createDirective, mount, template } from "jail/dom"
+import { createEffect, on } from "jail/signal"
+import { createDirective, mount, template } from "jail/dom"
 import installRouter, { path } from "jail/dom-router"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"

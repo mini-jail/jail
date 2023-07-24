@@ -8,21 +8,6 @@ import {
   provide,
   toValue,
 } from "jail/signal"
-import {
-  bindDirective,
-  htmlDirective,
-  ifDirective,
-  onDirective,
-  refDirective,
-  showDirective,
-  styleDirective,
-  textDirective,
-} from "./directives.js"
-import {
-  getAndRemoveAttribute,
-  sameCharacterDataType,
-  setProperty,
-} from "./helpers.js"
 
 /**
  * @typedef {HTMLElement | SVGElement} DOMElement
@@ -95,6 +80,9 @@ const TemplateCache = new Map()
  * @type {Map<string, string | string[] | null>}
  */
 const ValueCacheMap = new Map()
+const DelegatedEvents = Symbol()
+const IfDirectiveSymbol = Symbol()
+const RegisteredEvents = {}
 
 /**
  * @template Type
@@ -518,5 +506,193 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
   }
   while (currentNodes.length) {
     currentNodes.pop()?.remove()
+  }
+}
+
+/**
+ * @param {string} data
+ * @returns {string}
+ */
+function toCamelCase(data) {
+  return data.replace(/-[a-z]/g, (match) => match.slice(1).toUpperCase())
+}
+
+/**
+ * @param {string} data
+ * @returns {string}
+ */
+function toKebabCase(data) {
+  return data.replace(/([A-Z])/g, "-$1").toLowerCase()
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {string} prop
+ * @param {any} value
+ */
+function setProperty(elt, prop, value) {
+  if (prop in elt) {
+    elt[prop] = value
+    return
+  }
+  const name = toKebabCase(prop)
+  if (value != null) {
+    elt.setAttribute(name, value + "")
+  } else {
+    elt.removeAttribute(name)
+  }
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {string} name
+ * @returns {string | null}
+ */
+function getAndRemoveAttribute(elt, name) {
+  const value = elt.getAttribute(name)
+  elt.removeAttribute(name)
+  return value
+}
+
+function sameCharacterDataType(node, otherNode) {
+  const type = node.nodeType
+  return (type === 3 || type === 8) && otherNode.nodeType === type
+}
+
+/**
+ * @param {Event} event
+ */
+function delegatedEventListener(event) {
+  const type = event.type
+  let elt = event.target
+  while (elt !== null) {
+    elt?.[DelegatedEvents]?.[type]?.forEach?.((fn) => fn.call(elt, event))
+    elt = elt.parentNode
+  }
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<(elt: DOMElement) => void>} binding
+ */
+function refDirective(elt, binding) {
+  binding.rawValue?.(elt)
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<string>} binding
+ */
+function styleDirective(elt, binding) {
+  elt.style[binding.arg] = binding.value || null
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<any>} binding
+ */
+function bindDirective(elt, binding) {
+  let prop = binding.arg
+  if (binding.modifiers?.camel) {
+    prop = toCamelCase(prop)
+  }
+  if (binding.modifiers?.attr) {
+    prop = toKebabCase(prop)
+  }
+  if (
+    binding.modifiers?.prop === true ||
+    prop in elt && binding.modifiers?.attr === false
+  ) {
+    elt[prop] = binding.value
+  } else {
+    elt.setAttribute(prop, binding.value + "")
+  }
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<string>} binding
+ */
+function htmlDirective(elt, binding) {
+  elt.innerHTML = binding.value
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<string>} binding
+ */
+function textDirective(elt, binding) {
+  elt.textContent = binding.value
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<boolean>} binding
+ */
+function showDirective(elt, binding) {
+  elt.style.display = binding.value ? "" : "none"
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<boolean>} binding
+ */
+function ifDirective(elt, binding) {
+  elt[IfDirectiveSymbol] = elt[IfDirectiveSymbol] || new Text()
+  const value = binding.value, target = value ? elt[IfDirectiveSymbol] : elt
+  target.replaceWith(value ? elt : elt[IfDirectiveSymbol])
+}
+
+/**
+ * @param {DOMElement} elt
+ * @param {Binding<(event: Event) => void>} binding
+ */
+function onDirective(elt, binding) {
+  const name = binding.arg
+  const modifiers = binding.modifiers
+  let id = name, listener = binding.rawValue, eventOptions
+  if (modifiers) {
+    if (modifiers.prevent) {
+      id = id + "-prevent"
+      const listenerCopy = listener
+      listener = function (event) {
+        event.preventDefault()
+        listenerCopy.call(elt, event)
+      }
+    }
+    if (modifiers.stop) {
+      id = id + "-stop"
+      const listenerCopy = listener
+      listener = function (event) {
+        event.stopPropagation()
+        listenerCopy.call(elt, event)
+      }
+    }
+    if (modifiers.once) {
+      id = id + "-once"
+      eventOptions = eventOptions || {}
+      eventOptions.once = true
+    }
+    if (modifiers.capture) {
+      id = id + "-capture"
+      eventOptions = eventOptions || {}
+      eventOptions.capture = true
+    }
+    if (modifiers.passive) {
+      id = id + "-passive"
+      eventOptions = eventOptions || {}
+      eventOptions.passive = true
+    }
+  }
+  if (modifiers?.delegate) {
+    elt[DelegatedEvents] = elt[DelegatedEvents] || {}
+    elt[DelegatedEvents][name] = elt[DelegatedEvents][name] || []
+    elt[DelegatedEvents][name].push(listener)
+    if (RegisteredEvents[id] === undefined) {
+      addEventListener(name, delegatedEventListener, eventOptions)
+      RegisteredEvents[id] = true
+    }
+  } else {
+    elt.addEventListener(name, listener, eventOptions)
   }
 }
