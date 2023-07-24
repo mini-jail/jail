@@ -50,7 +50,6 @@ import {
 const AppInjectionKey = Symbol()
 const DelegatedEvents = Symbol()
 const IfDirectiveSymbol = Symbol()
-const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c"
 const TYPE = "__t", VALUE = "__v"
 const Query = `[${TYPE}]`
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
@@ -64,15 +63,14 @@ const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm
 const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/
 const ComRegExp = /^<((?:[A-Z][a-z]+)+)/,
-  ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
+  ClosingComRegExp = /<\/(?:[A-Z][a-z]+)+>/g
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
 const AtrRegExp =
-  /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>=\s]+)))?/g
-const AttributeDataReplacement = `<$1 ${TYPE}="${ATTRIBUTE}">`
-const InsertionReplacement =
-  `<slot ${TYPE}="${INSERTION}" ${VALUE}="$1"></slot>`
+  /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g
+const AttributeReplacement = `<$1 ${TYPE}="a">`
+const InsertionReplacement = `<slot ${TYPE}="i" ${VALUE}="$1"></slot>`
 const ComponentReplacement = [
-  `<template ${TYPE}="${COMPONENT}" ${VALUE}="$1"`,
+  `<template ${TYPE}="c" ${VALUE}="$1"`,
   "</template>",
 ]
 /**
@@ -343,7 +341,7 @@ export function createTemplateString(strings) {
     if (isComponent) {
       match = sub(match, ComRegExp, ComponentReplacement[0])
     } else if (DataRegExp.test(match)) {
-      match = sub(match, TagRegExp, AttributeDataReplacement)
+      match = sub(match, TagRegExp, AttributeReplacement)
     }
     return sub(match, ArgRegExp, "")
   })
