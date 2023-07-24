@@ -272,15 +272,18 @@ const ValueCacheMap = new Map();
 const DelegatedEvents = Symbol();
 const IfDirectiveSymbol = Symbol();
 const RegisteredEvents = {};
+function getApp() {
+    return inject(AppInjectionKey);
+}
 function createDirective(name, directive) {
-    const directives = inject(AppInjectionKey).directives, directiveCopy = directives[name];
+    const directives = getApp().directives, directiveCopy = directives[name];
     directives[name] = directive;
     if (directiveCopy) {
         onUnmount(()=>directives[name] = directiveCopy);
     }
 }
 function createComponent(name, component) {
-    const components = inject(AppInjectionKey).components, componentCopy = components[name];
+    const components = getApp().components, componentCopy = components[name];
     components[name] = component;
     if (componentCopy) {
         onUnmount(()=>components[name] = componentCopy);
@@ -288,18 +291,17 @@ function createComponent(name, component) {
 }
 function mount(rootElement, rootComponent) {
     return createRoot((cleanup)=>{
-        const defaultDirectives = {
-            on: onDirective,
-            ref: refDirective,
-            show: showDirective,
-            html: htmlDirective,
-            text: textDirective,
-            style: styleDirective,
-            bind: bindDirective,
-            if: ifDirective
-        };
         provide(AppInjectionKey, {
-            directives: defaultDirectives,
+            directives: {
+                on: onDirective,
+                ref: refDirective,
+                show: showDirective,
+                html: htmlDirective,
+                text: textDirective,
+                style: styleDirective,
+                bind: bindDirective,
+                if: ifDirective
+            },
             components: {}
         });
         let anchor = rootElement.appendChild(new Text());
@@ -335,7 +337,7 @@ const renderMap = {
     },
     c (elt, args) {
         const name = elt.getAttribute(VALUE);
-        const component = inject(AppInjectionKey).components[name];
+        const component = getApp().components[name];
         if (component === undefined) {
             elt.remove();
             return;
@@ -490,7 +492,7 @@ function renderDynamicChild(elt, childElement) {
 function renderAttribute(elt, prop, data) {
     if (prop.startsWith(DirPrefix)) {
         const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0];
-        const directive = inject(AppInjectionKey).directives[key];
+        const directive = getApp().directives[key];
         if (directive) {
             const binding = createBinding(prop, data);
             createEffect(()=>directive(elt, binding));

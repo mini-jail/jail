@@ -128,18 +128,17 @@ export function createComponent(name, component) {
  */
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
-    const defaultDirectives = {
-      on: onDirective,
-      ref: refDirective,
-      show: showDirective,
-      html: htmlDirective,
-      text: textDirective,
-      style: styleDirective,
-      bind: bindDirective,
-      if: ifDirective,
-    }
     provide(AppInjectionKey, {
-      directives: defaultDirectives,
+      directives: {
+        on: onDirective,
+        ref: refDirective,
+        show: showDirective,
+        html: htmlDirective,
+        text: textDirective,
+        style: styleDirective,
+        bind: bindDirective,
+        if: ifDirective,
+      },
       components: {},
     })
     let anchor = rootElement.appendChild(new Text())
