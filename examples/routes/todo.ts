@@ -1,12 +1,18 @@
 import { createSignal } from "jail/signal"
 import { template } from "jail/dom"
 
-const list = createSignal([
+type ToDoItem = {
+  id: number
+  done: boolean
+  text: string
+}
+
+const list = createSignal<ToDoItem[]>([
   { id: 0, done: true, text: "eat cornflakes without soymilk" },
   { id: 1, done: false, text: "buy soymilk" },
 ])
 
-const Item = (props) => {
+const Item = (props: ToDoItem) => {
   const deleteItem = () => list(list().filter((item) => item.id !== props.id))
   const toggleItem = () => list((items) => (props.done = !props.done, items))
 
@@ -28,7 +34,7 @@ const Item = (props) => {
 export default () => {
   const textValue = createSignal("")
 
-  const addItem = (ev) => {
+  const addItem = (ev: KeyboardEvent) => {
     if (ev.key === "Enter") {
       list(list().concat({ id: Date.now(), done: false, text: textValue() }))
       textValue("")
@@ -36,7 +42,9 @@ export default () => {
     }
   }
 
-  const onInput = (ev) => textValue(ev.target.value)
+  function onInput(this: HTMLInputElement) {
+    textValue(this.value)
+  }
   const length = () => list().length
   const done = () => list().filter((item) => item.done).length
   const ToDoItems = () => list().map((item) => Item(item))

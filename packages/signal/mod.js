@@ -281,10 +281,8 @@ function setValue(source, nextValue) {
   if (typeof nextValue === "function") {
     nextValue = nextValue(source.value)
   }
-  if (source.value !== nextValue) {
-    source.value = nextValue
-    queueNodes(source)
-  }
+  source.value = nextValue
+  queueNodes(source)
 }
 
 /**

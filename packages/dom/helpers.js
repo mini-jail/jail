@@ -37,7 +37,7 @@ export function setProperty(elt, prop, value) {
  * @param {string} name
  * @returns {string | null}
  */
-export function attribute(elt, name) {
+export function getAndRemoveAttribute(elt, name) {
   const value = elt.getAttribute(name)
   elt.removeAttribute(name)
   return value

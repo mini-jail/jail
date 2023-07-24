@@ -18,7 +18,11 @@ import {
   styleDirective,
   textDirective,
 } from "./directives.js"
-import { attribute, sameCharacterDataType, setProperty } from "./helpers.js"
+import {
+  getAndRemoveAttribute,
+  sameCharacterDataType,
+  setProperty,
+} from "./helpers.js"
 
 /**
  * @typedef {HTMLElement | SVGElement} DOMElement
@@ -205,7 +209,7 @@ const renderMap = {
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(Query)) {
-    renderMap[attribute(elt, TYPE)]?.(elt, args)
+    renderMap[getAndRemoveAttribute(elt, TYPE)]?.(elt, args)
   }
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
@@ -226,7 +230,8 @@ function createProps(elt, args) {
   const props = {}
   for (const key in elt.dataset) {
     if (key.startsWith("__")) {
-      const data = attribute(elt, `data-${key}`), prop = data.split(" ", 1)[0]
+      const data = getAndRemoveAttribute(elt, `data-${key}`),
+        prop = data.split(" ", 1)[0]
       props[prop] = createValue(data.slice(prop.length + 1), args)
     }
   }

@@ -6,7 +6,7 @@ import Counter from "./routes/counter.js"
 import SimpleCounter from "./routes/simple-counter.js"
 import Sierpinski from "./routes/sierpinski.ts"
 import About from "./routes/about.js"
-import Todo from "./routes/todo.js"
+import ToDo from "./routes/todo.ts"
 import Compiler from "./routes/compiler.js"
 import NotFound from "./routes/notfound.js"
 
@@ -21,7 +21,7 @@ const App = () => {
     "/sierpinski/:target": Sierpinski,
     "/sierpinski/:target/:size": Sierpinski,
     "/about": About,
-    "/todo": Todo,
+    "/todo": ToDo,
     "/compiler": Compiler,
   }
 

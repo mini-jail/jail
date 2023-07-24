@@ -107,10 +107,8 @@ function setValue(source, nextValue) {
     if (typeof nextValue === "function") {
         nextValue = nextValue(source.value);
     }
-    if (source.value !== nextValue) {
-        source.value = nextValue;
-        queueNodes(source);
-    }
+    source.value = nextValue;
+    queueNodes(source);
 }
 function isReactive(data) {
     return typeof data === "function";
@@ -267,7 +265,7 @@ function setProperty(elt, prop, value) {
         elt.removeAttribute(name);
     }
 }
-function attribute(elt, name) {
+function getAndRemoveAttribute(elt, name) {
     const value = elt.getAttribute(name);
     elt.removeAttribute(name);
     return value;
@@ -471,7 +469,7 @@ const renderMap = {
 };
 function render(fragment, args) {
     for (const elt of fragment.querySelectorAll(Query)){
-        renderMap[attribute(elt, TYPE)]?.(elt, args);
+        renderMap[getAndRemoveAttribute(elt, TYPE)]?.(elt, args);
     }
     const nodeList = fragment.childNodes;
     if (nodeList.length === 0) {
@@ -486,7 +484,7 @@ function createProps(elt, args) {
     const props = {};
     for(const key in elt.dataset){
         if (key.startsWith("__")) {
-            const data = attribute(elt, `data-${key}`), prop = data.split(" ", 1)[0];
+            const data = getAndRemoveAttribute(elt, `data-${key}`), prop = data.split(" ", 1)[0];
             props[prop] = createValue(data.slice(prop.length + 1), args);
         }
     }
@@ -999,7 +997,9 @@ const __default4 = ()=>{
             return;
         }
     };
-    const onInput = (ev)=>textValue(ev.target.value);
+    function onInput() {
+        textValue(this.value);
+    }
     const length = ()=>list().length;
     const done = ()=>list().filter((item)=>item.done).length;
     const ToDoItems = ()=>list().map((item)=>Item(item));
