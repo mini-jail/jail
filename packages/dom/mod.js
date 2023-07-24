@@ -115,9 +115,10 @@ export function createComponent(name, component) {
 }
 
 /**
+ * @template Type
  * @param {DOMElement} rootElement
- * @param {RootComponent} rootComponent
- * @returns {() => void}
+ * @param {RootComponent<Type>} rootComponent
+ * @returns {import("jail/signal").Cleanup}
  */
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
