@@ -272,18 +272,15 @@ const ValueCacheMap = new Map();
 const DelegatedEvents = Symbol();
 const IfDirectiveSymbol = Symbol();
 const RegisteredEvents = {};
-function getApp() {
-    return inject(AppInjectionKey);
-}
 function createDirective(name, directive) {
-    const directives = getApp().directives, directiveCopy = directives[name];
+    const directives = inject(AppInjectionKey).directives, directiveCopy = directives[name];
     directives[name] = directive;
     if (directiveCopy) {
         onUnmount(()=>directives[name] = directiveCopy);
     }
 }
 function createComponent(name, component) {
-    const components = getApp().components, componentCopy = components[name];
+    const components = inject(AppInjectionKey).components, componentCopy = components[name];
     components[name] = component;
     if (componentCopy) {
         onUnmount(()=>components[name] = componentCopy);
@@ -324,32 +321,35 @@ function template(strings, ...args) {
     const template1 = TemplateCache.get(strings) || createTemplate(strings);
     return render(template1.cloneNode(true), args);
 }
-const renderMap = {
-    a (elt, args) {
-        const props = createProps(elt, args);
-        for(const key in props){
-            renderAttribute(elt, key, props[key]);
-        }
-    },
-    i (elt, args) {
-        const slot = elt.getAttribute(VALUE);
-        renderChild(elt, getValue1(slot, args));
-    },
-    c (elt, args) {
-        const name = elt.getAttribute(VALUE);
-        const component = getApp().components[name];
-        if (component === undefined) {
-            elt.remove();
-            return;
-        }
-        createRoot(()=>{
-            const props = createProps(elt, args);
-            if (elt.content.hasChildNodes()) {
-                props.children = render(elt.content, args);
-            }
-            renderChild(elt, component(props));
-        });
+function renderAttributeType(elt, args) {
+    const props = createProps(elt, args);
+    for(const key in props){
+        renderAttribute(elt, key, props[key]);
     }
+}
+function renderInsertionType(elt, args) {
+    const slot = elt.getAttribute(VALUE);
+    renderChild(elt, getValue1(slot, args));
+}
+function renderComponentType(elt, args) {
+    const name = elt.getAttribute(VALUE);
+    const component = inject(AppInjectionKey).components[name];
+    if (component === undefined) {
+        elt.remove();
+        return;
+    }
+    createRoot(()=>{
+        const props = createProps(elt, args);
+        if (elt.content.hasChildNodes()) {
+            props.children = render(elt.content, args);
+        }
+        renderChild(elt, component(props));
+    });
+}
+const renderMap = {
+    a: renderAttributeType,
+    i: renderInsertionType,
+    c: renderComponentType
 };
 function render(fragment, args) {
     for (const elt of fragment.querySelectorAll(Query)){
@@ -492,7 +492,7 @@ function renderDynamicChild(elt, childElement) {
 function renderAttribute(elt, prop, data) {
     if (prop.startsWith(DirPrefix)) {
         const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0];
-        const directive = getApp().directives[key];
+        const directive = inject(AppInjectionKey).directives[key];
         if (directive) {
             const binding = createBinding(prop, data);
             createEffect(()=>directive(elt, binding));
