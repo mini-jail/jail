@@ -5,12 +5,13 @@ import {
   onMount,
   onUnmount,
   provide,
+  type Signal,
 } from "jail/signal"
 import { createDirective, template } from "jail/dom"
 import { getParams } from "jail/dom-router"
 
 const Dot = (x: number, y: number, target: number) => {
-  const counter = inject("counter")!
+  const counter = inject<Signal<number>>("counter")!
   const hover = createSignal(false)
   const onMouseOut = () => hover(false)
   const onMouseOver = () => hover(true)

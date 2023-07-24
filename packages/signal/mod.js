@@ -499,19 +499,6 @@ function cleanNode(node, complete) {
 }
 
 /**
- * @template {keyof InjectionMap} Key
- * @overload
- * @param {Key} key
- * @returns {InjectionMap[Key] | undefined}
- */
-/**
- * @template {keyof InjectionMap} Key
- * @overload
- * @param {Key} key
- * @param {InjectionMap[Key]} defaultValue
- * @returns {NonNullable<InjectionMap[Key]>}
- */
-/**
  * @template Type
  * @overload
  * @param {string | symbol} key
@@ -534,20 +521,9 @@ export function inject(key, defaultValue) {
 }
 
 /**
- * @template {keyof InjectionMap} Key
- * @overload
- * @param {Key} key
- * @param {NonNullable<InjectionMap[Key]>} value
- */
-/**
  * @template Type
- * @overload
  * @param {string | symbol} key
  * @param {Type} value
- */
-/**
- * @param {string | symbol} key
- * @param {any} value
  */
 export function provide(key, value) {
   if (activeNode.injectionMap === null) {
