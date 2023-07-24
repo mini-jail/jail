@@ -10,6 +10,10 @@ import {
 } from "jail/signal"
 
 /**
+ * @typedef {boolean | null | undefined} UnrenderedArg
+ * @typedef {string | number | Node | DOMElement | UnrenderedArg} ArgSlot
+ * @typedef {ArgSlot | ArgSlot[] | (() => ArgSlot) | EventListener | { [key: string]: any }} ArgAttr
+ * @typedef {ArgSlot | ArgAttr | (ArgSlot | ArgAttr)[] | (() => ArgSlot | ArgAttr)} Arg
  * @typedef {HTMLElement | SVGElement} DOMElement
  * @typedef {Node | Node[] | undefined} TemplateResult
  * @typedef {{ readonly [key: string]: boolean }} Modifiers
@@ -156,7 +160,7 @@ export function mount(rootElement, rootComponent) {
 
 /**
  * @param {TemplateStringsArray} strings
- * @param  {...any} args
+ * @param  {...Arg} args
  * @returns {TemplateResult}
  */
 export function template(strings, ...args) {
@@ -166,7 +170,7 @@ export function template(strings, ...args) {
 
 /**
  * @param {DOMElement} elt
- * @param {any[]} args
+ * @param {Arg[]} args
  */
 function renderAttributeType(elt, args) {
   const props = createProps(elt, args)
@@ -177,7 +181,7 @@ function renderAttributeType(elt, args) {
 
 /**
  * @param {HTMLSlotElement} elt
- * @param {any[]} args
+ * @param {Arg[]} args
  */
 function renderInsertionType(elt, args) {
   const slot = elt.getAttribute(VALUE)
@@ -186,7 +190,7 @@ function renderInsertionType(elt, args) {
 
 /**
  * @param {HTMLTemplateElement} elt
- * @param {any[]} args
+ * @param {Arg[]} args
  * @returns
  */
 function renderComponentType(elt, args) {
@@ -213,7 +217,7 @@ const renderMap = {
 
 /**
  * @param {DocumentFragment} fragment
- * @param {any[]} args
+ * @param {Arg[]} args
  * @returns {TemplateResult}
  */
 function render(fragment, args) {
@@ -234,7 +238,7 @@ function render(fragment, args) {
 
 /**
  * @param {DOMElement} elt
- * @param {any[]} args
+ * @param {Arg[]} args
  * @returns {Properties}
  */
 function createProps(elt, args) {
@@ -289,7 +293,7 @@ function createValue(value, args) {
 
 /**
  * @param {string} id
- * @param {any[]} args
+ * @param {Arg[]} args
  * @returns {any}
  */
 function getValue(id, args) {
