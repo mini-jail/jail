@@ -64,7 +64,7 @@ const ComRegExp = /^<((?:[A-Z][a-z]+)+)/,
   ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
 const AtrRegExp =
-  /\s([^"'<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>=\s]+)))?/g
+  /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>=\s]+)))?/g
 const AttributeDataReplacement = `<$1 ${TYPE}="${ATTRIBUTE}">`
 const InsertionReplacement =
   `<slot ${TYPE}="${INSERTION}" ${VALUE}="$1"></slot>`
@@ -85,20 +85,13 @@ const IfDirectiveSymbol = Symbol()
 const RegisteredEvents = {}
 
 /**
- * @returns {App | undefined}
- */
-function getApp() {
-  return inject(AppInjectionKey)
-}
-
-/**
  * @template Type
  * @param {string} name
  * @param {Directive<Type>} directive
  * @returns {void}
  */
 export function createDirective(name, directive) {
-  const directives = getApp().directives,
+  const directives = inject(AppInjectionKey).directives,
     directiveCopy = directives[name]
   directives[name] = directive
   if (directiveCopy) {
@@ -113,7 +106,7 @@ export function createDirective(name, directive) {
  * @returns {void}
  */
 export function createComponent(name, component) {
-  const components = getApp().components,
+  const components = inject(AppInjectionKey).components,
     componentCopy = components[name]
   components[name] = component
   if (componentCopy) {
@@ -168,32 +161,51 @@ export function template(strings, ...args) {
   return render(template.cloneNode(true), args)
 }
 
-const renderMap = {
-  a(elt, args) {
+/**
+ * @param {DOMElement} elt
+ * @param {any[]} args
+ */
+function renderAttributeType(elt, args) {
+  const props = createProps(elt, args)
+  for (const key in props) {
+    renderAttribute(elt, key, props[key])
+  }
+}
+
+/**
+ * @param {HTMLSlotElement} elt
+ * @param {any[]} args
+ */
+function renderInsertionType(elt, args) {
+  const slot = elt.getAttribute(VALUE)
+  renderChild(elt, getValue(slot, args))
+}
+
+/**
+ * @param {HTMLTemplateElement} elt
+ * @param {any[]} args
+ * @returns
+ */
+function renderComponentType(elt, args) {
+  const name = elt.getAttribute(VALUE)
+  const component = inject(AppInjectionKey).components[name]
+  if (component === undefined) {
+    elt.remove()
+    return
+  }
+  createRoot(() => {
     const props = createProps(elt, args)
-    for (const key in props) {
-      renderAttribute(elt, key, props[key])
+    if (elt.content.hasChildNodes()) {
+      props.children = render(elt.content, args)
     }
-  },
-  i(elt, args) {
-    const slot = elt.getAttribute(VALUE)
-    renderChild(elt, getValue(slot, args))
-  },
-  c(elt, args) {
-    const name = elt.getAttribute(VALUE)
-    const component = getApp().components[name]
-    if (component === undefined) {
-      elt.remove()
-      return
-    }
-    createRoot(() => {
-      const props = createProps(elt, args)
-      if (elt.content.hasChildNodes()) {
-        props.children = render(elt.content, args)
-      }
-      renderChild(elt, component(props))
-    })
-  },
+    renderChild(elt, component(props))
+  })
+}
+
+const renderMap = {
+  a: renderAttributeType,
+  i: renderInsertionType,
+  c: renderComponentType,
 }
 
 /**
@@ -403,7 +415,7 @@ function renderDynamicChild(elt, childElement) {
 function renderAttribute(elt, prop, data) {
   if (prop.startsWith(DirPrefix)) {
     const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0]
-    const directive = getApp().directives[key]
+    const directive = inject(AppInjectionKey).directives[key]
     if (directive) {
       const binding = createBinding(prop, data)
       createEffect(() => directive(elt, binding))

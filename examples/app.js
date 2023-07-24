@@ -260,7 +260,7 @@ const WSAndTabsRegExp = /^[\s\t]+/gm;
 const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/;
 const ComRegExp = /^<((?:[A-Z][a-z]+)+)/, ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g;
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
-const AtrRegExp = /\s([^"'<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>=\s]+)))?/g;
+const AtrRegExp = /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>=\s]+)))?/g;
 const AttributeDataReplacement = `<$1 ${TYPE}="${ATTRIBUTE}">`;
 const InsertionReplacement = `<slot ${TYPE}="${INSERTION}" ${VALUE}="$1"></slot>`;
 const ComponentReplacement = [
@@ -836,13 +836,13 @@ const __default1 = ()=>{
       <h4>
         counter example
         <sub>(...what else?)</sub>
-        <button d-on:click.delegate="${()=>show((value)=>!value)}">
+        <button d-on:click.delegate=${()=>show((value)=>!value)}>
           ${()=>show() ? "hide" : "show"} code
         </button>
       </h4>
-      <button d-on:click.delegate="${down}">-</button>
+      <button d-on:click.delegate=${down}>-</button>
       <span>current value: ${counter}</span>
-      <button d-on:click.delegate="${up}">+</button>
+      <button d-on:click.delegate=${up}>+</button>
       <div>> you have clicked ${clicked} times.</div>
       ${()=>clicked() >= 10 && template`<div>> why do you do this?????</div>`}
       ${()=>clicked() >= 20 && template`<div>> pls stop T_T</div>`}
@@ -859,9 +859,9 @@ function Counter() {
     const up = ()=>counter((value)=>++value);
     const down = ()=>counter((value)=>--value);
     return template`
-    <button d-on:click.delegate="${down}">-</button>
+    <button d-on:click.delegate=${down}>-</button>
     <span>current value: ${counter}</span>
-    <button d-on:click.delegate="${up}">+</button>
+    <button d-on:click.delegate=${up}>+</button>
   `;
 }
 const Dot = (x, y, target)=>{
@@ -886,9 +886,9 @@ const Dot = (x, y, target)=>{
   `;
     return template`
     <div 
-      d-text="${text}" style="${css}" d-style:background-color="${bgColor}"
-      d-on:mouseover.delegate="${onMouseOver}"
-      d-on:mouseout.delegate="${onMouseOut}"
+      d-text=${text} style=${css} d-style:background-color=${bgColor}
+      d-on:mouseover.delegate=${onMouseOver}
+      d-on:mouseout.delegate=${onMouseOut}
     ></div>
   `;
 };
@@ -973,14 +973,14 @@ const Item = (props)=>{
     const deleteItem = ()=>list(list().filter((item)=>item.id !== props.id));
     const toggleItem = ()=>list((items)=>(props.done = !props.done, items));
     return template`
-    <div class="todo-item" id="item_${props.id}">
+    <div class="todo-item" id=item_${props.id}>
       <div 
-        class="todo-item-text" d-on:click.delegate="${toggleItem}"
-        style="${props.done ? "color: grey; font-style: italic;" : null}"
+        class="todo-item-text" d-on:click.delegate=${toggleItem}
+        style=${props.done ? "color: grey; font-style: italic;" : null}
       >
         ${props.text}
       </div>
-      <div d-show="${props.done}" class="todo-item-delete" d-on:click="${deleteItem}">
+      <div d-show=${props.done} class="todo-item-delete" d-on:click=${deleteItem}>
         delete
       </div>
     </div>
@@ -1014,51 +1014,14 @@ const __default4 = ()=>{
       <div class="todo-app-container">
         <input 
           type="text" placeholder="...milk?"
-          required class="todo_input" value="${textValue}"
-          d-on:keyup="${addItem}" d-on:input="${onInput}"
+          required class="todo_input" value=${textValue}
+          d-on:keyup=${addItem} d-on:input=${onInput}
         />
         <div class="todo-items">${ToDoItems}</div>
         <label>progress: ${done}/${length}</label>
-        <progress max="${length}" value="${done}"></progress>
+        <progress max=${length} value=${done}></progress>
       </div>
     </article>
-
-    <style>
-      .todo-app-container {
-        width: 500px;
-        background-color: rgba(255, 255, 255, .5);
-        padding: 10px;
-        margin: 0 auto;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .todo-item {
-        display: flex;
-        gap: 20px;
-        justify-content: space-between;
-        cursor: pointer;
-      }
-      .todo-item-text {
-        text-align: left;
-        flex: 1;
-      }
-      .todo-items {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .todo-item-delete:hover {
-        color: indianred;
-      }
-      .todo-app input, 
-      .todo-app label,
-      .todo-app progress {
-        width: 100%;
-        display: block;
-        margin: 0 auto;
-      }
-    </style>
   `;
 };
 const __default5 = ()=>{
@@ -1094,8 +1057,8 @@ const __default5 = ()=>{
         compiler
         <sub>(4 real????)</sub>
       </h4>
-      <button d-on:click="${onClick}" d-style:margin="0 auto">show/hide explanation</button>
-      <pre d-show="${showExplanation}" style="${explainCSS}">
+      <button d-on:click=${onClick} d-style:margin="0 auto">show/hide explanation</button>
+      <pre d-show=${showExplanation} style=${explainCSS}>
         1.   join string literals with "${"#{\\d+}"}"
         2.   go inside tags with this regexp (in general): 
         .    <span d-style:color="red">${/<([a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*)>/g}</span>
@@ -1111,7 +1074,7 @@ const __default5 = ()=>{
         <label style="flex: 1;">input: (${inputLength} characters)</label>
         <textarea value="${text()}" d-on:input="${onInput}"></textarea>
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
-        <pre style="${outputCSS}" d-text="${compiled}"></pre>
+        <pre style=${outputCSS} d-text=${compiled}></pre>
       </pre>
     </article>
   `;
@@ -1173,7 +1136,7 @@ const App = ()=>{
       </nav>
     </header>
     <main d-animate=${on(path, animation)}>
-      <Router type="pathname" fallback=${__default6} routeMap=${routeMap}></Router>
+      <Router type=pathname fallback=${__default6} routeMap=${routeMap}></Router>
     </main>
   `;
 };

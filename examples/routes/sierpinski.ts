@@ -34,9 +34,9 @@ const Dot = (x: number, y: number, target: number) => {
 
   return template`
     <div 
-      d-text="${text}" style="${css}" d-style:background-color="${bgColor}"
-      d-on:mouseover.delegate="${onMouseOver}"
-      d-on:mouseout.delegate="${onMouseOut}"
+      d-text=${text} style=${css} d-style:background-color=${bgColor}
+      d-on:mouseover.delegate=${onMouseOver}
+      d-on:mouseout.delegate=${onMouseOut}
     ></div>
   `
 }

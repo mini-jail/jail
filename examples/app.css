@@ -155,3 +155,43 @@ code pre::before {
 code pre:nth-child(odd) {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+.todo-app-container {
+  width: 500px;
+  background-color: rgba(255, 255, 255, .5);
+  padding: 10px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.todo-item {
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.todo-item-text {
+  text-align: left;
+  flex: 1;
+}
+
+.todo-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.todo-item-delete:hover {
+  color: indianred;
+}
+
+.todo-app input, 
+.todo-app label,
+.todo-app progress {
+  width: 100%;
+  display: block;
+  margin: 0 auto;
+}

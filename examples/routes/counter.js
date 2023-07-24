@@ -32,13 +32,13 @@ export default () => {
       <h4>
         counter example
         <sub>(...what else?)</sub>
-        <button d-on:click.delegate="${() => show((value) => !value)}">
+        <button d-on:click.delegate=${() => show((value) => !value)}>
           ${() => show() ? "hide" : "show"} code
         </button>
       </h4>
-      <button d-on:click.delegate="${down}">-</button>
+      <button d-on:click.delegate=${down}>-</button>
       <span>current value: ${counter}</span>
-      <button d-on:click.delegate="${up}">+</button>
+      <button d-on:click.delegate=${up}>+</button>
       <div>> you have clicked ${clicked} times.</div>
       ${() => clicked() >= 10 && template`<div>> why do you do this?????</div>`}
       ${() => clicked() >= 20 && template`<div>> pls stop T_T</div>`}

@@ -37,8 +37,8 @@ export default () => {
         compiler
         <sub>(4 real????)</sub>
       </h4>
-      <button d-on:click="${onClick}" d-style:margin="0 auto">show/hide explanation</button>
-      <pre d-show="${showExplanation}" style="${explainCSS}">
+      <button d-on:click=${onClick} d-style:margin="0 auto">show/hide explanation</button>
+      <pre d-show=${showExplanation} style=${explainCSS}>
         1.   join string literals with "${"#{\\d+}"}"
         2.   go inside tags with this regexp (in general): 
         .    <span d-style:color="red">${/<([a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*)>/g}</span>
@@ -54,7 +54,7 @@ export default () => {
         <label style="flex: 1;">input: (${inputLength} characters)</label>
         <textarea value="${text()}" d-on:input="${onInput}"></textarea>
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
-        <pre style="${outputCSS}" d-text="${compiled}"></pre>
+        <pre style=${outputCSS} d-text=${compiled}></pre>
       </pre>
     </article>
   `

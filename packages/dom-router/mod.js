@@ -161,6 +161,27 @@ export function Router(props) {
   return [props.children, router]
 }
 
+/**
+ * Allows usage of the following:
+ * @example
+ * ```javascript
+ * const routeMap = {
+ *   "/": () => {
+ *     ...
+ *   }
+ * }
+ * const fallbackRoute = () => {
+ *   ...
+ * }
+ * template`
+ *   <Router
+ *     type="hash"
+ *     routeMap=${routeMap}
+ *     fallback=${fallbackRoute}>
+ *   </Router>
+ * `
+ * ```
+ */
 export default function installRouter() {
   createComponent("Router", Router)
 }

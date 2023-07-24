@@ -17,14 +17,14 @@ const Item = (props: ToDoItem) => {
   const toggleItem = () => list((items) => (props.done = !props.done, items))
 
   return template`
-    <div class="todo-item" id="item_${props.id}">
+    <div class="todo-item" id=item_${props.id}>
       <div 
-        class="todo-item-text" d-on:click.delegate="${toggleItem}"
-        style="${props.done ? "color: grey; font-style: italic;" : null}"
+        class="todo-item-text" d-on:click.delegate=${toggleItem}
+        style=${props.done ? "color: grey; font-style: italic;" : null}
       >
         ${props.text}
       </div>
-      <div d-show="${props.done}" class="todo-item-delete" d-on:click="${deleteItem}">
+      <div d-show=${props.done} class="todo-item-delete" d-on:click=${deleteItem}>
         delete
       </div>
     </div>
@@ -58,50 +58,13 @@ export default () => {
       <div class="todo-app-container">
         <input 
           type="text" placeholder="...milk?"
-          required class="todo_input" value="${textValue}"
-          d-on:keyup="${addItem}" d-on:input="${onInput}"
+          required class="todo_input" value=${textValue}
+          d-on:keyup=${addItem} d-on:input=${onInput}
         />
         <div class="todo-items">${ToDoItems}</div>
         <label>progress: ${done}/${length}</label>
-        <progress max="${length}" value="${done}"></progress>
+        <progress max=${length} value=${done}></progress>
       </div>
     </article>
-
-    <style>
-      .todo-app-container {
-        width: 500px;
-        background-color: rgba(255, 255, 255, .5);
-        padding: 10px;
-        margin: 0 auto;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .todo-item {
-        display: flex;
-        gap: 20px;
-        justify-content: space-between;
-        cursor: pointer;
-      }
-      .todo-item-text {
-        text-align: left;
-        flex: 1;
-      }
-      .todo-items {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .todo-item-delete:hover {
-        color: indianred;
-      }
-      .todo-app input, 
-      .todo-app label,
-      .todo-app progress {
-        width: 100%;
-        display: block;
-        margin: 0 auto;
-      }
-    </style>
   `
 }

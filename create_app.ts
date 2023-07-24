@@ -44,8 +44,10 @@ async function createBundle(
     return
   }
   built = true
+  const startTime = performance.now()
   const { code } = await bundle(sourceFile, options)
-  console.log(`creating "${targetFile}" (${code.length})`)
   await Deno.writeTextFile(targetFile, code)
+  const endTime = performance.now()
+  console.log(`creating "${targetFile}" (${endTime - startTime}ms)`)
   setTimeout(() => built = false, 500)
 }
