@@ -273,18 +273,20 @@ const DelegatedEvents = Symbol();
 const IfDirectiveSymbol = Symbol();
 const RegisteredEvents = {};
 function createDirective(name, directive) {
-    const directives = inject(AppInjectionKey).directives, directiveCopy = directives[name];
-    directives[name] = directive;
-    if (directiveCopy) {
+    const directives = inject(AppInjectionKey).directives;
+    if (name in directives) {
+        const directiveCopy = directives[name];
         onUnmount(()=>directives[name] = directiveCopy);
     }
+    directives[name] = directive;
 }
 function createComponent(name, component) {
-    const components = inject(AppInjectionKey).components, componentCopy = components[name];
-    components[name] = component;
-    if (componentCopy) {
+    const components = inject(AppInjectionKey).components;
+    if (name in components) {
+        const componentCopy = components[name];
         onUnmount(()=>components[name] = componentCopy);
     }
+    components[name] = component;
 }
 function mount(rootElement, rootComponent) {
     return createRoot((cleanup)=>{
