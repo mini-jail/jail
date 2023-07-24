@@ -1072,7 +1072,7 @@ const __default5 = ()=>{
       </pre>
       <pre style="display: flex; gap: 16px; flex-direction: column;">
         <label style="flex: 1;">input: (${inputLength} characters)</label>
-        <textarea value="${text()}" d-on:input="${onInput}"></textarea>
+        <textarea value=${text()} d-on:input=${onInput}></textarea>
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
         <pre style=${outputCSS} d-text=${compiled}></pre>
       </pre>
