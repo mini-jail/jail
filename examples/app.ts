@@ -46,7 +46,7 @@ const App = () => {
       </nav>
     </header>
     <main d-animate=${on(path, animation)}>
-      <Router type=pathname fallback=${NotFound} routeMap=${routeMap}></Router>
+      <Router type="pathname" fallback="${NotFound}" routeMap="${routeMap}">henlo</Router>
     </main>
   `
 }

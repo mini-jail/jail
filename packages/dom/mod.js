@@ -48,15 +48,18 @@ import {
  */
 
 const AppInjectionKey = Symbol()
+const DelegatedEvents = Symbol()
+const IfDirectiveSymbol = Symbol()
 const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c"
 const TYPE = "__t", VALUE = "__v"
 const Query = `[${TYPE}]`
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
-const DirRegExp = RegExp(`${DirPrefix.replace("-", "\\-")}[^"'<>=\\s]`)
+const DirRegExp = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
 const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /#{([^}]+)}/g,
-  SValRegExp = /^@{([^}]+)}$/,
-  MValRegExp = /@{([^}]+)}/g
+const ArgRegExp = /#{([^\s}]+)}/g,
+  SValRegExp = /^@{([^\s}]+)}$/,
+  MValRegExp = /@{([^\s}]+)}/g,
+  PropValueRegExp = /^([^\s]+)\s(.*)$/
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
 const WSAndTabsRegExp = /^[\s\t]+/gm
 const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/
@@ -77,11 +80,12 @@ const ComponentReplacement = [
  */
 const TemplateCache = new Map()
 /**
- * @type {Map<string, string | string[] | null>}
+ * @type {{ [value: string]: string | string[] | undefined }}
  */
-const ValueCacheMap = new Map()
-const DelegatedEvents = Symbol()
-const IfDirectiveSymbol = Symbol()
+const ValueCache = {}
+/**
+ * @type {{ [name: string]: boolean | undefined }}
+ */
 const RegisteredEvents = {}
 
 /**
@@ -216,7 +220,9 @@ const renderMap = {
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(Query)) {
-    renderMap[getAndRemoveAttribute(elt, TYPE)]?.(elt, args)
+    const type = elt.getAttribute(TYPE)
+    elt.removeAttribute(TYPE)
+    renderMap[type]?.(elt, args)
   }
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
@@ -237,9 +243,9 @@ function createProps(elt, args) {
   const props = {}
   for (const key in elt.dataset) {
     if (key.startsWith("__")) {
-      const data = getAndRemoveAttribute(elt, `data-${key}`),
-        prop = data.split(" ", 1)[0]
-      props[prop] = createValue(data.slice(prop.length + 1), args)
+      const match = elt.dataset[key].match(PropValueRegExp)
+      props[match[1]] = createValue(match[2], args)
+      delete elt.dataset[key]
     }
   }
   return props
@@ -247,25 +253,21 @@ function createProps(elt, args) {
 
 /**
  * @param {string} value
- * @returns {string | string[] | null}
+ * @returns {string | string[] | undefined}
  */
 function getValueCache(value) {
-  if (ValueCacheMap.has(value)) {
-    return ValueCacheMap.get(value)
+  if (value in ValueCache) {
+    return ValueCache[value]
   }
   const id = value.match(SValRegExp)?.[1]
   if (id) {
-    ValueCacheMap.set(value, id)
-    return id
+    return ValueCache[value] = id
   }
   const matches = [...value.matchAll(MValRegExp)]
   if (matches.length === 0) {
-    ValueCacheMap.set(value, null)
-    return null
+    return ValueCache[value] = undefined
   }
-  const ids = matches.map((match) => match[1])
-  ValueCacheMap.set(value, ids)
-  return ids
+  return ValueCache[value] = matches.map((match) => match[1])
 }
 
 /**
@@ -275,24 +277,16 @@ function getValueCache(value) {
  */
 function createValue(value, args) {
   const cached = getValueCache(value)
-  if (cached === null) {
+  if (cached === undefined) {
     return value
   }
   if (typeof cached === "string") {
     return getValue(cached, args)
   }
   if (cached.some((id) => isReactive(getValue(id, args)))) {
-    return String.prototype.replace.bind(
-      value,
-      MValRegExp,
-      (_, id) => toValue(getValue(id, args)),
-    )
+    return () => sub(value, MValRegExp, (_, id) => toValue(getValue(id, args)))
   }
-  return String.prototype.replace.call(
-    value,
-    MValRegExp,
-    (_, id) => getValue(id, args),
-  )
+  return sub(value, MValRegExp, (_, id) => getValue(id, args))
 }
 
 /**
@@ -331,29 +325,29 @@ export function createTemplateString(strings) {
     data = data + strings[arg] + `#{${arg++}}`
   }
   data = data + strings[arg]
-  data = data.replace(WSAndTabsRegExp, "")
-  data = data.replace(ClosingComRegExp, ComponentReplacement[1])
-  data = data.replace(TagRegExp, (match) => {
+  data = sub(data, WSAndTabsRegExp, "")
+  data = sub(data, ClosingComRegExp, ComponentReplacement[1])
+  data = sub(data, TagRegExp, (match) => {
     const isComponent = ComRegExp.test(match)
     let id = 0
-    match = match.replace(AtrRegExp, (data, name, val1, val2, val3) => {
+    match = sub(match, AtrRegExp, (data, name, val1, val2, val3) => {
       if (isComponent === false) {
         if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
           return data
         }
       }
       const quote = data.match(QuoteRegExp)?.[0] || `"`
-      const value = (val1 || val2 || val3 || "").replace(ArgRegExp, "@{$1}")
+      const value = sub(val1 || val2 || val3 || "", ArgRegExp, "@{$1}")
       return ` data-__${id++}=${quote}${name} ${value}${quote}`
     })
     if (isComponent) {
-      match = match.replace(ComRegExp, ComponentReplacement[0])
+      match = sub(match, ComRegExp, ComponentReplacement[0])
     } else if (DataRegExp.test(match)) {
-      match = match.replace(TagRegExp, AttributeDataReplacement)
+      match = sub(match, TagRegExp, AttributeDataReplacement)
     }
-    return match.replace(ArgRegExp, "")
+    return sub(match, ArgRegExp, "")
   })
-  data = data.replace(ArgRegExp, InsertionReplacement)
+  data = sub(data, ArgRegExp, InsertionReplacement)
   return data
 }
 
@@ -467,7 +461,7 @@ function createNodeArray(nodeArray, ...elements) {
       continue
     }
     if (elt instanceof DocumentFragment) {
-      nodeArray.push(...Array.from(elt.childNodes))
+      nodeArray.push(...elt.childNodes)
     } else if (elt instanceof Node) {
       nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
@@ -533,7 +527,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
  * @returns {string}
  */
 function toCamelCase(data) {
-  return data.replace(/-[a-z]/g, (match) => match.slice(1).toUpperCase())
+  return sub(data, /-[a-z]/g, (match) => match.slice(1).toUpperCase())
 }
 
 /**
@@ -541,7 +535,7 @@ function toCamelCase(data) {
  * @returns {string}
  */
 function toKebabCase(data) {
-  return data.replace(/([A-Z])/g, "-$1").toLowerCase()
+  return sub(data, /([A-Z])/g, "-$1").toLowerCase()
 }
 
 /**
@@ -560,17 +554,6 @@ function setProperty(elt, prop, value) {
   } else {
     elt.removeAttribute(name)
   }
-}
-
-/**
- * @param {DOMElement} elt
- * @param {string} name
- * @returns {string | null}
- */
-function getAndRemoveAttribute(elt, name) {
-  const value = elt.getAttribute(name)
-  elt.removeAttribute(name)
-  return value
 }
 
 function sameCharacterDataType(node, otherNode) {
@@ -714,4 +697,28 @@ function onDirective(elt, binding) {
   } else {
     elt.addEventListener(name, listener, eventOptions)
   }
+}
+
+/**
+ * @overload
+ * @param {string} data
+ * @param {string | RegExp} match
+ * @param {string} replacer
+ * @returns {string}
+ */
+/**
+ * @overload
+ * @param {string} data
+ * @param {string | RegExp} match
+ * @param {(match: string, ...matches: (string | undefined)[]) => string} replacer
+ * @returns {string}
+ */
+/**
+ * @param {string} data
+ * @param {string | RegExp} match
+ * @param {any} replacer
+ * @returns {string}
+ */
+function sub(data, match, replacer) {
+  return data.replace(match, replacer)
 }
