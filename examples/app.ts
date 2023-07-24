@@ -45,8 +45,8 @@ const App = () => {
         <a href="/compiler">compiler</a>
       </nav>
     </header>
-    <main d-animate="${on(path, animation)}">
-      <Router type="pathname" fallback="${NotFound}" routeMap="${routeMap}"></Router>
+    <main d-animate=${on(path, animation)}>
+      <Router type="pathname" fallback=${NotFound} routeMap=${routeMap}></Router>
     </main>
   `
 }

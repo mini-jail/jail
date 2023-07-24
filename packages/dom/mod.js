@@ -64,7 +64,7 @@ const ComRegExp = /^<((?:[A-Z][a-z]+)+)/,
   ClosingComRegExp = /<\/((?:[A-Z][a-z]+)+)>/g
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
 const AtrRegExp =
-  /\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g
+  /\s([^"'<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>=\s]+)))?/g
 const AttributeDataReplacement = `<$1 ${TYPE}="${ATTRIBUTE}">`
 const InsertionReplacement =
   `<slot ${TYPE}="${INSERTION}" ${VALUE}="$1"></slot>`
@@ -317,15 +317,15 @@ export function createTemplateString(strings) {
   data = data.replace(TagRegExp, (match) => {
     const isComponent = ComRegExp.test(match)
     let id = 0
-    match = match.replace(AtrRegExp, (data, name, val, val2, name2) => {
+    match = match.replace(AtrRegExp, (data, name, val1, val2, val3) => {
       if (isComponent === false) {
         if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
           return data
         }
       }
-      const quote = data.match(QuoteRegExp)[0]
-      val = (val || val2).replace(ArgRegExp, "@{$1}")
-      return ` data-__${id++}=${quote}${name || name2} ${val}${quote}`
+      const quote = data.match(QuoteRegExp)?.[0] || `"`
+      const value = (val1 || val2 || val3 || "").replace(ArgRegExp, "@{$1}")
+      return ` data-__${id++}=${quote}${name} ${value}${quote}`
     })
     if (isComponent) {
       match = match.replace(ComRegExp, ComponentReplacement[0])
