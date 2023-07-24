@@ -18,7 +18,7 @@ function createNode(initialValue) {
         value: initialValue,
         parentNode: activeNode,
         childNodes: null,
-        injectionMap: null,
+        injections: null,
         cleanups: null,
         onupdate: null,
         sources: null,
@@ -66,7 +66,7 @@ function createComputed(callback, initialValue) {
     return ()=>getValue(source);
 }
 function lookup(node, key) {
-    return node !== null ? node.injectionMap !== null && key in node.injectionMap ? node.injectionMap[key] : lookup(node.parentNode, key) : undefined;
+    return node !== null ? node.injections !== null && key in node.injections ? node.injections[key] : lookup(node.parentNode, key) : undefined;
 }
 function createSource(initialValue) {
     return {
@@ -149,10 +149,10 @@ function onCleanup(cleanup) {
         activeNode.cleanups.push(cleanup);
     }
 }
-function untrack(callback) {
+function untrack(getter) {
     const localNode = activeNode;
     activeNode = null;
-    const result = callback();
+    const result = getter();
     activeNode = localNode;
     return result;
 }
@@ -224,7 +224,7 @@ function cleanNode(node, complete) {
             node.cleanups.pop()();
         }
     }
-    node.injectionMap = null;
+    node.injections = null;
     if (complete) {
         node.value = null;
         node.parentNode = null;
@@ -239,12 +239,12 @@ function inject(key, defaultValue) {
     return lookup(activeNode, key) || defaultValue;
 }
 function provide(key, value) {
-    if (activeNode.injectionMap === null) {
-        activeNode.injectionMap = {
+    if (activeNode.injections === null) {
+        activeNode.injections = {
             [key]: value
         };
     } else {
-        activeNode.injectionMap[key] = value;
+        activeNode.injections[key] = value;
     }
 }
 const AppInjectionKey = Symbol();
@@ -781,7 +781,7 @@ function Router(props) {
         router
     ];
 }
-function installRouter() {
+function install() {
     createComponent("Router", Router);
 }
 const __default = ()=>{
@@ -1139,7 +1139,7 @@ const App = ()=>{
   `;
 };
 mount(document.body, ()=>{
-    installRouter();
+    install();
     createDirective("animate", (elt, binding)=>{
         const { frames , options  } = binding.value;
         elt.animate(frames, options);
