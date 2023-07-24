@@ -15,7 +15,7 @@ export function toKebabCase(data) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
+ * @param {import("./mod.js").DOMElement} elt
  * @param {string} prop
  * @param {any} value
  */
@@ -33,7 +33,7 @@ export function setProperty(elt, prop, value) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
+ * @param {import("./mod.js").DOMElement} elt
  * @param {string} name
  * @returns {string | null}
  */

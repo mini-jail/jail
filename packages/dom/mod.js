@@ -20,7 +20,45 @@ import {
 } from "./directives.js"
 import { attribute, sameCharacterDataType, setProperty } from "./helpers.js"
 
-export const AppInjectionKey = Symbol()
+/**
+ * @typedef {HTMLElement | SVGElement} DOMElement
+ * @typedef {Node | Node[] | undefined} TemplateResult
+ * @typedef {{ readonly [key: string]: boolean }} Modifiers
+ * @typedef {{ [prop: string]: any }} Properties
+ * @typedef {{ [directive: string]: Directive }} DirectiveMap
+ * @typedef {{ [component: string]: Component }} ComponentMap
+ * @typedef {{
+ *   directives: DirectiveMap
+ *   components: ComponentMap
+ * }} App
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{
+ *   readonly value: Type
+ *   readonly rawValue: (() => Type) | Type
+ *   readonly arg: string | null
+ *   readonly modifiers: Modifiers | null
+ * }} Binding
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {(elt: DOMElement, binding: Binding<Type>) => void} Directive
+ */
+
+/**
+ * @template {Properties} [Type = Properties]
+ * @typedef {(props: Type) => any} Component
+ */
+
+/**
+ * @template Type
+ * @typedef {() => Type} RootComponent
+ */
+
+const AppInjectionKey = Symbol()
 const ATTRIBUTE = "a", INSERTION = "i", COMPONENT = "c"
 const TYPE = "__t", VALUE = "__v"
 const Query = `[${TYPE}]`
@@ -55,22 +93,9 @@ const TemplateCache = new Map()
 const ValueCacheMap = new Map()
 
 /**
- * @template {keyof DirectiveMap} Name
- * @overload
- * @param {Name} name
- * @param {import("./types.d.ts").Directive<DirectiveMap[Name]>} directive
- * @returns {void}
- */
-/**
  * @template Type
- * @overload
  * @param {string} name
- * @param {import("./types.d.ts").Directive<Type>} directive
- * @returns {void}
- */
-/**
- * @param {string} name
- * @param {import("./types.d.ts").Directive<any>} directive
+ * @param {Directive<Type>} directive
  * @returns {void}
  */
 export function createDirective(name, directive) {
@@ -83,20 +108,10 @@ export function createDirective(name, directive) {
 }
 
 /**
- * @template {keyof ComponentMap} Name
- * @overload
- * @param {Name} name
- * @param {import("./types.d.ts").Component<ComponentMap[Name]>} component
- */
-/**
- * @template {import("./types.d.ts").Properties} Props
- * @overload
+ * @template {Properties} Props
  * @param {string} name
- * @param {import("./types.d.ts").Component<Props>} component
- */
-/**
- * @param {string} name
- * @param {import("./types.d.ts").Component<any>} component
+ * @param {Component<Props>} component
+ * @returns {void}
  */
 export function createComponent(name, component) {
   const components = inject(AppInjectionKey).components,
@@ -108,8 +123,8 @@ export function createComponent(name, component) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} rootElement
- * @param {import("./types.d.ts").RootComponent} rootComponent
+ * @param {DOMElement} rootElement
+ * @param {RootComponent} rootComponent
  * @returns {() => void}
  */
 export function mount(rootElement, rootComponent) {
@@ -148,7 +163,7 @@ export function mount(rootElement, rootComponent) {
 /**
  * @param {TemplateStringsArray} strings
  * @param  {...any} args
- * @returns {import("./types.d.ts").TemplateResult}
+ * @returns {TemplateResult}
  */
 export function template(strings, ...args) {
   const template = TemplateCache.get(strings) || createTemplate(strings)
@@ -186,11 +201,11 @@ const renderMap = {
 /**
  * @param {DocumentFragment} fragment
  * @param {any[]} args
- * @returns {import("./types.d.ts").TemplateResult}
+ * @returns {TemplateResult}
  */
 function render(fragment, args) {
   for (const elt of fragment.querySelectorAll(Query)) {
-    renderMap[attribute(elt, TYPE)](elt, args)
+    renderMap[attribute(elt, TYPE)]?.(elt, args)
   }
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
@@ -203,9 +218,9 @@ function render(fragment, args) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
+ * @param {DOMElement} elt
  * @param {any[]} args
- * @returns {import("./types.d.ts").Properties}
+ * @returns {Properties}
  */
 function createProps(elt, args) {
   const props = {}
@@ -342,7 +357,7 @@ function createTemplate(strings) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
+ * @param {DOMElement} elt
  * @param {any} value
  */
 function renderChild(elt, value) {
@@ -368,7 +383,7 @@ function renderChild(elt, value) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
+ * @param {DOMElement} elt
  * @param {(() => any) | any[]} childElement
  */
 function renderDynamicChild(elt, childElement) {
@@ -382,7 +397,7 @@ function renderDynamicChild(elt, childElement) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
+ * @param {DOMElement} elt
  * @param {string} prop
  * @param {any} data
  */
@@ -411,7 +426,7 @@ function renderAttribute(elt, prop, data) {
  * @template Type
  * @param {string} prop
  * @param {Type} rawValue
- * @returns {import("./types.d.ts").Binding<Type>}
+ * @returns {Binding<Type>}
  */
 function createBinding(prop, rawValue) {
   const arg = prop.match(BindingArgRegExp)?.[1] || null

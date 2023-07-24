@@ -1,7 +1,7 @@
 import { toCamelCase, toKebabCase } from "./helpers.js"
 
-const Events = Symbol()
-const If = Symbol()
+const DelegatedEvents = Symbol()
+const IfDirectiveSymbol = Symbol()
 const RegisteredEvents = {}
 
 /**
@@ -11,30 +11,30 @@ function delegatedEventListener(event) {
   const type = event.type
   let elt = event.target
   while (elt !== null) {
-    elt?.[Events]?.[type]?.forEach?.((listener) => listener.call(elt, event))
+    elt?.[DelegatedEvents]?.[type]?.forEach?.((fn) => fn.call(elt, event))
     elt = elt.parentNode
   }
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<(elt: import("./types.d.ts").DOMElement) => void>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<(elt: import("./mod.js").DOMElement) => void>} binding
  */
 export function refDirective(elt, binding) {
   binding.rawValue?.(elt)
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<string>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<string>} binding
  */
 export function styleDirective(elt, binding) {
   elt.style[binding.arg] = binding.value || null
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<any>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<any>} binding
  */
 export function bindDirective(elt, binding) {
   let prop = binding.arg
@@ -55,42 +55,42 @@ export function bindDirective(elt, binding) {
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<string>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<string>} binding
  */
 export function htmlDirective(elt, binding) {
   elt.innerHTML = binding.value
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<string>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<string>} binding
  */
 export function textDirective(elt, binding) {
   elt.textContent = binding.value
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<boolean>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<boolean>} binding
  */
 export function showDirective(elt, binding) {
   elt.style.display = binding.value ? "" : "none"
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<boolean>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<boolean>} binding
  */
 export function ifDirective(elt, binding) {
-  elt[If] = elt[If] || new Text()
-  const value = binding.value, target = value ? elt[If] : elt
-  target.replaceWith(value ? elt : elt[If])
+  elt[IfDirectiveSymbol] = elt[IfDirectiveSymbol] || new Text()
+  const value = binding.value, target = value ? elt[IfDirectiveSymbol] : elt
+  target.replaceWith(value ? elt : elt[IfDirectiveSymbol])
 }
 
 /**
- * @param {import("./types.d.ts").DOMElement} elt
- * @param {import("./types.d.ts").Binding<(event: Event) => void>} binding
+ * @param {import("./mod.js").DOMElement} elt
+ * @param {import("./mod.js").Binding<(event: Event) => void>} binding
  */
 export function onDirective(elt, binding) {
   const name = binding.arg
@@ -130,9 +130,9 @@ export function onDirective(elt, binding) {
     }
   }
   if (modifiers?.delegate) {
-    elt[Events] = elt[Events] || {}
-    elt[Events][name] = elt[Events][name] || []
-    elt[Events][name].push(listener)
+    elt[DelegatedEvents] = elt[DelegatedEvents] || {}
+    elt[DelegatedEvents][name] = elt[DelegatedEvents][name] || []
+    elt[DelegatedEvents][name].push(listener)
     if (RegisteredEvents[id] === undefined) {
       addEventListener(name, delegatedEventListener, eventOptions)
       RegisteredEvents[id] = true

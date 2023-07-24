@@ -276,14 +276,14 @@ function sameCharacterDataType(node, otherNode) {
     const type = node.nodeType;
     return (type === 3 || type === 8) && otherNode.nodeType === type;
 }
-const Events = Symbol();
-const If = Symbol();
+const DelegatedEvents = Symbol();
+const IfDirectiveSymbol = Symbol();
 const RegisteredEvents = {};
 function delegatedEventListener(event) {
     const type = event.type;
     let elt = event.target;
     while(elt !== null){
-        elt?.[Events]?.[type]?.forEach?.((listener)=>listener.call(elt, event));
+        elt?.[DelegatedEvents]?.[type]?.forEach?.((fn)=>fn.call(elt, event));
         elt = elt.parentNode;
     }
 }
@@ -317,9 +317,9 @@ function showDirective(elt, binding) {
     elt.style.display = binding.value ? "" : "none";
 }
 function ifDirective(elt, binding) {
-    elt[If] = elt[If] || new Text();
-    const value = binding.value, target = value ? elt[If] : elt;
-    target.replaceWith(value ? elt : elt[If]);
+    elt[IfDirectiveSymbol] = elt[IfDirectiveSymbol] || new Text();
+    const value = binding.value, target = value ? elt[IfDirectiveSymbol] : elt;
+    target.replaceWith(value ? elt : elt[IfDirectiveSymbol]);
 }
 function onDirective(elt, binding) {
     const name = binding.arg;
@@ -359,9 +359,9 @@ function onDirective(elt, binding) {
         }
     }
     if (modifiers?.delegate) {
-        elt[Events] = elt[Events] || {};
-        elt[Events][name] = elt[Events][name] || [];
-        elt[Events][name].push(listener);
+        elt[DelegatedEvents] = elt[DelegatedEvents] || {};
+        elt[DelegatedEvents][name] = elt[DelegatedEvents][name] || [];
+        elt[DelegatedEvents][name].push(listener);
         if (RegisteredEvents[id] === undefined) {
             addEventListener(name, delegatedEventListener, eventOptions);
             RegisteredEvents[id] = true;
@@ -471,7 +471,7 @@ const renderMap = {
 };
 function render(fragment, args) {
     for (const elt of fragment.querySelectorAll(Query)){
-        renderMap[attribute(elt, TYPE)](elt, args);
+        renderMap[attribute(elt, TYPE)]?.(elt, args);
     }
     const nodeList = fragment.childNodes;
     if (nodeList.length === 0) {
@@ -926,7 +926,8 @@ const __default2 = ()=>{
     createDirective("text", (elt, binding)=>{
         const value = binding.value + "";
         if (elt.firstChild?.nodeType === 3) {
-            elt.firstChild.data = value;
+            const textNode = elt.firstChild;
+            textNode.data = value;
         } else {
             elt.prepend(value);
         }

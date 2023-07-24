@@ -1,5 +1,5 @@
-import { createEffect, inject, on } from "jail/signal"
-import { createDirective, mount, template } from "jail/dom"
+import { Cleanup, createEffect, on } from "jail/signal"
+import { createComponent, createDirective, mount, template } from "jail/dom"
 import installRouter, { path } from "jail/dom-router"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
@@ -53,7 +53,7 @@ const App = () => {
 
 mount(document.body, () => {
   installRouter()
-  createDirective("animate", (elt, binding) => {
+  createDirective<AnimateDirective>("animate", (elt, binding) => {
     const { frames, options } = binding.value
     elt.animate(frames, options)
   })
@@ -63,10 +63,4 @@ mount(document.body, () => {
 interface AnimateDirective {
   frames: Keyframe[]
   options: KeyframeAnimationOptions
-}
-
-declare global {
-  interface DirectiveMap {
-    animate: AnimateDirective
-  }
 }

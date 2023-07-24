@@ -9,7 +9,46 @@ import {
 } from "jail/signal"
 import { createComponent } from "jail/dom"
 
-export const ParamsInjectionKey = Symbol()
+/**
+ * @typedef {{ readonly [param: string]: string }} Params
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {() => Type} RouteHandler
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{
+ *   path: string
+ *   regexp: RegExp
+ *   handler: RouteHandler<Type>
+ * }} Route
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{ [path: string]: RouteHandler<Type> }} RouteMap
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{
+ *   fallback?: RouteHandler<Type>
+ * }} RouterOptions
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{
+ *   type: "pathname" | "hash"
+ *   fallback?: RouteHandler<Type>
+ *   routeMap: RouteMap<Type>
+ * }} RouterProperties
+ */
+
+const ParamsInjectionKey = Symbol()
 export const path = createSignal("")
 
 const routeTypeHandlerMap = {
@@ -76,8 +115,8 @@ function createMatcher(path) {
 }
 
 /**
- * @param {import("./types.d.ts").RouteMap} routeMap
- * @returns {import("./types.d.ts").Route[]}
+ * @param {RouteMap} routeMap
+ * @returns {Route[]}
  */
 function createRoutes(routeMap) {
   return Object.keys(routeMap).map((path) => ({
@@ -89,8 +128,8 @@ function createRoutes(routeMap) {
 
 /**
  * @template Type
- * @param {import("./types.d.ts").RouteMap<Type>} routeMap
- * @param {import("./types.d.ts").RouterOptions<Type>} options
+ * @param {RouteMap<Type>} routeMap
+ * @param {RouterOptions<Type>} options
  * @returns {() => Type | undefined}
  */
 function createRouter(routeMap, options) {
@@ -111,7 +150,7 @@ function createRouter(routeMap, options) {
 
 /**
  * @template Type
- * @param {import("./types.d.ts").RouterProps<Type>} props
+ * @param {RouterProperties<Type>} props
  * @returns {[any, (() => Type | undefined)]}
  */
 export function Router(props) {

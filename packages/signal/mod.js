@@ -1,22 +1,66 @@
-export const ErrorInjectionKey = Symbol()
 /**
- * @type {Set<import("./types.d.ts").Node>}
+ * @template [Type = any]
+ * @typedef {(currentValue: Type) => Type} Callback
+ */
+
+/**
+ * @typedef {() => void} Cleanup
+ * @typedef {{
+ *   [key: string | symbol]: any
+ * }} InjectionMap
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{
+ *   (): Type
+ *   (value: Type): void
+ *   (update: Callback<Type>): void
+ * }} Signal
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{
+ *   value: Type | undefined
+ *   nodes: Node[] | null
+ *   nodeSlots: number[] | null
+ * }} Source
+ */
+
+/**
+ * @template [Type = any]
+ * @typedef {{
+ *   value: Type | undefined | null
+ *   injectionMap: InjectionMap | null
+ *   parentNode: Node | null
+ *   childNodes: Node[] | null
+ *   cleanups: Cleanup[] | null
+ *   onupdate: Callback<Type> | null
+ *   sources: Source[] | null
+ *   sourceSlots: number[] | null
+ * }} Node
+ */
+
+const ErrorInjectionKey = Symbol()
+/**
+ * @type {Set<Node>}
  */
 const NodeQueue = new Set()
 let isRunning = false
 /**
- * @type {import("./types.d.ts").Node | null}
+ * @type {Node | null}
  */
 let activeNode = null
 
 /**
  * @template Type
  * @overload
- * @param {(cleanup: () => void) => Type} callback
+ * @param {(cleanup: Cleanup) => Type} callback
  * @returns {Type | undefined}
  */
 /**
- * @param {(cleanup: any | undefined) => any} callback
+ * @param {(cleanup: Cleanup | undefined) => any} callback
  * @returns {any | undefined}
  */
 export function createRoot(callback) {
@@ -36,7 +80,7 @@ export function createRoot(callback) {
 }
 
 /**
- * @returns {import("./types.d.ts").Node | null}
+ * @returns {Node | null}
  */
 export function nodeRef() {
   return activeNode
@@ -44,7 +88,7 @@ export function nodeRef() {
 
 /**
  * @template Type
- * @param {import("./types.d.ts").Node} node
+ * @param {Node} node
  * @param {() => Type} callback
  * @returns {Type | undefined}
  */
@@ -65,11 +109,11 @@ export function withNode(node, callback) {
 /**
  * @template Type
  * @param {Type} [initialValue]
- * @returns {import("./types.d.ts").Node<Type>}
+ * @returns {Node<Type>}
  */
 function createNode(initialValue) {
   /**
-   * @type {import("./types.d.ts").Node<Type>}
+   * @type {Node<Type>}
    */
   const localNode = {
     value: initialValue,
@@ -99,7 +143,7 @@ export function onMount(callback) {
 }
 
 /**
- * @param {() => void} cleanup
+ * @param {Cleanup} cleanup
  */
 export function onUnmount(cleanup) {
   onCleanup(() => untrack(cleanup))
@@ -108,8 +152,8 @@ export function onUnmount(cleanup) {
 /**
  * @template Type
  * @param {() => void} dependency
- * @param {import("./types.d.ts").Callback<Type>} callback
- * @returns {import("./types.d.ts").Callback<Type>}
+ * @param {Callback<Type>} callback
+ * @returns {Callback<Type>}
  */
 export function on(dependency, callback) {
   return (currentValue) => {
@@ -121,22 +165,23 @@ export function on(dependency, callback) {
 /**
  * @overload
  * @param {() => void} callback
- */
-/**
- * @template Type
- * @overload
- * @param {import("./types.d.ts").Callback<Type | undefined>} callback
  * @returns {void}
  */
 /**
  * @template Type
  * @overload
- * @param {import("./types.d.ts").Callback<Type>} callback
+ * @param {Callback<Type | undefined>} callback
+ * @returns {void}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {Callback<Type>} callback
  * @param {Type} initialValue
  * @returns {void}
  */
 /**
- * @param {import("./types.d.ts").Callback<any>} callback
+ * @param {Callback<any>} callback
  * @param {any} [initialValue]
  * @returns {void}
  */
@@ -157,18 +202,18 @@ export function createEffect(callback, initialValue) {
 /**
  * @template Type
  * @overload
- * @param {import("./types.d.ts").Callback<Type | undefined>} callback
+ * @param {Callback<Type | undefined>} callback
  * @returns {() => Type | undefined}
  */
 /**
  * @template Type
  * @overload
- * @param {import("./types.d.ts").Callback<Type>} callback
+ * @param {Callback<Type>} callback
  * @param {Type} initialValue
  * @returns {() => Type}
  */
 /**
- * @param {import("./types.d.ts").Callback<any>} callback
+ * @param {Callback<any>} callback
  * @param {any} [initialValue]
  */
 export function createComputed(callback, initialValue) {
@@ -179,7 +224,7 @@ export function createComputed(callback, initialValue) {
 
 /**
  * @template {keyof InjectionMap} Key
- * @param {import("./types.d.ts").Node | null} node
+ * @param {Node | null} node
  * @param {Key} key
  * @returns {InjectionMap[Key] | undefined}
  */
@@ -194,7 +239,7 @@ function lookup(node, key) {
 /**
  * @template Type
  * @param {Type} [initialValue]
- * @returns {import("./types.d.ts").Source<Type>}
+ * @returns {Source<Type>}
  */
 function createSource(initialValue) {
   return { value: initialValue, nodes: null, nodeSlots: null }
@@ -202,7 +247,7 @@ function createSource(initialValue) {
 
 /**
  * @template Type
- * @param {import("./types.d.ts").Source<Type>} source
+ * @param {Source<Type>} source
  * @returns {Type}
  */
 function getValue(source) {
@@ -229,8 +274,8 @@ function getValue(source) {
 
 /**
  * @template Type
- * @param {import("./types.d.ts").Source<Type>} source
- * @param {Type | import("./types.d.ts").Callback<Type>} nextValue
+ * @param {Source<Type>} source
+ * @param {Type | Callback<Type>} nextValue
  */
 function setValue(source, nextValue) {
   if (typeof nextValue === "function") {
@@ -261,7 +306,7 @@ export function toValue(data) {
 }
 
 /**
- * @param {import("./types.d.ts").Source} source
+ * @param {Source} source
  */
 function queueNodes(source) {
   if (source.nodes?.length) {
@@ -276,17 +321,17 @@ function queueNodes(source) {
 /**
  * @template Type
  * @overload
- * @returns {import("./types.d.ts").Signal<Type | undefined>}
+ * @returns {Signal<Type | undefined>}
  */
 /**
  * @template Type
  * @overload
  * @param {Type} initialValue
- * @returns {import("./types.d.ts").Signal<Type>}
+ * @returns {Signal<Type>}
  */
 /**
  * @param {any} [initialValue]
- * @returns {import("./types.d.ts").Signal<any>}
+ * @returns {Signal<any>}
  */
 export function createSignal(initialValue) {
   const source = createSource(initialValue)
@@ -311,7 +356,7 @@ function handleError(error) {
 
 /**
  * @template [Type = unknown]
- * @param {import("./types.d.ts").ErrorCallback<Type>} callback
+ * @param {(error: Type) => void} callback
  */
 export function catchError(callback) {
   if (activeNode.injectionMap === null) {
@@ -322,7 +367,7 @@ export function catchError(callback) {
 }
 
 /**
- * @param {() => void} cleanup
+ * @param {Cleanup} cleanup
  */
 export function onCleanup(cleanup) {
   if (activeNode.cleanups === null) {
@@ -372,7 +417,7 @@ function flush() {
 }
 
 /**
- * @param {import("./types.d.ts").Node} node
+ * @param {Node} node
  * @param {boolean} [complete]
  */
 function updateNode(node, complete) {
@@ -392,7 +437,7 @@ function updateNode(node, complete) {
 }
 
 /**
- * @param {import("./types.d.ts").Node} node
+ * @param {Node} node
  */
 function cleanSources(node) {
   while (node.sources.length) {
@@ -411,7 +456,7 @@ function cleanSources(node) {
 }
 
 /**
- * @param {import("./types.d.ts").Node} node
+ * @param {Node} node
  * @param {boolean} [complete]
  */
 function cleanChildNodes(node, complete) {
@@ -426,7 +471,7 @@ function cleanChildNodes(node, complete) {
 }
 
 /**
- * @param {import("./types.d.ts").Node} node
+ * @param {Node} node
  * @param {boolean} [complete]
  */
 function cleanNode(node, complete) {
