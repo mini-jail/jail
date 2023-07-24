@@ -85,13 +85,20 @@ const IfDirectiveSymbol = Symbol()
 const RegisteredEvents = {}
 
 /**
+ * @returns {App | undefined}
+ */
+function getApp() {
+  return inject(AppInjectionKey)
+}
+
+/**
  * @template Type
  * @param {string} name
  * @param {Directive<Type>} directive
  * @returns {void}
  */
 export function createDirective(name, directive) {
-  const directives = inject(AppInjectionKey).directives,
+  const directives = getApp().directives,
     directiveCopy = directives[name]
   directives[name] = directive
   if (directiveCopy) {
@@ -106,7 +113,7 @@ export function createDirective(name, directive) {
  * @returns {void}
  */
 export function createComponent(name, component) {
-  const components = inject(AppInjectionKey).components,
+  const components = getApp().components,
     componentCopy = components[name]
   components[name] = component
   if (componentCopy) {
@@ -175,7 +182,7 @@ const renderMap = {
   },
   c(elt, args) {
     const name = elt.getAttribute(VALUE)
-    const component = inject(AppInjectionKey).components[name]
+    const component = getApp().components[name]
     if (component === undefined) {
       elt.remove()
       return
@@ -397,7 +404,7 @@ function renderDynamicChild(elt, childElement) {
 function renderAttribute(elt, prop, data) {
   if (prop.startsWith(DirPrefix)) {
     const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0]
-    const directive = inject(AppInjectionKey).directives[key]
+    const directive = getApp().directives[key]
     if (directive) {
       const binding = createBinding(prop, data)
       createEffect(() => directive(elt, binding))
