@@ -10,8 +10,7 @@ import {
 } from "jail/signal"
 
 /**
- * @typedef {boolean | null | undefined} UnrenderedArg
- * @typedef {string | number | Node | DOMElement | UnrenderedArg} ArgSlot
+ * @typedef {string | number | Node | DOMElement | boolean | null | undefined} ArgSlot
  * @typedef {ArgSlot | ArgSlot[] | (() => ArgSlot) | EventListener | { [key: string]: any }} ArgAttr
  * @typedef {ArgSlot | ArgAttr | (ArgSlot | ArgAttr)[] | (() => ArgSlot | ArgAttr)} Arg
  * @typedef {HTMLElement | SVGElement} DOMElement
