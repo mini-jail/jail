@@ -10,8 +10,10 @@ import {
 } from "jail/signal"
 
 /**
+ * @typedef {Event & { currentTarget: EventTarget & DOMElement }} DOMEvent
+ * @typedef {(this: DOMElement, event: DOMEvent) => void} Listener
  * @typedef {string | number | Node | DOMElement | boolean | null | undefined} ArgSlot
- * @typedef {ArgSlot | ArgSlot[] | (() => ArgSlot) | EventListener | { [key: string]: any }} ArgAttr
+ * @typedef {ArgSlot | ArgSlot[] | (() => ArgSlot) | Listener | { [key: string]: any }} ArgAttr
  * @typedef {ArgSlot | ArgAttr | (ArgSlot | ArgAttr)[] | (() => ArgSlot | ArgAttr)} Arg
  * @typedef {HTMLElement | SVGElement} DOMElement
  * @typedef {Node | Node[] | undefined} TemplateResult
