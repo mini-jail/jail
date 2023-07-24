@@ -438,8 +438,8 @@ function createTemplateString(strings) {
                 }
             }
             const quote = data.match(QuoteRegExp)?.[0] || `"`;
-            const val = (val1 || val2 || val3).replace(ArgRegExp, "@{$1}");
-            return ` data-__${id++}=${quote}${name} ${val}${quote}`;
+            const value = (val1 || val2 || val3 || "").replace(ArgRegExp, "@{$1}");
+            return ` data-__${id++}=${quote}${name} ${value}${quote}`;
         });
         if (isComponent) {
             match = match.replace(ComRegExp, ComponentReplacement[0]);
