@@ -14,7 +14,7 @@ declare module "jail/signal" {
   }
   type Node<Type = any> = {
     value: Type | undefined | null
-    injections: InjectionValues | null
+    injections: Injections | null
     parentNode: Node | null
     childNodes: Node[] | null
     cleanups: Cleanup[] | null
@@ -22,7 +22,7 @@ declare module "jail/signal" {
     sources: Source[] | null
     sourceSlots: number[] | null
   }
-  interface InjectionValues {
+  interface Injections {
     [ErrorInjectionKey]?: ((error: any) => void)[]
     [key: string | symbol]: any
   }
@@ -58,18 +58,18 @@ declare module "jail/signal" {
   function catchError<Type>(callback: (error: Type) => void): void
   function onCleanup(cleanup: Cleanup): void
   function untrack<Type>(getter: Getter<Type>): Type
-  function inject<Key extends keyof InjectionValues>(
+  function inject<Key extends keyof Injections>(
     key: Key,
-  ): InjectionValues[Key] | undefined
-  function inject<Key extends keyof InjectionValues, Default>(
+  ): Injections[Key] | undefined
+  function inject<Key extends keyof Injections, Default>(
     key: Key,
-    defaultValue: Default | NonNullable<InjectionValues[Key]>,
-  ): Default | NonNullable<InjectionValues[Key]>
+    defaultValue: Default | NonNullable<Injections[Key]>,
+  ): Default | NonNullable<Injections[Key]>
   function inject<Type>(key: string | symbol): Type | undefined
   function inject<Type>(key: string | symbol, defaultValue: Type): Type
-  function provide<Key extends keyof InjectionValues>(
+  function provide<Key extends keyof Injections>(
     key: Key,
-    value: NonNullable<InjectionValues[Key]>,
+    value: NonNullable<Injections[Key]>,
   ): void
   function provide<Type>(key: string | symbol, value: Type): void
   function createCallback<Callback extends (...args: any[]) => any>(

@@ -11,9 +11,9 @@ function Counter() {
   const down = () => counter(value => --value)
 
   return template\`
-    <button d-on:click.delegate="\${down}">-</button>
+    <button d-on:click.delegate=\${down}>-</button>
     <span>current value: \${counter}</span>
-    <button d-on:click.delegate="\${up}">+</button>
+    <button d-on:click.delegate=\${up}>+</button>
   \`
 }`.trim()
 

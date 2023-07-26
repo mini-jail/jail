@@ -11,7 +11,9 @@ import Compiler from "./routes/compiler.js"
 import NotFound from "./routes/notfound.js"
 
 const App = () => {
-  createEffect(() => document.title = `jail${path()}`)
+  createEffect(() => {
+    document.title = `jail${path()}`
+  })
 
   const routeMap = {
     "/": Home,
@@ -66,7 +68,7 @@ declare module "jail/dom" {
     options?: KeyframeAnimationOptions | number
   }
 
-  interface DirectiveValues {
+  interface Directives {
     animate: AnimateDirective
   }
 }

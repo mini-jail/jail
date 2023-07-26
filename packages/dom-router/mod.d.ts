@@ -2,7 +2,7 @@ import type { ParamsInjectionKey } from "jail/dom-router"
 import type { Getter, Signal } from "jail/signal"
 
 declare module "jail/signal" {
-  interface InjectionValues {
+  interface Injections {
     [ParamsInjectionKey]?: Params
   }
 }
@@ -30,7 +30,7 @@ declare module "jail/dom-router" {
   function getParams(): Params | undefined
   function Router<Type>(
     props: RouterProperties<Type>,
-  ): [any, import("jail/signal").Getter<Type | undefined>]
+  ): [any, Getter<Type | undefined>]
   /**
    * Allows usage of the following:
    * @example

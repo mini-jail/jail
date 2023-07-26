@@ -13,29 +13,26 @@ import {
 export const AppInjectionKey = Symbol()
 const DelegatedEvents = Symbol()
 const IfDirectiveSymbol = Symbol()
-const TYPE = "__t", VALUE = "__v"
+const TYPE = "__type", VALUE = "__value"
 const Query = `[${TYPE}]`
-const DirPrefix = "d-", DirPrefixLength = DirPrefix.length
-const DirRegExp = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`)
-const DirKeyRegExp = /[a-z\-\_]+/
-const ArgRegExp = /#{([^\s}]+)}/g,
-  SValRegExp = /^@{([^\s}]+)}$/,
-  MValRegExp = /@{([^\s}]+)}/g,
-  PropValueRegExp = /^([^\s]+)\s(.*)$/
+const DirPrefix = "d-",
+  DirPrefixLength = DirPrefix.length,
+  DirRegExp = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`),
+  DirKeyRegExp = /[a-z\-\_]+/
+const ArgRegExp = /#{(\d+)}/g,
+  SingleValueRegExp = /^@{(\d+)}$/,
+  MultiValueRegExp = /@{(\d+)}/g
+const PropValueRegExp = /^([^\s]+)\s(.*)$/
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/
-const WSAndTabsRegExp = /^[\s\t]+/gm
-const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/
-const ComRegExp = /^<((?:[A-Z][a-z]+)+)/,
-  ClosingComRegExp = /<\/(?:[A-Z][a-z]+)+>/g
+const WSAndTabsRegExp = /^[\s\t]+/gm, QuoteRegExp = /["']/
+const CompRegExp = /^<((?:[A-Z][a-z]+)+)/,
+  ClosingCompRegExp = /<\/(?:[A-Z][a-z]+)+>/g
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
-const AtrRegExp =
+const AttrRegExp =
   /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g
-const AttributeReplacement = `<$1 ${TYPE}="a">`
-const InsertionReplacement = `<slot ${TYPE}="i" ${VALUE}="$1"></slot>`
-const ComponentReplacement = [
-  `<template ${TYPE}="c" ${VALUE}="$1"`,
-  "</template>",
-]
+const AttrData = `<$1 ${TYPE}="attr">`
+const SlotData = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`
+const CompData = [`<template ${TYPE}="comp" ${VALUE}="$1"`, "</template>"]
 /**
  * @type {Map<TemplateStringsArray, DocumentFragment>}
  */
@@ -79,10 +76,10 @@ export function createComponent(name, component) {
 
 /**
  * @param {import("jail/dom").DOMElement} rootElement
- * @param {import("jail/dom").RootComponent} rootComponent
+ * @param {import("jail/dom").RootComp} rootComp
  * @returns {import("jail/signal").Cleanup}
  */
-export function mount(rootElement, rootComponent) {
+export function mount(rootElement, rootComp) {
   return createRoot((cleanup) => {
     provide(AppInjectionKey, {
       directives: {
@@ -100,7 +97,7 @@ export function mount(rootElement, rootComponent) {
     let anchor = rootElement.appendChild(new Text())
     let currentNodes = null
     createEffect(() => {
-      const nextNodes = createNodeArray([], rootComponent())
+      const nextNodes = createNodeArray([], rootComp())
       reconcileNodes(anchor, currentNodes, nextNodes)
       currentNodes = nextNodes
     })
@@ -116,71 +113,54 @@ export function mount(rootElement, rootComponent) {
 
 /**
  * @param {TemplateStringsArray} strings
- * @param  {...import("jail/dom").Arg} args
+ * @param  {...import("jail/dom").Slot[]} slots
  * @returns {import("jail/dom").TemplateResult}
  */
-export function template(strings, ...args) {
-  const template = TemplateCache.get(strings) || createTemplate(strings)
-  return render(template.cloneNode(true), args)
+export function template(strings, ...slots) {
+  return render(createOrGetTemplate(strings), slots)
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Arg[]} args
+ * @type {import("jail/dom").RenderTypeMap}
  */
-function renderAttributeType(elt, args) {
-  const props = createProps(elt, args)
-  for (const key in props) {
-    renderAttribute(elt, key, props[key])
-  }
-}
-
-/**
- * @param {HTMLSlotElement} elt
- * @param {import("jail/dom").Arg[]} args
- */
-function renderInsertionType(elt, args) {
-  const slot = elt.getAttribute(VALUE)
-  renderChild(elt, getValue(slot, args))
-}
-
-/**
- * @param {HTMLTemplateElement} elt
- * @param {import("jail/dom").Arg[]} args
- * @returns
- */
-function renderComponentType(elt, args) {
-  const name = elt.getAttribute(VALUE)
-  const component = inject(AppInjectionKey).components[name]
-  if (component === undefined) {
-    elt.remove()
-    return
-  }
-  createRoot(() => {
-    const props = createProps(elt, args)
-    if (elt.content.hasChildNodes()) {
-      props.children = render(elt.content, args)
-    }
-    renderChild(elt, component(props))
-  })
-}
-
 const renderMap = {
-  a: renderAttributeType,
-  i: renderInsertionType,
-  c: renderComponentType,
+  attr(elt, slots) {
+    const props = createProps(elt, slots)
+    for (const key in props) {
+      renderAttr(elt, key, props[key])
+    }
+  },
+  slot(elt, slots) {
+    const key = elt.getAttribute(VALUE)
+    renderChild(elt, slots[key])
+  },
+  comp(elt, slots) {
+    const name = elt.getAttribute(VALUE)
+    const component = inject(AppInjectionKey).components[name]
+    if (component === undefined) {
+      elt.remove()
+      return
+    }
+    createRoot(() => {
+      const props = createProps(elt, slots)
+      if (elt.content.hasChildNodes()) {
+        props.children = render(elt.content, slots)
+      }
+      renderChild(elt, component(props))
+    })
+  },
 }
 
 /**
  * @param {DocumentFragment} fragment
- * @param {import("jail/dom").Arg[]} args
+ * @param {import("jail/dom").Slot[]} slots
  * @returns {import("jail/dom").TemplateResult}
  */
-function render(fragment, args) {
+function render(fragment, slots) {
   for (const elt of fragment.querySelectorAll(Query)) {
     const type = elt.getAttribute(TYPE)
     elt.removeAttribute(TYPE)
-    renderMap[type]?.(elt, args)
+    renderMap[type]?.(elt, slots)
   }
   const nodeList = fragment.childNodes
   if (nodeList.length === 0) {
@@ -194,15 +174,15 @@ function render(fragment, args) {
 
 /**
  * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Arg[]} args
+ * @param {import("jail/dom").Slot[]} slots
  * @returns {import("jail/dom").Properties}
  */
-function createProps(elt, args) {
+function createProps(elt, slots) {
   const props = {}
   for (const key in elt.dataset) {
     if (key.startsWith("__")) {
       const match = elt.dataset[key].match(PropValueRegExp)
-      props[match[1]] = createValue(match[2], args)
+      props[match[1]] = createValue(match[2], slots)
       delete elt.dataset[key]
     }
   }
@@ -217,11 +197,11 @@ function getValueCache(value) {
   if (value in ValueCache) {
     return ValueCache[value]
   }
-  const id = value.match(SValRegExp)?.[1]
+  const id = value.match(SingleValueRegExp)?.[1]
   if (id) {
     return ValueCache[value] = id
   }
-  const matches = [...value.matchAll(MValRegExp)]
+  const matches = [...value.matchAll(MultiValueRegExp)]
   if (matches.length === 0) {
     return ValueCache[value] = undefined
   }
@@ -230,94 +210,75 @@ function getValueCache(value) {
 
 /**
  * @param {string} value
- * @param {any[]} args
+ * @param {import("jail/dom").Slot[]} slots
  * @returns {string | (() => string) | any}
  */
-function createValue(value, args) {
-  const cached = getValueCache(value)
-  if (cached === undefined) {
+function createValue(value, slots) {
+  const keyOrKeys = getValueCache(value)
+  if (keyOrKeys === undefined) {
     return value
   }
-  if (typeof cached === "string") {
-    return getValue(cached, args)
+  if (typeof keyOrKeys === "string") {
+    return slots[keyOrKeys]
   }
-  if (cached.some((id) => isReactive(getValue(id, args)))) {
-    return () => sub(value, MValRegExp, (_, id) => toValue(getValue(id, args)))
+  if (keyOrKeys.some((key) => isReactive(slots[key]))) {
+    return () => sub(value, MultiValueRegExp, (_, key) => toValue(slots[key]))
   }
-  return sub(value, MValRegExp, (_, id) => getValue(id, args))
+  return sub(value, MultiValueRegExp, (_, key) => slots[key])
 }
 
-/**
- * @param {string} id
- * @param {import("jail/dom").Arg[]} args
- * @returns {any}
- */
-function getValue(id, args) {
-  return id in args ? args[id] : getInjectedValue(id)
-}
-
-/**
- * @param {string} id
- * @returns {any}
- */
-function getInjectedValue(id) {
-  const value = inject(id)
-  if (value) {
-    return value
-  }
-  const [mainId, ...keys] = id.split(".")
-  const initialValue = inject(mainId)
-  if (initialValue == null || keys.length === 0) {
-    return
-  }
-  return keys.reduce((value, key) => value[key], initialValue)
-}
+const getId = () => ++getId.value
+getId.value = -1
 
 /**
  * @param {TemplateStringsArray | string[]} strings
  * @returns {string}
  */
 export function createTemplateString(strings) {
-  let data = "", arg = 0
+  let templateString = "", arg = 0
   while (arg < strings.length - 1) {
-    data = data + strings[arg] + `#{${arg++}}`
+    templateString = templateString + strings[arg] + `#{${arg++}}`
   }
-  data = data + strings[arg]
-  data = sub(data, WSAndTabsRegExp, "")
-  data = sub(data, ClosingComRegExp, ComponentReplacement[1])
-  data = sub(data, TagRegExp, (match) => {
-    const isComponent = ComRegExp.test(match)
+  templateString = templateString + strings[arg]
+  templateString = sub(templateString, WSAndTabsRegExp, "")
+  templateString = sub(templateString, ClosingCompRegExp, CompData[1])
+  templateString = sub(templateString, TagRegExp, (data) => {
+    const isComp = CompRegExp.test(data)
     let id = 0
-    match = sub(match, AtrRegExp, (data, name, val1, val2, val3) => {
-      if (isComponent === false) {
+    data = sub(data, AttrRegExp, (data, name, val1, val2, val3) => {
+      if (isComp === false) {
         if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
           return data
         }
       }
       const quote = data.match(QuoteRegExp)?.[0] || `"`
-      const value = sub(val1 || val2 || val3 || "", ArgRegExp, "@{$1}")
+      const value = sub(val1 ?? val2 ?? val3 ?? "", ArgRegExp, "@{$1}")
       return ` data-__${id++}=${quote}${name} ${value}${quote}`
     })
-    if (isComponent) {
-      match = sub(match, ComRegExp, ComponentReplacement[0])
-    } else if (DataRegExp.test(match)) {
-      match = sub(match, TagRegExp, AttributeReplacement)
+    if (isComp) {
+      data = sub(data, CompRegExp, CompData[0])
+    } else if (id !== 0) {
+      data = sub(data, TagRegExp, AttrData)
     }
-    return sub(match, ArgRegExp, "")
+    return sub(data, ArgRegExp, "")
   })
-  data = sub(data, ArgRegExp, InsertionReplacement)
-  return data
+  templateString = sub(templateString, ArgRegExp, SlotData)
+  return templateString
 }
 
 /**
  * @param {TemplateStringsArray | string[]} strings
  * @returns {DocumentFragment}
  */
-function createTemplate(strings) {
-  const template = document.createElement("template")
-  template.innerHTML = createTemplateString(strings)
-  TemplateCache.set(strings, template.content)
-  return template.content
+function createOrGetTemplate(strings) {
+  let template = TemplateCache.get(strings)
+  if (template === undefined) {
+    const element = document.createElement("template")
+    element.innerHTML = createTemplateString(strings)
+    TemplateCache.set(strings, element.content)
+    template = element.content
+  }
+  return template.cloneNode(true)
 }
 
 /**
@@ -365,7 +326,7 @@ function renderDynamicChild(elt, childElement) {
  * @param {string} prop
  * @param {any} data
  */
-function renderAttribute(elt, prop, data) {
+function renderAttr(elt, prop, data) {
   if (prop.startsWith(DirPrefix)) {
     const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0]
     const directive = inject(AppInjectionKey).directives[key]
@@ -408,9 +369,9 @@ function createBinding(prop, rawValue) {
 }
 
 /**
- * @param {Node[]} nodeArray
+ * @param {import("jail/dom").DOMNode[]} nodeArray
  * @param  {...any} elements
- * @returns {Node[]}
+ * @returns {import("jail/dom").DOMNode[]}
  */
 function createNodeArray(nodeArray, ...elements) {
   for (const elt of elements) {
@@ -422,12 +383,7 @@ function createNodeArray(nodeArray, ...elements) {
     } else if (elt instanceof Node) {
       nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
-      const previousNode = nodeArray.at(-1)
-      if (previousNode instanceof Text) {
-        previousNode.data = previousNode.data + elt
-      } else {
-        nodeArray.push(new Text(elt + ""))
-      }
+      nodeArray.push(new Text(elt + ""))
     } else if (isReactive(elt)) {
       createNodeArray(nodeArray, toValue(elt))
     } else if (Symbol.iterator in elt) {
@@ -438,9 +394,9 @@ function createNodeArray(nodeArray, ...elements) {
 }
 
 /**
- * @param {ChildNode} anchor
- * @param {(ChildNode | null)[] | null} currentNodes
- * @param {(ChildNode | Node)[]} nextNodes
+ * @param {import("jail/dom").DOMNode} anchor
+ * @param {(import("jail/dom").DOMNode | null)[] | null} currentNodes
+ * @param {import("jail/dom").DOMNode[]} nextNodes
  */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
   const parentNode = anchor.parentNode
@@ -496,7 +452,7 @@ function toKebabCase(data) {
 }
 
 /**
- * @param {DOMElement} elt
+ * @param {import("jail/dom").DOMElement} elt
  * @param {string} prop
  * @param {any} value
  */
@@ -564,7 +520,7 @@ function bindDirective(elt, binding) {
   ) {
     elt[prop] = binding.value
   } else {
-    elt.setAttribute(prop, binding.value + "")
+    elt.setAttr(prop, binding.value + "")
   }
 }
 
@@ -604,7 +560,7 @@ function ifDirective(elt, binding) {
 
 /**
  * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<(event: Event) => void>} binding
+ * @param {import("jail/dom").Binding<import("jail/dom").DOMListener>} binding
  */
 function onDirective(elt, binding) {
   const name = binding.arg
@@ -667,7 +623,7 @@ function onDirective(elt, binding) {
  * @overload
  * @param {string} data
  * @param {string | RegExp} match
- * @param {(match: string, ...matches: (string | undefined)[]) => string} replacer
+ * @param {(match: string, ...matches: (string | number | undefined)[]) => string} replacer
  * @returns {string}
  */
 /**

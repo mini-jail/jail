@@ -250,22 +250,22 @@ function provide(key, value) {
 const AppInjectionKey = Symbol();
 const DelegatedEvents = Symbol();
 const IfDirectiveSymbol = Symbol();
-const TYPE = "__t", VALUE = "__v";
+const TYPE = "__type", VALUE = "__value";
 const Query = `[${TYPE}]`;
 const DirPrefix = "d-", DirPrefixLength = DirPrefix.length;
 const DirRegExp = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`);
 const DirKeyRegExp = /[a-z\-\_]+/;
-const ArgRegExp = /#{([^\s}]+)}/g, SValRegExp = /^@{([^\s}]+)}$/, MValRegExp = /@{([^\s}]+)}/g, PropValueRegExp = /^([^\s]+)\s(.*)$/;
+const ArgRegExp = /#{(\d+)}/g, SValRegExp = /^@{(\d+)}$/, MValRegExp = /@{(\d+)}/g, PropValueRegExp = /^([^\s]+)\s(.*)$/;
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/;
 const WSAndTabsRegExp = /^[\s\t]+/gm;
-const QuoteRegExp = /["']/, DataRegExp = /data\-__\d+/;
+const QuoteRegExp = /["']/;
 const ComRegExp = /^<((?:[A-Z][a-z]+)+)/, ClosingComRegExp = /<\/(?:[A-Z][a-z]+)+>/g;
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
 const AtrRegExp = /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g;
-const AttributeReplacement = `<$1 ${TYPE}="a">`;
-const InsertionReplacement = `<slot ${TYPE}="i" ${VALUE}="$1"></slot>`;
-const ComponentReplacement = [
-    `<template ${TYPE}="c" ${VALUE}="$1"`,
+const AttrData = `<$1 ${TYPE}="attr">`;
+const SlotData = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`;
+const CompData = [
+    `<template ${TYPE}="comp" ${VALUE}="$1"`,
     "</template>"
 ];
 const TemplateCache = new Map();
@@ -287,7 +287,7 @@ function createComponent(name, component) {
     }
     components[name] = component;
 }
-function mount(rootElement, rootComponent) {
+function mount(rootElement, rootComp) {
     return createRoot((cleanup)=>{
         provide(AppInjectionKey, {
             directives: {
@@ -305,7 +305,7 @@ function mount(rootElement, rootComponent) {
         let anchor = rootElement.appendChild(new Text());
         let currentNodes = null;
         createEffect(()=>{
-            const nextNodes = createNodeArray([], rootComponent());
+            const nextNodes = createNodeArray([], rootComp());
             reconcileNodes(anchor, currentNodes, nextNodes);
             currentNodes = nextNodes;
         });
@@ -318,45 +318,41 @@ function mount(rootElement, rootComponent) {
         return cleanup;
     });
 }
-function template(strings, ...args) {
-    const template1 = TemplateCache.get(strings) || createTemplate(strings);
-    return render(template1.cloneNode(true), args);
-}
-function renderAttributeType(elt, args) {
-    const props = createProps(elt, args);
-    for(const key in props){
-        renderAttribute(elt, key, props[key]);
-    }
-}
-function renderInsertionType(elt, args) {
-    const slot = elt.getAttribute(VALUE);
-    renderChild(elt, getValue1(slot, args));
-}
-function renderComponentType(elt, args) {
-    const name = elt.getAttribute(VALUE);
-    const component = inject(AppInjectionKey).components[name];
-    if (component === undefined) {
-        elt.remove();
-        return;
-    }
-    createRoot(()=>{
-        const props = createProps(elt, args);
-        if (elt.content.hasChildNodes()) {
-            props.children = render(elt.content, args);
-        }
-        renderChild(elt, component(props));
-    });
+function template(strings, ...slots) {
+    return render(createOrGetTemplate(strings), slots);
 }
 const renderMap = {
-    a: renderAttributeType,
-    i: renderInsertionType,
-    c: renderComponentType
+    attr (elt, slots) {
+        const props = createProps(elt, slots);
+        for(const key in props){
+            renderAttr(elt, key, props[key]);
+        }
+    },
+    slot (elt, slots) {
+        const key = elt.getAttribute(VALUE);
+        renderChild(elt, slots[key]);
+    },
+    comp (elt, slots) {
+        const name = elt.getAttribute(VALUE);
+        const component = inject(AppInjectionKey).components[name];
+        if (component === undefined) {
+            elt.remove();
+            return;
+        }
+        createRoot(()=>{
+            const props = createProps(elt, slots);
+            if (elt.content.hasChildNodes()) {
+                props.children = render(elt.content, slots);
+            }
+            renderChild(elt, component(props));
+        });
+    }
 };
-function render(fragment, args) {
+function render(fragment, slots) {
     for (const elt of fragment.querySelectorAll(Query)){
         const type = elt.getAttribute(TYPE);
         elt.removeAttribute(TYPE);
-        renderMap[type]?.(elt, args);
+        renderMap[type]?.(elt, slots);
     }
     const nodeList = fragment.childNodes;
     if (nodeList.length === 0) {
@@ -367,12 +363,12 @@ function render(fragment, args) {
     }
     return Array.from(nodeList);
 }
-function createProps(elt, args) {
+function createProps(elt, slots) {
     const props = {};
     for(const key in elt.dataset){
         if (key.startsWith("__")) {
             const match = elt.dataset[key].match(PropValueRegExp);
-            props[match[1]] = createValue(match[2], args);
+            props[match[1]] = createValue(match[2], slots);
             delete elt.dataset[key];
         }
     }
@@ -394,70 +390,61 @@ function getValueCache(value) {
     }
     return ValueCache[value] = matches.map((match)=>match[1]);
 }
-function createValue(value, args) {
-    const cached = getValueCache(value);
-    if (cached === undefined) {
+function createValue(value, slots) {
+    const keyOrKeys = getValueCache(value);
+    if (keyOrKeys === undefined) {
         return value;
     }
-    if (typeof cached === "string") {
-        return getValue1(cached, args);
+    if (typeof keyOrKeys === "string") {
+        return slots[keyOrKeys];
     }
-    if (cached.some((id)=>isReactive(getValue1(id, args)))) {
-        return ()=>sub(value, MValRegExp, (_, id)=>toValue(getValue1(id, args)));
+    if (keyOrKeys.some((key)=>isReactive(slots[key]))) {
+        return ()=>sub(value, MValRegExp, (_, key)=>toValue(slots[key]));
     }
-    return sub(value, MValRegExp, (_, id)=>getValue1(id, args));
+    return sub(value, MValRegExp, (_, key)=>slots[key]);
 }
-function getValue1(id, args) {
-    return id in args ? args[id] : getInjectedValue(id);
-}
-function getInjectedValue(id) {
-    const value = inject(id);
-    if (value) {
-        return value;
-    }
-    const [mainId, ...keys] = id.split(".");
-    const initialValue = inject(mainId);
-    if (initialValue == null || keys.length === 0) {
-        return;
-    }
-    return keys.reduce((value, key)=>value[key], initialValue);
-}
+const getId = ()=>++getId.value;
+getId.value = -1;
 function createTemplateString(strings) {
-    let data = "", arg = 0;
+    let templateString = "", arg = 0;
     while(arg < strings.length - 1){
-        data = data + strings[arg] + `#{${arg++}}`;
+        templateString = templateString + strings[arg] + `#{${arg++}}`;
     }
-    data = data + strings[arg];
-    data = sub(data, WSAndTabsRegExp, "");
-    data = sub(data, ClosingComRegExp, ComponentReplacement[1]);
-    data = sub(data, TagRegExp, (match)=>{
-        const isComponent = ComRegExp.test(match);
+    templateString = templateString + strings[arg];
+    templateString = sub(templateString, WSAndTabsRegExp, "");
+    templateString = sub(templateString, ClosingComRegExp, CompData[1]);
+    templateString = sub(templateString, TagRegExp, (data)=>{
+        const isComp = ComRegExp.test(data);
         let id = 0;
-        match = sub(match, AtrRegExp, (data, name, val1, val2, val3)=>{
-            if (isComponent === false) {
+        data = sub(data, AtrRegExp, (data, name, val1, val2, val3)=>{
+            if (isComp === false) {
                 if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
                     return data;
                 }
             }
             const quote = data.match(QuoteRegExp)?.[0] || `"`;
-            const value = sub(val1 || val2 || val3 || "", ArgRegExp, "@{$1}");
+            const value = sub(val1 ?? val2 ?? val3 ?? "", ArgRegExp, "@{$1}");
             return ` data-__${id++}=${quote}${name} ${value}${quote}`;
         });
-        if (isComponent) {
-            match = sub(match, ComRegExp, ComponentReplacement[0]);
-        } else if (DataRegExp.test(match)) {
-            match = sub(match, TagRegExp, AttributeReplacement);
+        if (isComp) {
+            data = sub(data, ComRegExp, CompData[0]);
+        } else if (id !== 0) {
+            data = sub(data, TagRegExp, AttrData);
         }
-        return sub(match, ArgRegExp, "");
+        return sub(data, ArgRegExp, "");
     });
-    data = sub(data, ArgRegExp, InsertionReplacement);
-    return data;
+    templateString = sub(templateString, ArgRegExp, SlotData);
+    return templateString;
 }
-function createTemplate(strings) {
-    const template = document.createElement("template");
-    template.innerHTML = createTemplateString(strings);
-    TemplateCache.set(strings, template.content);
-    return template.content;
+function createOrGetTemplate(strings) {
+    let template = TemplateCache.get(strings);
+    if (template === undefined) {
+        const element = document.createElement("template");
+        element.innerHTML = createTemplateString(strings);
+        TemplateCache.set(strings, element.content);
+        template = element.content;
+    }
+    return template.cloneNode(true);
 }
 function renderChild(elt, value) {
     if (value == null || typeof value === "boolean") {
@@ -489,7 +476,7 @@ function renderDynamicChild(elt, childElement) {
         return nextNodes;
     }, null);
 }
-function renderAttribute(elt, prop, data) {
+function renderAttr(elt, prop, data) {
     if (prop.startsWith(DirPrefix)) {
         const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0];
         const directive = inject(AppInjectionKey).directives[key];
@@ -534,12 +521,7 @@ function createNodeArray(nodeArray, ...elements) {
         } else if (elt instanceof Node) {
             nodeArray.push(elt);
         } else if (typeof elt === "string" || typeof elt === "number") {
-            const previousNode = nodeArray.at(-1);
-            if (previousNode instanceof Text) {
-                previousNode.data = previousNode.data + elt;
-            } else {
-                nodeArray.push(new Text(elt + ""));
-            }
+            nodeArray.push(new Text(elt + ""));
         } else if (isReactive(elt)) {
             createNodeArray(nodeArray, toValue(elt));
         } else if (Symbol.iterator in elt) {
@@ -630,7 +612,7 @@ function bindDirective(elt, binding) {
     if (binding.modifiers?.prop === true || prop in elt && binding.modifiers?.attr === false) {
         elt[prop] = binding.value;
     } else {
-        elt.setAttribute(prop, binding.value + "");
+        elt.setAttr(prop, binding.value + "");
     }
 }
 function htmlDirective(elt, binding) {
@@ -815,9 +797,9 @@ function Counter() {
   const down = () => counter(value => --value)
 
   return template\`
-    <button d-on:click.delegate="\${down}">-</button>
+    <button d-on:click.delegate=\${down}>-</button>
     <span>current value: \${counter}</span>
-    <button d-on:click.delegate="\${up}">+</button>
+    <button d-on:click.delegate=\${up}>+</button>
   \`
 }`.trim();
 const __default1 = ()=>{
@@ -1092,7 +1074,9 @@ const __default6 = ()=>{
   `;
 };
 const App = ()=>{
-    createEffect(()=>document.title = `jail${path()}`);
+    createEffect(()=>{
+        document.title = `jail${path()}`;
+    });
     const routeMap = {
         "/": __default,
         "/counter": __default1,
