@@ -186,14 +186,20 @@ function getValue(source) {
 
 /**
  * @param {import("jail/signal").Source} source
- * @param {Type | import("jail/signal").Callback} nextValue
+ * @param {any | import("jail/signal").Callback} nextValue
  */
 function setValue(source, nextValue) {
   if (typeof nextValue === "function") {
     nextValue = nextValue(source.value)
   }
   source.value = nextValue
-  queueNodes(source)
+  if (source.nodes?.length) {
+    batch(() => {
+      for (const node of source.nodes) {
+        NodeQueue.add(node)
+      }
+    })
+  }
 }
 
 /**
@@ -213,19 +219,6 @@ export function toValue(data) {
 }
 
 /**
- * @param {import("jail/signal").Source} source
- */
-function queueNodes(source) {
-  if (source.nodes?.length) {
-    batch(() => {
-      for (const node of source.nodes) {
-        NodeQueue.add(node)
-      }
-    })
-  }
-}
-
-/**
  * @param {any} [initialValue]
  * @returns {import("jail/signal").Signal}
  */
@@ -240,7 +233,7 @@ export function createSignal(initialValue) {
  * @param {any} error
  */
 function handleError(error) {
-  const errorCallbacks = inject(ErrorInjectionKey)
+  const errorCallbacks = lookup(activeNode, ErrorInjectionKey)
   if (!errorCallbacks) {
     return reportError(error)
   }
@@ -330,48 +323,33 @@ function updateNode(node, complete) {
 
 /**
  * @param {import("jail/signal").Node} node
- */
-function cleanSources(node) {
-  while (node.sources.length) {
-    const source = node.sources.pop()
-    const sourceSlot = node.sourceSlots.pop()
-    if (source.nodes?.length) {
-      const sourceNode = source.nodes.pop()
-      const nodeSlot = source.nodeSlots.pop()
-      if (sourceSlot < source.nodes.length) {
-        source.nodes[sourceSlot] = sourceNode
-        source.nodeSlots[sourceSlot] = nodeSlot
-        sourceNode.sourceSlots[nodeSlot] = sourceSlot
-      }
-    }
-  }
-}
-
-/**
- * @param {import("jail/signal").Node} node
- * @param {boolean} [complete]
- */
-function cleanChildNodes(node, complete) {
-  const hasUpdateHandler = node.onupdate !== null
-  while (node.childNodes.length) {
-    const childNode = node.childNodes.pop()
-    cleanNode(
-      childNode,
-      complete || hasUpdateHandler && childNode.onupdate !== null,
-    )
-  }
-}
-
-/**
- * @param {import("jail/signal").Node} node
  * @param {boolean} [complete]
  */
 function cleanNode(node, complete) {
   if (node.sources?.length) {
-    cleanSources(node)
+    while (node.sources.length) {
+      const source = node.sources.pop()
+      const sourceSlot = node.sourceSlots.pop()
+      if (source.nodes?.length) {
+        const sourceNode = source.nodes.pop()
+        const nodeSlot = source.nodeSlots.pop()
+        if (sourceSlot < source.nodes.length) {
+          source.nodes[sourceSlot] = sourceNode
+          source.nodeSlots[sourceSlot] = nodeSlot
+          sourceNode.sourceSlots[nodeSlot] = sourceSlot
+        }
+      }
+    }
   }
   if (node.childNodes?.length) {
-    cleanChildNodes(node, complete)
+    const isUpdatable = node.onupdate !== null
+    while (node.childNodes.length) {
+      const childNode = node.childNodes.pop()
+      cleanNode(
+        childNode,
+        complete || isUpdatable && childNode.onupdate !== null,
+      )
+    }
   }
   if (node.cleanups?.length) {
     while (node.cleanups.length) {

@@ -108,15 +108,6 @@ function setValue(source, nextValue) {
         nextValue = nextValue(source.value);
     }
     source.value = nextValue;
-    queueNodes(source);
-}
-function isReactive(data) {
-    return typeof data === "function";
-}
-function toValue(data) {
-    return typeof data === "function" ? data() : data;
-}
-function queueNodes(source) {
     if (source.nodes?.length) {
         batch(()=>{
             for (const node of source.nodes){
@@ -125,6 +116,12 @@ function queueNodes(source) {
         });
     }
 }
+function isReactive(data) {
+    return typeof data === "function";
+}
+function toValue(data) {
+    return typeof data === "function" ? data() : data;
+}
 function createSignal(initialValue) {
     const source = createSource(initialValue);
     return function Signal(value) {
@@ -132,7 +129,7 @@ function createSignal(initialValue) {
     };
 }
 function handleError(error) {
-    const errorCallbacks = inject(ErrorInjectionKey);
+    const errorCallbacks = lookup(activeNode, ErrorInjectionKey);
     if (!errorCallbacks) {
         return reportError(error);
     }
@@ -190,34 +187,28 @@ function updateNode(node, complete) {
         activeNode = previousNode;
     }
 }
-function cleanSources(node) {
-    while(node.sources.length){
-        const source = node.sources.pop();
-        const sourceSlot = node.sourceSlots.pop();
-        if (source.nodes?.length) {
-            const sourceNode = source.nodes.pop();
-            const nodeSlot = source.nodeSlots.pop();
-            if (sourceSlot < source.nodes.length) {
-                source.nodes[sourceSlot] = sourceNode;
-                source.nodeSlots[sourceSlot] = nodeSlot;
-                sourceNode.sourceSlots[nodeSlot] = sourceSlot;
+function cleanNode(node, complete) {
+    if (node.sources?.length) {
+        while(node.sources.length){
+            const source = node.sources.pop();
+            const sourceSlot = node.sourceSlots.pop();
+            if (source.nodes?.length) {
+                const sourceNode = source.nodes.pop();
+                const nodeSlot = source.nodeSlots.pop();
+                if (sourceSlot < source.nodes.length) {
+                    source.nodes[sourceSlot] = sourceNode;
+                    source.nodeSlots[sourceSlot] = nodeSlot;
+                    sourceNode.sourceSlots[nodeSlot] = sourceSlot;
+                }
             }
         }
     }
-}
-function cleanChildNodes(node, complete) {
-    const hasUpdateHandler = node.onupdate !== null;
-    while(node.childNodes.length){
-        const childNode = node.childNodes.pop();
-        cleanNode(childNode, complete || hasUpdateHandler && childNode.onupdate !== null);
-    }
-}
-function cleanNode(node, complete) {
-    if (node.sources?.length) {
-        cleanSources(node);
-    }
     if (node.childNodes?.length) {
-        cleanChildNodes(node, complete);
+        const isUpdatable = node.onupdate !== null;
+        while(node.childNodes.length){
+            const childNode = node.childNodes.pop();
+            cleanNode(childNode, complete || isUpdatable && childNode.onupdate !== null);
+        }
     }
     if (node.cleanups?.length) {
         while(node.cleanups.length){
