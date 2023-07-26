@@ -1,5 +1,5 @@
 import { createEffect, on } from "jail/signal"
-import { createDirective, mount, template } from "jail/dom"
+import { createComponent, createDirective, mount, template } from "jail/dom"
 import { install, path } from "jail/dom-router"
 import Home from "./routes/home.js"
 import Counter from "./routes/counter.js"
@@ -62,7 +62,7 @@ mount(document.body, () => {
   return App()
 })
 
-declare module "jail/dom" {
+declare global {
   interface AnimateDirective {
     frames: Keyframe[]
     options?: KeyframeAnimationOptions | number
