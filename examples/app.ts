@@ -1,4 +1,4 @@
-import { createEffect, inject, on, provide } from "jail/signal"
+import { createEffect, on } from "jail/signal"
 import { createDirective, mount, template } from "jail/dom"
 import { install, path } from "jail/dom-router"
 import Home from "./routes/home.js"

@@ -7,6 +7,12 @@ declare module "jail/signal" {
   }
 }
 
+declare module "jail/dom" {
+  interface Components {
+    Router: RouterProperties
+  }
+}
+
 declare module "jail/dom-router" {
   type RouterType = "pathname" | "hash"
   type Params = { readonly [param: string]: string }

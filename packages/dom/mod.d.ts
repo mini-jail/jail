@@ -57,7 +57,7 @@ declare module "jail/dom" {
     [name: string]: any
   }
   interface Components {
-    [name: `${Uppercase<string>}${string}`]: Properties
+    [name: string]: Properties
   }
   interface App {
     directives: Directives

@@ -252,16 +252,14 @@ const DelegatedEvents = Symbol();
 const IfDirectiveSymbol = Symbol();
 const TYPE = "__type", VALUE = "__value";
 const Query = `[${TYPE}]`;
-const DirPrefix = "d-", DirPrefixLength = DirPrefix.length;
-const DirRegExp = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`);
-const DirKeyRegExp = /[a-z\-\_]+/;
-const ArgRegExp = /#{(\d+)}/g, SValRegExp = /^@{(\d+)}$/, MValRegExp = /@{(\d+)}/g, PropValueRegExp = /^([^\s]+)\s(.*)$/;
+const DirPrefix = "d-", DirPrefixLength = DirPrefix.length, DirRegExp = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`), DirKeyRegExp = /[a-z\-\_]+/;
+const ArgRegExp = /#{(\d+)}/g, SingleValueRegExp = /^@{(\d+)}$/, MultiValueRegExp = /@{(\d+)}/g;
+const PropValueRegExp = /^([^\s]+)\s(.*)$/;
 const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/;
-const WSAndTabsRegExp = /^[\s\t]+/gm;
-const QuoteRegExp = /["']/;
-const ComRegExp = /^<((?:[A-Z][a-z]+)+)/, ClosingComRegExp = /<\/(?:[A-Z][a-z]+)+>/g;
+const WSAndTabsRegExp = /^[\s\t]+/gm, QuoteRegExp = /["']/;
+const CompRegExp = /^<((?:[A-Z][a-z]+)+)/, ClosingCompRegExp = /<\/(?:[A-Z][a-z]+)+>/g;
 const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
-const AtrRegExp = /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g;
+const AttrRegExp = /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g;
 const AttrData = `<$1 ${TYPE}="attr">`;
 const SlotData = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`;
 const CompData = [
@@ -378,12 +376,12 @@ function getValueCache(value) {
     if (value in ValueCache) {
         return ValueCache[value];
     }
-    const id = value.match(SValRegExp)?.[1];
+    const id = value.match(SingleValueRegExp)?.[1];
     if (id) {
         return ValueCache[value] = id;
     }
     const matches = [
-        ...value.matchAll(MValRegExp)
+        ...value.matchAll(MultiValueRegExp)
     ];
     if (matches.length === 0) {
         return ValueCache[value] = undefined;
@@ -399,9 +397,9 @@ function createValue(value, slots) {
         return slots[keyOrKeys];
     }
     if (keyOrKeys.some((key)=>isReactive(slots[key]))) {
-        return ()=>sub(value, MValRegExp, (_, key)=>toValue(slots[key]));
+        return ()=>sub(value, MultiValueRegExp, (_, key)=>toValue(slots[key]));
     }
-    return sub(value, MValRegExp, (_, key)=>slots[key]);
+    return sub(value, MultiValueRegExp, (_, key)=>slots[key]);
 }
 const getId = ()=>++getId.value;
 getId.value = -1;
@@ -412,11 +410,11 @@ function createTemplateString(strings) {
     }
     templateString = templateString + strings[arg];
     templateString = sub(templateString, WSAndTabsRegExp, "");
-    templateString = sub(templateString, ClosingComRegExp, CompData[1]);
+    templateString = sub(templateString, ClosingCompRegExp, CompData[1]);
     templateString = sub(templateString, TagRegExp, (data)=>{
-        const isComp = ComRegExp.test(data);
+        const isComp = CompRegExp.test(data);
         let id = 0;
-        data = sub(data, AtrRegExp, (data, name, val1, val2, val3)=>{
+        data = sub(data, AttrRegExp, (data, name, val1, val2, val3)=>{
             if (isComp === false) {
                 if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
                     return data;
@@ -427,7 +425,7 @@ function createTemplateString(strings) {
             return ` data-__${id++}=${quote}${name} ${value}${quote}`;
         });
         if (isComp) {
-            data = sub(data, ComRegExp, CompData[0]);
+            data = sub(data, CompRegExp, CompData[0]);
         } else if (id !== 0) {
             data = sub(data, TagRegExp, AttrData);
         }
