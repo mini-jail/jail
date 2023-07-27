@@ -1,4 +1,4 @@
-import type { Cleanup } from "jail/signal"
+import type { Cleanup, Getter } from "jail/signal"
 
 declare global {
   interface Injections {
@@ -12,8 +12,8 @@ declare global {
   }
 }
 
-export type DOMNode = Node & AnyObject
 export type DOMElement = (HTMLElement | SVGElement) & AnyObject
+export type DOMNode = (Node & AnyObject) | DOMElement
 export type DOMEventTarget = DOMElement & EventTarget
 export interface DOMEvent extends Event {
   target: DOMEventTarget | null
@@ -24,7 +24,6 @@ export type NodeSlot =
   | string
   | number
   | DOMNode
-  | DOMElement
   | boolean
   | null
   | undefined
@@ -53,7 +52,7 @@ export interface Modifiers {
 }
 export interface Binding<Type = any> {
   readonly value: Type
-  readonly rawValue: (() => Type) | Type
+  readonly rawValue: Getter<Type> | Type
   readonly arg: string | null
   readonly modifiers: Modifiers | null
 }
