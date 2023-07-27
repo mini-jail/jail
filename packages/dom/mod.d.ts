@@ -14,7 +14,11 @@ declare global {
 
 export type DOMNode = Node & AnyObject
 export type DOMElement = (HTMLElement | SVGElement) & AnyObject
-export type DOMEvent = Event & { currentTarget: EventTarget & DOMElement }
+export type DOMEventTarget = DOMElement & EventTarget
+export interface DOMEvent extends Event {
+  target: DOMEventTarget | null
+  currentTarget: DOMEventTarget
+}
 export type DOMListener = (this: DOMElement, event: DOMEvent) => void
 export type NodeSlot =
   | string
