@@ -5,6 +5,14 @@ declare global {
     [AppInjectionKey]?: App
   }
   interface Directives {
+    on: DOMListener
+    ref: (elt: DOMElement) => void
+    show: boolean
+    if: boolean
+    html: string
+    text: string
+    style: string
+    bind: any
     [name: string]: any
   }
   interface Components {

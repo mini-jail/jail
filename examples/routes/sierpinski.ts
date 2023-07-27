@@ -13,8 +13,6 @@ import { getParams } from "jail/dom-router"
 const Dot = (x: number, y: number, target: number) => {
   const counter = inject<Signal<number>>("counter")!
   const hover = createSignal(false)
-  const onMouseOut = () => hover(false)
-  const onMouseOver = () => hover(true)
   const text = () => hover() ? "*" + counter() + "*" : counter()
   const bgColor = () => hover() ? "lightpink" : "white"
 
@@ -35,8 +33,8 @@ const Dot = (x: number, y: number, target: number) => {
   return template`
     <div 
       d-text=${text} style=${css} d-style:background-color=${bgColor}
-      d-on:mouseover.delegate=${onMouseOver}
-      d-on:mouseout.delegate=${onMouseOut}
+      d-on:mouseover.delegate=${() => hover(true)}
+      d-on:mouseout.delegate=${() => hover(false)}
     ></div>
   `
 }
