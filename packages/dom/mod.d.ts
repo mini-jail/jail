@@ -46,7 +46,7 @@ export type Slot =
   | AttrSlot
   | (NodeSlot | AttrSlot)[]
   | (() => NodeSlot | AttrSlot)
-export type TemplateResult = DOMNode | DOMNode[] | undefined
+export type RenderResult = DOMNode | DOMNode[] | undefined
 export interface RenderTypeMap {
   attr(elt: DOMElement, slots: Slot[]): void
   slot(elt: HTMLSlotElement, slots: Slot[]): void
@@ -64,7 +64,10 @@ export interface Binding<Type = any> {
   readonly arg: string | null
   readonly modifiers: Modifiers | null
 }
-export type Properties = { [prop: string]: any }
+export interface Properties {
+  children?: RenderResult | unknown
+  [property: string]: any
+}
 export type Directive<Type = any> = (
   elt: DOMElement,
   binding: Binding<Type>,
@@ -101,6 +104,6 @@ export function mount(
 export function template(
   strings: TemplateStringsArray,
   ...slots: Slot[]
-): TemplateResult
+): RenderResult
 export function createTemplateString(strings: TemplateStringsArray): string
 export function createTemplateString(strings: string[]): string

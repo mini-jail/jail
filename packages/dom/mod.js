@@ -114,7 +114,7 @@ export function mount(rootElement, rootComp) {
 /**
  * @param {TemplateStringsArray} strings
  * @param  {...import("jail/dom").Slot[]} slots
- * @returns {import("jail/dom").TemplateResult}
+ * @returns {import("jail/dom").RenderResult}
  */
 export function template(strings, ...slots) {
   return render(createOrGetTemplate(strings), slots)
@@ -154,7 +154,7 @@ const renderMap = {
 /**
  * @param {DocumentFragment} fragment
  * @param {import("jail/dom").Slot[]} slots
- * @returns {import("jail/dom").TemplateResult}
+ * @returns {import("jail/dom").RenderResult}
  */
 function render(fragment, slots) {
   for (const elt of fragment.querySelectorAll(Query)) {
