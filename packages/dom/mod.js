@@ -112,12 +112,12 @@ export function mount(rootElement, rootComp) {
 }
 
 /**
- * @param {TemplateStringsArray} strings
+ * @param {TemplateStringsArray} templateStrings
  * @param  {...import("jail/dom").Slot[]} slots
  * @returns {import("jail/dom").RenderResult}
  */
-export function template(strings, ...slots) {
-  return render(createOrGetTemplate(strings), slots)
+export function template(templateStrings, ...slots) {
+  return render(createOrGetTemplate(templateStrings), slots)
 }
 
 /**
@@ -227,9 +227,6 @@ function createValue(value, slots) {
   return sub(value, MultiValueRegExp, (_, key) => slots[key])
 }
 
-const getId = () => ++getId.value
-getId.value = -1
-
 /**
  * @param {TemplateStringsArray | string[]} strings
  * @returns {string}
@@ -267,15 +264,15 @@ export function createTemplateString(strings) {
 }
 
 /**
- * @param {TemplateStringsArray | string[]} strings
+ * @param {TemplateStringsArray} templateStrings
  * @returns {DocumentFragment}
  */
-function createOrGetTemplate(strings) {
-  let template = TemplateCache.get(strings)
+function createOrGetTemplate(templateStrings) {
+  let template = TemplateCache.get(templateStrings)
   if (template === undefined) {
     const element = document.createElement("template")
-    element.innerHTML = createTemplateString(strings)
-    TemplateCache.set(strings, element.content)
+    element.innerHTML = createTemplateString(templateStrings)
+    TemplateCache.set(templateStrings, element.content)
     template = element.content
   }
   return template.cloneNode(true)

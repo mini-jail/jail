@@ -307,8 +307,8 @@ function mount(rootElement, rootComp) {
         return cleanup;
     });
 }
-function template(strings, ...slots) {
-    return render(createOrGetTemplate(strings), slots);
+function template(templateStrings, ...slots) {
+    return render(createOrGetTemplate(templateStrings), slots);
 }
 const renderMap = {
     attr (elt, slots) {
@@ -392,8 +392,6 @@ function createValue(value, slots) {
     }
     return sub(value, MultiValueRegExp, (_, key)=>slots[key]);
 }
-const getId = ()=>++getId.value;
-getId.value = -1;
 function createTemplateString(strings) {
     let templateString = "", arg = 0;
     while(arg < strings.length - 1){
@@ -425,12 +423,12 @@ function createTemplateString(strings) {
     templateString = sub(templateString, ArgRegExp, SlotData);
     return templateString;
 }
-function createOrGetTemplate(strings) {
-    let template = TemplateCache.get(strings);
+function createOrGetTemplate(templateStrings) {
+    let template = TemplateCache.get(templateStrings);
     if (template === undefined) {
         const element = document.createElement("template");
-        element.innerHTML = createTemplateString(strings);
-        TemplateCache.set(strings, element.content);
+        element.innerHTML = createTemplateString(templateStrings);
+        TemplateCache.set(templateStrings, element.content);
         template = element.content;
     }
     return template.cloneNode(true);
@@ -836,8 +834,6 @@ function Counter() {
 const Dot = (x, y, target)=>{
     const counter = inject("counter");
     const hover = createSignal(false);
-    const onMouseOut = ()=>hover(false);
-    const onMouseOver = ()=>hover(true);
     const text = ()=>hover() ? "*" + counter() + "*" : counter();
     const bgColor = ()=>hover() ? "lightpink" : "white";
     const css = `
@@ -856,8 +852,8 @@ const Dot = (x, y, target)=>{
     return template`
     <div 
       d-text=${text} style=${css} d-style:background-color=${bgColor}
-      d-on:mouseover.delegate=${onMouseOver}
-      d-on:mouseout.delegate=${onMouseOut}
+      d-on:mouseover.delegate=${()=>hover(true)}
+      d-on:mouseout.delegate=${()=>hover(false)}
     ></div>
   `;
 };
