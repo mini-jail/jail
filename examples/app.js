@@ -243,14 +243,14 @@ const DelegatedEvents = Symbol();
 const IfDirectiveSymbol = Symbol();
 const TYPE = "__type", VALUE = "__value";
 const Query = `[${TYPE}]`;
-const DirPrefix = "d-", DirPrefixLength = DirPrefix.length, DirRegExp = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`), DirKeyRegExp = /[a-z\-\_]+/;
-const ArgRegExp = /#{(\d+)}/g, SingleValueRegExp = /^@{(\d+)}$/, MultiValueRegExp = /@{(\d+)}/g;
-const PropValueRegExp = /^([^\s]+)\s(.*)$/;
-const BindingModRegExp = /\.(?:[^"'.])+/g, BindingArgRegExp = /:([^"'<>.]+)/;
-const WSAndTabsRegExp = /^[\s\t]+/gm, QuoteRegExp = /["']/;
-const CompRegExp = /^<((?:[A-Z][a-z]+)+)/, ClosingCompRegExp = /<\/(?:[A-Z][a-z]+)+>/g;
-const TagRegExp = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
-const AttrRegExp = /\s([^"'!?<>=\s]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g;
+const DirPrefix = "d-", DirPrefixLength = DirPrefix.length, DirRE = RegExp(`${sub(DirPrefix, "-", "\\-")}[^"'<>=\\s]`), DirKeyRE = /[a-z\-\_]+/;
+const ArgRE = /#{(\d+)}/g, SingleValueRE = /^@{(\d+)}$/, MultiValueRE = /@{(\d+)}/g;
+const PropValueRE = /^([^\s]+)\s(.*)$/;
+const BindingModRE = /\.(?:[^"'.])+/g, BindingArgRE = /:([^"'<>.]+)/;
+const StartingWSRE = /^[\s]+/gm, ContentRE = /^\r\n|\n|\r(>)\s+(<)$/gm, HasUCRE = /[A-Z]/, QuoteRE = /["']/;
+const CompRE = /^<((?:[A-Z][a-z]+)+)/, ClosingCompRE = /<\/(?:[A-Z][a-z]+)+>/g, SelfClosingTagRE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g;
+const TagRE = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
+const AttrRE = /\s([^"'!?<>=\s/\\]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g;
 const AttrData = `<$1 ${TYPE}="attr">`;
 const SlotData = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`;
 const CompData = [
@@ -260,6 +260,24 @@ const CompData = [
 const TemplateCache = new Map();
 const ValueCache = {};
 const RegisteredEvents = {};
+const voidElements = [
+    "area",
+    "base",
+    "br",
+    "col",
+    "command",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "keygen",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr"
+];
 function createDirective(name, directive) {
     const directives = inject(AppInjectionKey).directives;
     if (name in directives) {
@@ -356,7 +374,7 @@ function createProps(elt, slots) {
     const props = {};
     for(const key in elt.dataset){
         if (key.startsWith("__")) {
-            const match = elt.dataset[key].match(PropValueRegExp);
+            const match = elt.dataset[key].match(PropValueRE);
             props[match[1]] = createValue(match[2], slots);
             delete elt.dataset[key];
         }
@@ -367,12 +385,12 @@ function getOrCreateValueCache(value) {
     if (value in ValueCache) {
         return ValueCache[value];
     }
-    const id = value.match(SingleValueRegExp)?.[1];
+    const id = value.match(SingleValueRE)?.[1];
     if (id) {
         return ValueCache[value] = id;
     }
     const matches = [
-        ...value.matchAll(MultiValueRegExp)
+        ...value.matchAll(MultiValueRE)
     ];
     if (matches.length === 0) {
         return ValueCache[value] = undefined;
@@ -388,9 +406,9 @@ function createValue(value, slots) {
         return slots[keyOrKeys];
     }
     if (keyOrKeys.some((key)=>isReactive(slots[key]))) {
-        return ()=>sub(value, MultiValueRegExp, (_, key)=>toValue(slots[key]));
+        return ()=>sub(value, MultiValueRE, (_, key)=>toValue(slots[key]));
     }
-    return sub(value, MultiValueRegExp, (_, key)=>slots[key]);
+    return sub(value, MultiValueRE, (_, key)=>slots[key]);
 }
 function createTemplateString(strings) {
     let templateString = "", arg = 0;
@@ -398,29 +416,36 @@ function createTemplateString(strings) {
         templateString = templateString + strings[arg] + `#{${arg++}}`;
     }
     templateString = templateString + strings[arg];
-    templateString = sub(templateString, WSAndTabsRegExp, "");
-    templateString = sub(templateString, ClosingCompRegExp, CompData[1]);
-    templateString = sub(templateString, TagRegExp, (data)=>{
-        const isComp = CompRegExp.test(data);
+    templateString = sub(templateString, StartingWSRE, "");
+    templateString = sub(templateString, SelfClosingTagRE, (match, tag, attr)=>{
+        if (HasUCRE.test(tag) || voidElements.includes(tag)) {
+            return match;
+        }
+        return `<${tag}${attr}></${tag}>`;
+    });
+    templateString = sub(templateString, ClosingCompRE, CompData[1]);
+    templateString = sub(templateString, TagRE, (data)=>{
+        const isComp = CompRE.test(data);
         let id = 0;
-        data = sub(data, AttrRegExp, (data, name, val1, val2, val3)=>{
+        data = sub(data, AttrRE, (data, name, val1, val2, val3)=>{
             if (isComp === false) {
-                if (!ArgRegExp.test(data) && !DirRegExp.test(data)) {
+                if (!ArgRE.test(data) && !DirRE.test(data)) {
                     return data;
                 }
             }
-            const quote = data.match(QuoteRegExp)?.[0] || `"`;
-            const value = sub(val1 ?? val2 ?? val3 ?? "", ArgRegExp, "@{$1}");
+            const quote = data.match(QuoteRE)?.[0] || `"`;
+            const value = sub(val1 ?? val2 ?? val3 ?? "", ArgRE, "@{$1}");
             return ` data-__${id++}=${quote}${name} ${value}${quote}`;
         });
         if (isComp) {
-            data = sub(data, CompRegExp, CompData[0]);
+            data = sub(data, CompRE, CompData[0]);
         } else if (id !== 0) {
-            data = sub(data, TagRegExp, AttrData);
+            data = sub(data, TagRE, AttrData);
         }
-        return sub(data, ArgRegExp, "");
+        return data;
     });
-    templateString = sub(templateString, ArgRegExp, SlotData);
+    templateString = sub(templateString, ArgRE, SlotData);
+    templateString = sub(templateString, ContentRE, "$1$2");
     return templateString;
 }
 function createOrGetTemplate(templateStrings) {
@@ -465,7 +490,7 @@ function renderDynamicChild(elt, childElement) {
 }
 function renderAttr(elt, prop, data) {
     if (prop.startsWith(DirPrefix)) {
-        const key = prop.slice(DirPrefixLength).match(DirKeyRegExp)[0];
+        const key = prop.slice(DirPrefixLength).match(DirKeyRE)[0];
         const directive = inject(AppInjectionKey).directives[key];
         if (directive) {
             const binding = createBinding(prop, data);
@@ -484,8 +509,8 @@ function renderAttr(elt, prop, data) {
     }
 }
 function createBinding(prop, rawValue) {
-    const arg = prop.match(BindingArgRegExp)?.[1] || null;
-    const modifiers = prop.match(BindingModRegExp)?.reduce((modifiers, key)=>{
+    const arg = prop.match(BindingArgRE)?.[1] || null;
+    const modifiers = prop.match(BindingModRE)?.reduce((modifiers, key)=>{
         modifiers[key.slice(1)] = true;
         return modifiers;
     }, {}) || null;
@@ -760,17 +785,22 @@ const __default = ()=>{
         welcome home!
         <sub>(sucker)</sub>
       </h4>
-      <pre>
-        just look at my examples like <a href="/counter">counter</a>.
-        have fun!
-        i tend to create examples like <a href="/sierpinski">sierpinski</a>
-        because i want to test out the performance of my libraries ^^"
-        also try out some parameter values for that one!
-        > /sierpinski/:target/:size <
-        <a href="/sierpinski/2000/50">sierpinski/2000/50</a> 
-        <a href="/sierpinski/250">sierpinski/250</a>
-        btw. this whole page is just an example, lol.
-      </pre>
+      <div>
+        <p>
+          just look at my examples like <a href="/counter">counter</a>.
+        </p>
+        <p>
+          i tend to create examples like <a href="/sierpinski">sierpinski</a> 
+          because i want to test out the performance of my libraries ^^"
+        </p>
+        <p>also try out some parameter values for that one!</p>
+        <p>> /sierpinski/:target/:size <</p>
+        <p>
+          <a href="/sierpinski/2000/50">sierpinski/2000/50</a> 
+          <a href="/sierpinski/250">sierpinski/250</a>
+        </p>
+        <p>btw. this whole page is just an example, lol.</p>
+      </div>
     </article>
   `;
 };
@@ -850,11 +880,11 @@ const Dot = (x, y, target)=>{
     user-select: none;
   `;
     return template`
-    <div 
+    <div
       d-text=${text} style=${css} d-style:background-color=${bgColor}
       d-on:mouseover.delegate=${()=>hover(true)}
       d-on:mouseout.delegate=${()=>hover(false)}
-    ></div>
+    />
   `;
 };
 const Triangle = (x, y, target, size)=>{
@@ -911,14 +941,26 @@ const __default3 = ()=>{
         <sub>(signal? me? idk...)</sub>
       </h4>
       <h5>special thx to:</h5>
-      <pre>
-        inspiration:
-        <a href="https://github.com/terkelg/facon" target="_blank">facon</a> by <a href="https://github.com/terkelg" target="_blank">Terkel</a>
-        <a href="https://github.com/solidjs/solid" target="_blank">solid</a> by <a href="https://github.com/ryansolid" target="_blank">Ryan Carniato</a>
-        <a href="https://github.com/vuejs" target="_blank">vue</a> by <a href="https://github.com/yyx990803" target="_blank">Evan You</a>
-        assets:
-        <a href="https://github.com/TakWolf/ark-pixel-font" target="_blank">ark-pixel-font</a> by <a href="https://github.com/TakWolf" target="_blank">狼人小林 / TakWolf</a>
-      </pre>
+      <div>
+        <div>inspiration:</div>
+        <div>
+          <a href="https://github.com/terkelg/facon" target="_blank">facon</a> 
+          by <a href="https://github.com/terkelg" target="_blank">Terkel</a>
+        </div>
+        <div>
+          <a href="https://github.com/solidjs/solid" target="_blank">solid</a> 
+          by <a href="https://github.com/ryansolid" target="_blank">Ryan Carniato</a>
+        </div>
+        <div>
+          <a href="https://github.com/vuejs" target="_blank">vue</a> 
+          by <a href="https://github.com/yyx990803" target="_blank">Evan You</a>
+        </div>
+        <div>assets:</div>
+        <div>
+          <a href="https://github.com/TakWolf/ark-pixel-font" target="_blank">ark-pixel-font</a> 
+          by <a href="https://github.com/TakWolf" target="_blank">狼人小林 / TakWolf</a>
+        </div>
+      </div>
     </article>
   `;
 };
@@ -990,7 +1032,6 @@ const __default4 = ()=>{
   `;
 };
 const __default5 = ()=>{
-    const showExplanation = createSignal(false);
     const text = createSignal(`<div data-cool="user is \${state} cool!">\n  you are \${state} cool!\n</div>`);
     const inputLength = ()=>text().length;
     const time = createSignal(0);
@@ -1005,16 +1046,10 @@ const __default5 = ()=>{
     };
     const outputLength = ()=>compiled().length;
     const onInput = (ev)=>text(ev.currentTarget.value);
-    const onClick = ()=>showExplanation(!showExplanation());
     const outputCSS = `
     min-height: 60px;
     background-color: white;
     box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
-  `;
-    const explainCSS = `
-    background-color: papayawhip;
-    padding: 10px;
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, .1);
   `;
     return template`
     <article style="display: flex; gap: 8px; flex-direction: column;">
@@ -1022,25 +1057,12 @@ const __default5 = ()=>{
         compiler
         <sub>(4 real????)</sub>
       </h4>
-      <button d-on:click=${onClick} d-style:margin="0 auto">show/hide explanation</button>
-      <pre d-show=${showExplanation} style=${explainCSS}>
-        1.   join string literals with "${"#{\\d+}"}"
-        2.   go inside tags with this regexp (in general): 
-        .    <span d-style:color="red">${/<([a-zA-Z\-](?:"[^"]*"|'[^']*'|[^'">])*)>/g}</span>
-        3.   look for valid attributes with this regexp:
-        .    <span d-style:color="red">${/\s(?:([^"'<>=\s]+)=(?:"([^"]*)"|'([^']*)'))|(?:\s([^"'<>=\s]+))/g}</span>
-        4.   replace dynamic values inside attributes with "${"@{\\d+}"}"
-        5.   replace all other "${"#{\\d+}"}" with <span d-style:color="red">${`<slot __t="i" __v="\\d+"></slot>`}</span>
-        6.   insert code into template element and extract its fragment
-        7.   insert attributes, children and components inside fragment
-        8.   ${"template`...`"} might return a single node, a node-array or undefined
-      </pre>
-      <pre style="display: flex; gap: 16px; flex-direction: column;">
+      <div style="display: flex; gap: 16px; flex-direction: column;">
         <label style="flex: 1;">input: (${inputLength} characters)</label>
-        <textarea value=${text()} d-on:input=${onInput}></textarea>
+        <textarea value=${text()} d-on:input=${onInput} />
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
         <pre style=${outputCSS} d-text=${compiled}></pre>
-      </pre>
+      </div>
     </article>
   `;
 };
@@ -1103,7 +1125,7 @@ const App = ()=>{
       </nav>
     </header>
     <main d-animate=${on(path, animation)}>
-      <Router type="pathname" fallback="${__default6}" routeMap="${routeMap}"></Router>
+      <Router type="pathname" fallback=${__default6} routeMap=${routeMap} />
     </main>
   `;
 };
