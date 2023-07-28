@@ -548,14 +548,10 @@ function bindDirective(elt, binding) {
   let prop = binding.arg
   if (binding.modifiers?.camel) {
     prop = toCamelCase(prop)
-  }
-  if (binding.modifiers?.attr) {
+  } else if (binding.modifiers?.attr) {
     prop = toKebabCase(prop)
   }
-  if (
-    binding.modifiers?.prop === true ||
-    prop in elt && binding.modifiers?.attr === false
-  ) {
+  if (binding.modifiers?.prop === true || prop in elt) {
     elt[prop] = binding.value
   } else {
     elt.setAttribute(prop, binding.value + "")
