@@ -558,7 +558,7 @@ function bindDirective(elt, binding) {
   ) {
     elt[prop] = binding.value
   } else {
-    elt.setAttr(prop, binding.value + "")
+    elt.setAttribute(prop, binding.value + "")
   }
 }
 

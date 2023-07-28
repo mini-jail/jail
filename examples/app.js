@@ -633,7 +633,7 @@ function bindDirective(elt, binding) {
     if (binding.modifiers?.prop === true || prop in elt && binding.modifiers?.attr === false) {
         elt[prop] = binding.value;
     } else {
-        elt.setAttr(prop, binding.value + "");
+        elt.setAttribute(prop, binding.value + "");
     }
 }
 function htmlDirective(elt, binding) {
