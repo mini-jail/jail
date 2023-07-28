@@ -27,7 +27,7 @@ const App = () => {
     "/compiler": Compiler,
   }
 
-  const animation = () => ({
+  const animation = (): AnimateDirective => ({
     frames: [
       { opacity: 0, transform: "translateY(-10px)" },
       { opacity: 1, transform: "unset" },
