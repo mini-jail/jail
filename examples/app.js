@@ -276,7 +276,16 @@ const voidElements = [
     "param",
     "source",
     "track",
-    "wbr"
+    "wbr",
+    "circle",
+    "ellipse",
+    "line",
+    "path",
+    "polygon",
+    "polyline",
+    "rect",
+    "stop",
+    "use"
 ];
 function createDirective(name, directive) {
     const directives = inject(AppInjectionKey).directives;

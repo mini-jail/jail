@@ -69,6 +69,15 @@ const voidElements = [
   "source",
   "track",
   "wbr",
+  "circle",
+  "ellipse",
+  "line",
+  "path",
+  "polygon",
+  "polyline",
+  "rect",
+  "stop",
+  "use",
 ]
 
 /**
