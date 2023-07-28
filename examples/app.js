@@ -116,11 +116,11 @@ function setValue(source, nextValue) {
         });
     }
 }
-function isReactive(data1) {
-    return typeof data1 === "function";
+function isReactive(data) {
+    return typeof data === "function";
 }
-function toValue(data1) {
-    return typeof data1 === "function" ? data1() : data1;
+function toValue(data) {
+    return typeof data === "function" ? data() : data;
 }
 function createSignal(initialValue) {
     const source = createSource(initialValue);
@@ -426,7 +426,7 @@ function createTemplateString(strings) {
     templateString = sub(templateString, TAG_RE, (match)=>{
         const isComp = COMP_RE.test(match);
         let id = 0;
-        match = sub(data, ATTR_RE, (match, name, val1, val2, val3)=>{
+        match = sub(match, ATTR_RE, (match, name, val1, val2, val3)=>{
             if (isComp === false) {
                 if (!ARG_RE.test(match) && !DIR_RE.test(match)) {
                     return match;
@@ -487,24 +487,24 @@ function renderDynamicChild(elt, childElement) {
         return nextNodes;
     }, null);
 }
-function renderAttr(elt, prop, data1) {
+function renderAttr(elt, prop, data) {
     if (prop.startsWith(DIR_PREFIX)) {
         const key = prop.slice(DIR_PREFIX_LENGTH).match(DIR_KEY_RE)[0];
         const directive = inject(APP_INJECTION_KEY).directives[key];
         if (directive) {
-            const binding = createBinding(prop, data1);
+            const binding = createBinding(prop, data);
             createEffect(()=>directive(elt, binding));
         }
-    } else if (isReactive(data1)) {
+    } else if (isReactive(data)) {
         createEffect((currentValue)=>{
-            const nextValue = toValue(data1);
+            const nextValue = toValue(data);
             if (nextValue !== currentValue) {
                 setProperty(elt, prop, nextValue);
             }
             return nextValue;
         });
     } else {
-        setProperty(elt, prop, data1);
+        setProperty(elt, prop, data);
     }
 }
 function createBinding(prop, rawValue) {
@@ -576,11 +576,11 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
         currentNodes.pop()?.remove();
     }
 }
-function toCamelCase(data1) {
-    return sub(data1, KEBAB_NAME_RE, (match)=>match.slice(1).toUpperCase());
+function toCamelCase(data) {
+    return sub(data, KEBAB_NAME_RE, (match)=>match.slice(1).toUpperCase());
 }
-function toKebabCase(data1) {
-    return sub(data1, CAMEL_NAME_RE, "-$1").toLowerCase();
+function toKebabCase(data) {
+    return sub(data, CAMEL_NAME_RE, "-$1").toLowerCase();
 }
 function setProperty(elt, prop, value) {
     if (prop in elt) {
@@ -688,8 +688,8 @@ function onDirective(elt, binding) {
         elt.addEventListener(name, listener, eventOptions);
     }
 }
-function sub(data1, match, replacer) {
-    return data1.replace(match, replacer);
+function sub(data, match, replacer) {
+    return data.replace(match, replacer);
 }
 const PARAMS_INJECTION_KEY = Symbol();
 const path = createSignal("");
@@ -1032,8 +1032,8 @@ const __default5 = ()=>{
     const timeMs = ()=>`millisecond${time() === 1 ? "" : "s"}`;
     const compiled = ()=>{
         const start = performance.now();
-        const data1 = text().replace(/\$\{[^${}]+\}/gm, "${}").split("${}");
-        const result = createTemplateString(data1);
+        const data = text().replace(/\$\{[^${}]+\}/gm, "${}").split("${}");
+        const result = createTemplateString(data);
         const end = performance.now();
         untrack(()=>time(end - start));
         return result;

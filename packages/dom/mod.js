@@ -279,7 +279,7 @@ export function createTemplateString(strings) {
   templateString = sub(templateString, TAG_RE, (match) => {
     const isComp = COMP_RE.test(match)
     let id = 0
-    match = sub(data, ATTR_RE, (match, name, val1, val2, val3) => {
+    match = sub(match, ATTR_RE, (match, name, val1, val2, val3) => {
       if (isComp === false) {
         if (!ARG_RE.test(match) && !DIR_RE.test(match)) {
           return match
