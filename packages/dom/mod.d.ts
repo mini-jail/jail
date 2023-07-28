@@ -1,11 +1,11 @@
-import type { Cleanup, Getter } from "jail/signal"
+import type { Cleanup } from "jail/signal"
 
 declare global {
-  interface Injections {
+  interface InjectionValueMap {
     [AppInjectionKey]?: App
   }
-  interface Directives {
-    on: DOMListener
+  interface DirectiveValueMap {
+    on: DOMListener<DOMElement>
     ref: (elt: DOMElement) => void
     show: boolean
     if: boolean
@@ -15,83 +15,79 @@ declare global {
     bind: any
     [name: string]: any
   }
-  interface Components {
+  interface ComponentPropertyMap {
     [name: string]: Properties
   }
 }
 
-export type DOMElement = (HTMLElement | SVGElement) & AnyObject
-export type DOMNode = (Node & AnyObject) | DOMElement
-export type DOMEventTarget = DOMElement & EventTarget
-export interface DOMEvent extends Event {
-  target: DOMEventTarget | null
-  currentTarget: DOMEventTarget
+export interface Object {
+  [prop: string | symbol | number]: any
 }
-export type DOMListener = (this: DOMElement, event: DOMEvent) => void
-export type NodeSlot =
+export type DOMElement = (HTMLElement | SVGElement) & Object
+export type DOMNode = DOMElement | (Node & Object)
+export type DOMEventTarget<Target> = Target & EventTarget
+export interface DOMEvent<Target> extends Event {
+  target: DOMEventTarget<Target>
+  currentTarget: DOMEventTarget<Target>
+}
+export interface DOMListener<Target> {
+  (this: DOMElement, event: DOMEvent<Target>): void
+}
+export type SlotPrimitive =
   | string
   | number
-  | DOMNode
   | boolean
   | null
   | undefined
-export type AttrSlot =
-  | NodeSlot
-  | NodeSlot[]
-  | (() => NodeSlot)
-  | DOMListener
-  | AnyObject
-export type Slot =
-  | NodeSlot
-  | AttrSlot
-  | (NodeSlot | AttrSlot)[]
-  | (() => NodeSlot | AttrSlot)
+  | Object
+  | SlotPrimitive[]
+  | (() => SlotPrimitive)
+export type SlotNode = DOMNode | DOMNode[] | (() => SlotNode)
+export type Slot = SlotPrimitive | SlotNode | DOMListener<DOMElement>
 export type RenderResult = DOMNode | DOMNode[] | undefined
-export interface RenderTypeMap {
+export type RenderTypeMap = {
   attr(elt: DOMElement, slots: Slot[]): void
   slot(elt: HTMLSlotElement, slots: Slot[]): void
   comp(elt: HTMLTemplateElement, slots: Slot[]): void
-}
-export type AnyObject = {
-  [key: string]: any
 }
 export interface Modifiers {
   readonly [key: string]: boolean
 }
 export interface Binding<Type = any> {
   readonly value: Type
-  readonly rawValue: Getter<Type> | Type
+  readonly rawValue: (() => Type) | Type
   readonly arg: string | null
   readonly modifiers: Modifiers | null
 }
 export interface Properties {
-  children?: RenderResult | unknown
+  children?: RenderResult | any
   [property: string]: any
 }
-export type Directive<Type = any> = (
-  elt: DOMElement,
-  binding: Binding<Type>,
-) => void
-export type Component<Props extends Properties = Properties> = (
-  props: Props,
-) => any
-export type RootComponent = () => any
+export interface Directive<Type = any> {
+  (elt: DOMElement, binding: Binding<Type>): void
+}
+export interface Component<Props extends Properties = Properties> {
+  (props: Props): any
+}
+export interface RootComponent {
+  (): any
+}
 export interface App {
-  directives: Directives
-  components: Components
+  directives: DirectiveValueMap
+  components: ComponentPropertyMap
 }
 export const AppInjectionKey: unique symbol
-export function createDirective<Name extends keyof Directives>(
+export function createDirective<Name extends keyof DirectiveValueMap>(
   name: Name,
-  directive: Directive<Directives[Name]>,
+  directive: Directive<DirectiveValueMap[Name]>,
 ): void
 export function createDirective<Type>(
   name: string,
   directive: Directive<Type>,
 ): void
-export function createComponent<Name extends keyof Components>(
+export function createComponent<Name extends keyof ComponentPropertyMap>(
   name: Name,
-  component: Component<Components[Name]>,
+  component: Component<ComponentPropertyMap[Name]>,
 ): void
 export function createComponent<Props extends Properties>(
   name: string,

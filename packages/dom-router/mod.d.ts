@@ -1,10 +1,10 @@
 import type { Getter, Signal } from "jail/signal"
 
 declare global {
-  interface Injections {
+  interface InjectionValueMap {
     [ParamsInjectionKey]?: Params
   }
-  interface Components {
+  interface ComponentPropertyMap {
     Router: RouterProperties
   }
 }

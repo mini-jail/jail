@@ -193,7 +193,7 @@ function createProps(elt, slots) {
  * @param {string} value
  * @returns {string | string[] | undefined}
  */
-function getValueCache(value) {
+function getOrCreateValueCache(value) {
   if (value in ValueCache) {
     return ValueCache[value]
   }
@@ -214,7 +214,7 @@ function getValueCache(value) {
  * @returns {string | (() => string) | any}
  */
 function createValue(value, slots) {
-  const keyOrKeys = getValueCache(value)
+  const keyOrKeys = getOrCreateValueCache(value)
   if (keyOrKeys === undefined) {
     return value
   }

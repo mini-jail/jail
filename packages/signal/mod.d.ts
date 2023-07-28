@@ -1,5 +1,5 @@
 declare global {
-  interface Injections {
+  interface InjectionValueMap {
     [ErrorInjectionKey]?: ((error: any) => void)[]
     [key: string | symbol]: any
   }
@@ -20,7 +20,7 @@ export type Source<Type = any> = {
 }
 export type Node<Type = any> = {
   value: Type | undefined | null
-  injections: Injections | null
+  injections: InjectionValueMap | null
   parentNode: Node | null
   childNodes: Node[] | null
   cleanups: Cleanup[] | null
@@ -65,18 +65,18 @@ export function createSignal<Type>(initialValue: Type): Signal<Type>
 export function catchError<Type>(callback: (error: Type) => void): void
 export function onCleanup(cleanup: Cleanup): void
 export function untrack<Type>(getter: Getter<Type>): Type
-export function inject<Key extends keyof Injections>(
+export function inject<Key extends keyof InjectionValueMap>(
   key: Key,
-): Injections[Key] | undefined
-export function inject<Key extends keyof Injections, Default>(
+): InjectionValueMap[Key] | undefined
+export function inject<Key extends keyof InjectionValueMap, Default>(
   key: Key,
-  defaultValue: Default | NonNullable<Injections[Key]>,
-): Default | NonNullable<Injections[Key]>
+  defaultValue: Default | NonNullable<InjectionValueMap[Key]>,
+): Default | NonNullable<InjectionValueMap[Key]>
 export function inject<Type>(key: string | symbol): Type | undefined
 export function inject<Type>(key: string | symbol, defaultValue: Type): Type
-export function provide<Key extends keyof Injections>(
+export function provide<Key extends keyof InjectionValueMap>(
   key: Key,
-  value: NonNullable<Injections[Key]>,
+  value: NonNullable<InjectionValueMap[Key]>,
 ): void
 export function provide<Type>(key: string | symbol, value: Type): void
 export function createCallback<Callback extends (...args: any[]) => any>(

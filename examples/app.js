@@ -363,7 +363,7 @@ function createProps(elt, slots) {
     }
     return props;
 }
-function getValueCache(value) {
+function getOrCreateValueCache(value) {
     if (value in ValueCache) {
         return ValueCache[value];
     }
@@ -380,7 +380,7 @@ function getValueCache(value) {
     return ValueCache[value] = matches.map((match)=>match[1]);
 }
 function createValue(value, slots) {
-    const keyOrKeys = getValueCache(value);
+    const keyOrKeys = getOrCreateValueCache(value);
     if (keyOrKeys === undefined) {
         return value;
     }
