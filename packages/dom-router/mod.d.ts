@@ -2,7 +2,7 @@ import type { Getter, Signal } from "jail/signal"
 
 declare global {
   interface InjectionValueMap {
-    [ParamsInjectionKey]?: Params
+    [PARAMS_INJECTION_KEY]?: Params
   }
   interface ComponentPropertyMap {
     Router: RouterProperties
@@ -26,7 +26,7 @@ export type RouterProperties<Type = any> = {
   fallback?: RouteHandler<Type>
   routeMap: RouteMap<Type>
 }
-export const ParamsInjectionKey: unique symbol
+export const PARAMS_INJECTION_KEY: unique symbol
 export const path: Signal<string>
 export function getParams(): Params | undefined
 export function Router<Type>(

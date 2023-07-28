@@ -2,7 +2,7 @@ import type { Cleanup } from "jail/signal"
 
 declare global {
   interface InjectionValueMap {
-    [AppInjectionKey]?: App
+    [APP_INJECTION_KEY]?: App
   }
   interface DirectiveValueMap {
     on: DOMListener<DOMElement>
@@ -76,7 +76,7 @@ export interface App {
   directives: DirectiveValueMap
   components: ComponentPropertyMap
 }
-export const AppInjectionKey: unique symbol
+export const APP_INJECTION_KEY: unique symbol
 export function createDirective<Name extends keyof DirectiveValueMap>(
   name: Name,
   directive: Directive<DirectiveValueMap[Name]>,

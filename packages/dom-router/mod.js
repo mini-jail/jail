@@ -11,7 +11,7 @@ import {
 } from "jail/signal"
 import { createComponent } from "jail/dom"
 
-export const ParamsInjectionKey = Symbol()
+export const PARAMS_INJECTION_KEY = Symbol()
 export const path = createSignal("")
 
 const routeTypeHandlerMap = {
@@ -64,7 +64,7 @@ const routeTypeHandlerMap = {
 }
 
 export function getParams() {
-  return inject(ParamsInjectionKey)
+  return inject(PARAMS_INJECTION_KEY)
 }
 
 /**
@@ -101,7 +101,7 @@ function createRouter(routeMap, options) {
     return createRoot(() => {
       for (const route of routeArray) {
         if (route.regexp.test(nextPath)) {
-          provide(ParamsInjectionKey, route.regexp.exec(nextPath)?.groups)
+          provide(PARAMS_INJECTION_KEY, route.regexp.exec(nextPath)?.groups)
           return route.handler()
         }
       }

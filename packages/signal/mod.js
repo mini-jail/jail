@@ -1,6 +1,6 @@
 /// <reference types="./mod.d.ts" />
 
-export const ErrorInjectionKey = Symbol()
+export const ERROR_INJECTION_KEY = Symbol()
 /**
  * @type {Set<import("jail/signal").Node>}
  */
@@ -233,7 +233,7 @@ export function createSignal(initialValue) {
  * @param {any} error
  */
 function handleError(error) {
-  const errorCallbacks = lookup(activeNode, ErrorInjectionKey)
+  const errorCallbacks = lookup(activeNode, ERROR_INJECTION_KEY)
   if (!errorCallbacks) {
     return reportError(error)
   }
@@ -247,9 +247,9 @@ function handleError(error) {
  */
 export function catchError(callback) {
   if (activeNode.injections === null) {
-    activeNode.injections = { [ErrorInjectionKey]: [callback] }
+    activeNode.injections = { [ERROR_INJECTION_KEY]: [callback] }
   } else {
-    activeNode.injections[ErrorInjectionKey].push(callback)
+    activeNode.injections[ERROR_INJECTION_KEY].push(callback)
   }
 }
 

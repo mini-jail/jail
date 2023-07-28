@@ -1,6 +1,6 @@
 declare global {
   interface InjectionValueMap {
-    [ErrorInjectionKey]?: ((error: any) => void)[]
+    [ERROR_INJECTION_KEY]?: ((error: any) => void)[]
     [key: string | symbol]: any
   }
 }
@@ -28,7 +28,7 @@ export type Node<Type = any> = {
   sources: Source[] | null
   sourceSlots: number[] | null
 }
-export const ErrorInjectionKey: unique symbol
+export const ERROR_INJECTION_KEY: unique symbol
 export function createRoot<Type>(
   callback: (cleanup: Cleanup) => Type,
 ): Type | undefined
