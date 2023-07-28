@@ -36,7 +36,7 @@ const CompRE = /^<((?:[A-Z][a-z]+)+)/,
   SelfClosingTagRE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g
 const TagRE = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g
 const AttrRE =
-  /\s([^"'!?<>=\s/\\]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g
+  /\s([a-z][a-z0-9-_.:]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/gi
 const AttrData = `<$1 ${TYPE}="attr">`
 const SlotData = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`
 const CompData = [`<template ${TYPE}="comp" ${VALUE}="$1"`, "</template>"]

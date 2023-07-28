@@ -18,11 +18,6 @@ export default () => {
   }
   const outputLength = () => compiled().length
   const onInput = (ev) => text(ev.currentTarget.value)
-  const outputCSS = `
-    min-height: 60px;
-    background-color: white;
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
-  `
 
   return template`
     <article style="display: flex; gap: 8px; flex-direction: column;">
@@ -34,7 +29,9 @@ export default () => {
         <label style="flex: 1;">input: (${inputLength} characters)</label>
         <textarea value=${text()} d-on:input=${onInput} />
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
-        <pre style=${outputCSS} d-text=${compiled}></pre>
+        <pre style="min-height: 60px; background-color: white; box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);">
+          ${compiled}
+        </pre>
       </div>
     </article>
   `

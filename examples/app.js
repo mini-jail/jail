@@ -250,7 +250,7 @@ const BindingModRE = /\.(?:[^"'.])+/g, BindingArgRE = /:([^"'<>.]+)/;
 const StartingWSRE = /^[\s]+/gm, ContentRE = /^\r\n|\n|\r(>)\s+(<)$/gm, HasUCRE = /[A-Z]/, QuoteRE = /["']/;
 const CompRE = /^<((?:[A-Z][a-z]+)+)/, ClosingCompRE = /<\/(?:[A-Z][a-z]+)+>/g, SelfClosingTagRE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g;
 const TagRE = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g;
-const AttrRE = /\s([^"'!?<>=\s/\\]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/g;
+const AttrRE = /\s([a-z][a-z0-9-_.:]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/gi;
 const AttrData = `<$1 ${TYPE}="attr">`;
 const SlotData = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`;
 const CompData = [
@@ -795,19 +795,15 @@ const __default = ()=>{
         <sub>(sucker)</sub>
       </h4>
       <div>
-        <p>
-          just look at my examples like <a href="/counter">counter</a>.
-        </p>
+        <p>just look at my examples like <a href="/counter">counter</a>.</p>
         <p>
           i tend to create examples like <a href="/sierpinski">sierpinski</a> 
           because i want to test out the performance of my libraries ^^"
         </p>
         <p>also try out some parameter values for that one!</p>
         <p>> /sierpinski/:target/:size <</p>
-        <p>
-          <a href="/sierpinski/2000/50">sierpinski/2000/50</a> 
-          <a href="/sierpinski/250">sierpinski/250</a>
-        </p>
+        <p><a href="/sierpinski/2000/50">sierpinski/2000/50</a></p>
+        <p><a href="/sierpinski/250">sierpinski/250</a></p>
         <p>btw. this whole page is just an example, lol.</p>
       </div>
     </article>
@@ -1055,11 +1051,6 @@ const __default5 = ()=>{
     };
     const outputLength = ()=>compiled().length;
     const onInput = (ev)=>text(ev.currentTarget.value);
-    const outputCSS = `
-    min-height: 60px;
-    background-color: white;
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
-  `;
     return template`
     <article style="display: flex; gap: 8px; flex-direction: column;">
       <h4>
@@ -1070,7 +1061,9 @@ const __default5 = ()=>{
         <label style="flex: 1;">input: (${inputLength} characters)</label>
         <textarea value=${text()} d-on:input=${onInput} />
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
-        <pre style=${outputCSS} d-text=${compiled}></pre>
+        <pre style="min-height: 60px; background-color: white; box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);">
+          ${compiled}
+        </pre>
       </div>
     </article>
   `;
