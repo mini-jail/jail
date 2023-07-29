@@ -29,10 +29,10 @@ const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
   QUOTE_RE = /["']/,
   COMP_RE = /^<((?:[A-Z][a-z]+)+)/,
   CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g,
-  TAG_RE = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g,
+  TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi,
   SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g,
   ATTR_RE =
-    /\s([a-z][a-z0-9-_.:]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/gi
+    /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi
 const ATTR_DATA = `<$1 ${TYPE}="attr">`,
   SLOT_DATA = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`,
   COMP_DATA = [`<template ${TYPE}="comp" ${VALUE}="$1"`, "</template>"]
