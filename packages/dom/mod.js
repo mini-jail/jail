@@ -26,7 +26,6 @@ const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
   BINDING_ARG_RE = /:([^"'<>.]+)/,
   START_WS_RE = /^[\s]+/gm,
   CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm,
-  HAS_WS_RE = /[A-Z]/,
   QUOTE_RE = /["']/,
   COMP_RE = /^<((?:[A-Z][a-z]+)+)/,
   CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g,
@@ -49,33 +48,33 @@ const ATTR_VALUE_CACHE = {}
  * @type {{ [name: string]: boolean | undefined }}
  */
 const DELEGATED_EVENTS = {}
-const SC_TAGS = [
-  "area",
-  "base",
-  "br",
-  "col",
-  "command",
-  "embed",
-  "hr",
-  "img",
-  "input",
-  "keygen",
-  "link",
-  "meta",
-  "param",
-  "source",
-  "track",
-  "wbr",
-  "circle",
-  "ellipse",
-  "line",
-  "path",
-  "polygon",
-  "polyline",
-  "rect",
-  "stop",
-  "use",
-]
+const SC_TAGS = {
+  "area": true,
+  "base": true,
+  "br": true,
+  "col": true,
+  "command": true,
+  "embed": true,
+  "hr": true,
+  "img": true,
+  "input": true,
+  "keygen": true,
+  "link": true,
+  "meta": true,
+  "param": true,
+  "source": true,
+  "track": true,
+  "wbr": true,
+  "circle": true,
+  "ellipse": true,
+  "line": true,
+  "path": true,
+  "polygon": true,
+  "polyline": true,
+  "rect": true,
+  "stop": true,
+  "use": true,
+}
 
 /**
  * @param {string} name
@@ -270,10 +269,7 @@ export function createTemplateString(strings) {
   templateString = templateString + strings[arg]
   templateString = sub(templateString, START_WS_RE, "")
   templateString = sub(templateString, SC_TAG_RE, (match, tag, attr) => {
-    if (HAS_WS_RE.test(tag) || SC_TAGS.includes(tag)) {
-      return match
-    }
-    return `<${tag}${attr}></${tag}>`
+    return SC_TAGS[tag] ? match : `<${tag}${attr}></${tag}>`
   })
   templateString = sub(templateString, CLOSING_COMP_RE, COMP_DATA[1])
   templateString = sub(templateString, TAG_RE, (match) => {

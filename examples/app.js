@@ -242,7 +242,7 @@ const APP_INJECTION_KEY = Symbol();
 const ON_DEL_DIR_SYM = Symbol(), IF_DIR_SYM = Symbol();
 const TYPE = "__type", VALUE = "__value", QUERY = `[${TYPE}]`;
 const DIR_PREFIX = "d-", DIR_PREFIX_LENGTH = DIR_PREFIX.length;
-const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`), DIR_KEY_RE = /[a-z\-\_]+/, ARG_RE = /#{(\d+)}/g, SINGLE_VALUE_RE = /^@{(\d+)}$/, KEBAB_NAME_RE = /-[a-z]/g, CAMEL_NAME_RE = /([A-Z])/g, MULTI_VALUE_RE = /@{(\d+)}/g, KEY_VALUE_RE = /^([^\s]+)\s(.*)$/, BINDING_MOD_RE = /\.(?:[^"'.])+/g, BINDING_ARG_RE = /:([^"'<>.]+)/, START_WS_RE = /^[\s]+/gm, CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm, HAS_WS_RE = /[A-Z]/, QUOTE_RE = /["']/, COMP_RE = /^<((?:[A-Z][a-z]+)+)/, CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g, TAG_RE = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g, SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g, ATTR_RE = /\s([a-z][a-z0-9-_.:]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/gi;
+const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`), DIR_KEY_RE = /[a-z\-\_]+/, ARG_RE = /#{(\d+)}/g, SINGLE_VALUE_RE = /^@{(\d+)}$/, KEBAB_NAME_RE = /-[a-z]/g, CAMEL_NAME_RE = /([A-Z])/g, MULTI_VALUE_RE = /@{(\d+)}/g, KEY_VALUE_RE = /^([^\s]+)\s(.*)$/, BINDING_MOD_RE = /\.(?:[^"'.])+/g, BINDING_ARG_RE = /:([^"'<>.]+)/, START_WS_RE = /^[\s]+/gm, CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm, QUOTE_RE = /["']/, COMP_RE = /^<((?:[A-Z][a-z]+)+)/, CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g, TAG_RE = /<([a-zA-Z\-]+(?:"[^"]*"|'[^']*'|[^'">])*)>/g, SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g, ATTR_RE = /\s([a-z][a-z0-9-_.:]+)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^"'<>\s]+)))?/gi;
 const ATTR_DATA = `<$1 ${TYPE}="attr">`, SLOT_DATA = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`, COMP_DATA = [
     `<template ${TYPE}="comp" ${VALUE}="$1"`,
     "</template>"
@@ -250,33 +250,33 @@ const ATTR_DATA = `<$1 ${TYPE}="attr">`, SLOT_DATA = `<slot ${TYPE}="slot" ${VAL
 const FRAGMENT_CACHE = new Map();
 const ATTR_VALUE_CACHE = {};
 const DELEGATED_EVENTS = {};
-const SC_TAGS = [
-    "area",
-    "base",
-    "br",
-    "col",
-    "command",
-    "embed",
-    "hr",
-    "img",
-    "input",
-    "keygen",
-    "link",
-    "meta",
-    "param",
-    "source",
-    "track",
-    "wbr",
-    "circle",
-    "ellipse",
-    "line",
-    "path",
-    "polygon",
-    "polyline",
-    "rect",
-    "stop",
-    "use"
-];
+const SC_TAGS = {
+    "area": true,
+    "base": true,
+    "br": true,
+    "col": true,
+    "command": true,
+    "embed": true,
+    "hr": true,
+    "img": true,
+    "input": true,
+    "keygen": true,
+    "link": true,
+    "meta": true,
+    "param": true,
+    "source": true,
+    "track": true,
+    "wbr": true,
+    "circle": true,
+    "ellipse": true,
+    "line": true,
+    "path": true,
+    "polygon": true,
+    "polyline": true,
+    "rect": true,
+    "stop": true,
+    "use": true
+};
 function createDirective(name, directive) {
     const directives = inject(APP_INJECTION_KEY).directives;
     if (name in directives) {
@@ -417,10 +417,7 @@ function createTemplateString(strings) {
     templateString = templateString + strings[arg];
     templateString = sub(templateString, START_WS_RE, "");
     templateString = sub(templateString, SC_TAG_RE, (match, tag, attr)=>{
-        if (HAS_WS_RE.test(tag) || SC_TAGS.includes(tag)) {
-            return match;
-        }
-        return `<${tag}${attr}></${tag}>`;
+        return SC_TAGS[tag] ? match : `<${tag}${attr}></${tag}>`;
     });
     templateString = sub(templateString, CLOSING_COMP_RE, COMP_DATA[1]);
     templateString = sub(templateString, TAG_RE, (match)=>{
