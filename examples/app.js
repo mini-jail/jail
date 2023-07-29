@@ -328,17 +328,17 @@ function template(templateStrings, ...slots) {
     return render(createOrGetFragment(templateStrings), slots);
 }
 const renderMap = {
-    attr (elt, slots) {
+    attr: (elt, slots)=>{
         const props = createProps(elt, slots);
         for(const key in props){
             renderAttr(elt, key, props[key]);
         }
     },
-    slot (elt, slots) {
+    slot: (elt, slots)=>{
         const key = elt.getAttribute(VALUE);
         renderChild(elt, slots[key]);
     },
-    comp (elt, slots) {
+    comp: (elt, slots)=>{
         const name = elt.getAttribute(VALUE);
         const component = inject(APP_INJECTION_KEY).components[name];
         if (component === undefined) {

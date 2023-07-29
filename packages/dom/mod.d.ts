@@ -23,8 +23,12 @@ declare global {
 export interface Object {
   [prop: string | symbol | number]: any
 }
-export type DOMElement = (HTMLElement | SVGElement) & Object
-export type DOMNode = DOMElement | (Node & Object)
+export interface DOMElement extends HTMLElement {
+  [prop: string | symbol | number]: any
+}
+export interface DOMNode extends Node {
+  [prop: string | symbol | number]: any
+}
 export type DOMEventTarget<Target> = Target & EventTarget
 export interface DOMEvent<Target> extends Event {
   target: DOMEventTarget<Target>
@@ -40,15 +44,16 @@ export type SlotPrimitive =
   | null
   | undefined
   | Object
-  | SlotPrimitive[]
+  | Iterable<SlotPrimitive>
   | (() => SlotPrimitive)
-export type SlotNode = DOMNode | DOMNode[] | (() => SlotNode)
+export type SlotNode = DOMNode | Iterable<SlotNode> | (() => SlotNode)
 export type Slot = SlotPrimitive | SlotNode | DOMListener<DOMElement>
 export type RenderResult = DOMNode | DOMNode[] | undefined
+export type Element = SlotNode | SlotPrimitive
 export type RenderTypeMap = {
-  attr(elt: DOMElement, slots: Slot[]): void
-  slot(elt: HTMLSlotElement, slots: Slot[]): void
-  comp(elt: HTMLTemplateElement, slots: Slot[]): void
+  attr: (elt: DOMElement, slots: Slot[]) => void
+  slot: (elt: HTMLSlotElement, slots: Slot[]) => void
+  comp: (elt: HTMLTemplateElement, slots: Slot[]) => void
 }
 export interface Modifiers {
   readonly [key: string]: boolean
