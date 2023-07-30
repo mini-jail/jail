@@ -33,9 +33,9 @@ const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
   SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g,
   ATTR_RE =
     /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi
-const ATTR_DATA = `<$1 ${TYPE}="attr">`,
-  SLOT_DATA = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`,
-  COMP_DATA = [`<template ${TYPE}="comp" ${VALUE}="$1"`, "</template>"]
+const ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`,
+  SLOT_REPLACEMENT = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`,
+  COMP_REPLACEMENTS = [`<template ${TYPE}="comp" ${VALUE}="$1"`, "</template>"]
 /**
  * @type {Map<TemplateStringsArray, DocumentFragment>}
  */
@@ -271,7 +271,7 @@ export function createTemplateString(strings) {
   templateString = sub(templateString, SC_TAG_RE, (match, tag, attr) => {
     return SC_TAGS[tag] ? match : `<${tag}${attr}></${tag}>`
   })
-  templateString = sub(templateString, CLOSING_COMP_RE, COMP_DATA[1])
+  templateString = sub(templateString, CLOSING_COMP_RE, COMP_REPLACEMENTS[1])
   templateString = sub(templateString, TAG_RE, (match) => {
     const isComp = COMP_RE.test(match)
     let id = 0
@@ -286,13 +286,13 @@ export function createTemplateString(strings) {
       return ` data-__${id++}=${quote}${name} ${value}${quote}`
     })
     if (isComp) {
-      match = sub(match, COMP_RE, COMP_DATA[0])
+      match = sub(match, COMP_RE, COMP_REPLACEMENTS[0])
     } else if (id !== 0) {
-      match = sub(match, TAG_RE, ATTR_DATA)
+      match = sub(match, TAG_RE, ATTR_REPLACEMENT)
     }
     return match
   })
-  templateString = sub(templateString, ARG_RE, SLOT_DATA)
+  templateString = sub(templateString, ARG_RE, SLOT_REPLACEMENT)
   templateString = sub(templateString, CONTENT_RE, "$1$2")
   return templateString
 }
@@ -306,8 +306,7 @@ function createOrGetFragment(templateStrings) {
   if (template === undefined) {
     const element = document.createElement("template")
     element.innerHTML = createTemplateString(templateStrings)
-    template = element.content
-    FRAGMENT_CACHE.set(templateStrings, element.content)
+    FRAGMENT_CACHE.set(templateStrings, template = element.content)
   }
   return template.cloneNode(true)
 }

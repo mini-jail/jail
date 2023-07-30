@@ -71,7 +71,7 @@ export interface Properties {
 export interface Directive<Type = any> {
   (elt: DOMElement, binding: Binding<Type>): void
 }
-export interface Component<Props extends Properties = Properties> {
+export interface Component<Props extends Properties> {
   (props: Props): any
 }
 export interface RootComponent {

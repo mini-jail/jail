@@ -243,7 +243,7 @@ const ON_DEL_DIR_SYM = Symbol(), IF_DIR_SYM = Symbol();
 const TYPE = "__type", VALUE = "__value", QUERY = `[${TYPE}]`;
 const DIR_PREFIX = "d-", DIR_PREFIX_LENGTH = DIR_PREFIX.length;
 const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`), DIR_KEY_RE = /[a-z\-\_]+/, ARG_RE = /#{(\d+)}/g, SINGLE_VALUE_RE = /^@{(\d+)}$/, KEBAB_NAME_RE = /-[a-z]/g, CAMEL_NAME_RE = /([A-Z])/g, MULTI_VALUE_RE = /@{(\d+)}/g, KEY_VALUE_RE = /^([^\s]+)\s(.*)$/, BINDING_MOD_RE = /\.(?:[^"'.])+/g, BINDING_ARG_RE = /:([^"'<>.]+)/, START_WS_RE = /^[\s]+/gm, CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm, QUOTE_RE = /["']/, COMP_RE = /^<((?:[A-Z][a-z]+)+)/, CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g, TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi, SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g, ATTR_RE = /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi;
-const ATTR_DATA = `<$1 ${TYPE}="attr">`, SLOT_DATA = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`, COMP_DATA = [
+const ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`, SLOT_REPLACEMENT = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`, COMP_REPLACEMENTS = [
     `<template ${TYPE}="comp" ${VALUE}="$1"`,
     "</template>"
 ];
@@ -419,7 +419,7 @@ function createTemplateString(strings) {
     templateString = sub(templateString, SC_TAG_RE, (match, tag, attr)=>{
         return SC_TAGS[tag] ? match : `<${tag}${attr}></${tag}>`;
     });
-    templateString = sub(templateString, CLOSING_COMP_RE, COMP_DATA[1]);
+    templateString = sub(templateString, CLOSING_COMP_RE, COMP_REPLACEMENTS[1]);
     templateString = sub(templateString, TAG_RE, (match)=>{
         const isComp = COMP_RE.test(match);
         let id = 0;
@@ -434,13 +434,13 @@ function createTemplateString(strings) {
             return ` data-__${id++}=${quote}${name} ${value}${quote}`;
         });
         if (isComp) {
-            match = sub(match, COMP_RE, COMP_DATA[0]);
+            match = sub(match, COMP_RE, COMP_REPLACEMENTS[0]);
         } else if (id !== 0) {
-            match = sub(match, TAG_RE, ATTR_DATA);
+            match = sub(match, TAG_RE, ATTR_REPLACEMENT);
         }
         return match;
     });
-    templateString = sub(templateString, ARG_RE, SLOT_DATA);
+    templateString = sub(templateString, ARG_RE, SLOT_REPLACEMENT);
     templateString = sub(templateString, CONTENT_RE, "$1$2");
     return templateString;
 }
@@ -449,8 +449,7 @@ function createOrGetFragment(templateStrings) {
     if (template === undefined) {
         const element = document.createElement("template");
         element.innerHTML = createTemplateString(templateStrings);
-        template = element.content;
-        FRAGMENT_CACHE.set(templateStrings, element.content);
+        FRAGMENT_CACHE.set(templateStrings, template = element.content);
     }
     return template.cloneNode(true);
 }
