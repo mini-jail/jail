@@ -360,14 +360,13 @@ function render(fragment, slots) {
         elt.removeAttribute(TYPE);
         renderMap[type]?.(elt, slots);
     }
-    const nodeList = fragment.childNodes;
-    if (nodeList.length === 0) {
+    if (fragment.childNodes.length === 0) {
         return;
     }
-    if (nodeList.length === 1) {
-        return nodeList[0];
+    if (fragment.childNodes.length === 1) {
+        return fragment.childNodes[0];
     }
-    return Array.from(nodeList);
+    return Array.from(fragment.childNodes);
 }
 function createProps(elt, slots) {
     const props = {};

@@ -29,12 +29,12 @@ export interface DOMElement extends HTMLElement {
 export interface DOMNode extends Node {
   [prop: string | symbol | number]: any
 }
-export type DOMEventTarget<Target> = Target & EventTarget
-export interface DOMEvent<Target> extends Event {
+export type DOMEventTarget<Target extends DOMElement> = Target & EventTarget
+export interface DOMEvent<Target extends DOMElement> extends Event {
   target: DOMEventTarget<Target>
   currentTarget: DOMEventTarget<Target>
 }
-export interface DOMListener<Target> {
+export interface DOMListener<Target extends DOMElement> {
   (this: DOMElement, event: DOMEvent<Target>): void
 }
 export type SlotPrimitive =

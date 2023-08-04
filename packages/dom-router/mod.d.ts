@@ -45,11 +45,7 @@ export function Router<Type>(
  *   ...
  * }
  * template`
- *   <Router
- *     type="hash"
- *     routeMap=${routeMap}
- *     fallback=${fallbackRoute}>
- *   </Router>
+ *   <Router type="hash" routeMap=${routeMap} fallback=${fallbackRoute} />
  * `
  * ```
  */

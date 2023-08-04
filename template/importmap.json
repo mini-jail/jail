@@ -1,7 +1,0 @@
-{
-  "imports": {
-    "jail/signal": "https://cdn.jsdelivr.net/gh/mini-jail/jail/packages/signal/mod.js",
-    "jail/dom": "https://cdn.jsdelivr.net/gh/mini-jail/jail/packages/dom/mod.js",
-    "jail/dom-router": "https://cdn.jsdelivr.net/gh/mini-jail/jail/packages/dom-router/mod.js"
-  }
-}
