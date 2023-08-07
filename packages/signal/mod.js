@@ -1,5 +1,4 @@
 /// <reference types="./mod.d.ts" />
-
 export const ERROR_INJECTION_KEY = Symbol()
 /**
  * @type {Set<import("jail/signal").Node>}
@@ -200,14 +199,6 @@ function setValue(source, nextValue) {
       }
     })
   }
-}
-
-/**
- * @param {any | import("jail/signal").Getter} data
- * @returns {data is import("jail/signal").Getter}
- */
-export function isReactive(data) {
-  return typeof data === "function"
 }
 
 /**

@@ -47,7 +47,7 @@ export default () => {
 
   return template`
     <article class="todo-app">
-      <h4> ${(ev) => {}}
+      <h4>
         todo
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>

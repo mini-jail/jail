@@ -116,9 +116,6 @@ function setValue(source, nextValue) {
         });
     }
 }
-function isReactive(data) {
-    return typeof data === "function";
-}
 function toValue(data) {
     return typeof data === "function" ? data() : data;
 }
@@ -403,7 +400,7 @@ function createValue(value, slots) {
     if (typeof keyOrKeys === "string") {
         return slots[keyOrKeys];
     }
-    if (keyOrKeys.some((key)=>isReactive(slots[key]))) {
+    if (keyOrKeys.some((key)=>typeof slots[key] === "function")) {
         return ()=>sub(value, MULTI_VALUE_RE, (_, key)=>toValue(slots[key]));
     }
     return sub(value, MULTI_VALUE_RE, (_, key)=>slots[key]);
@@ -457,14 +454,14 @@ function renderChild(elt, value) {
         elt.remove();
     } else if (value instanceof Node) {
         elt.replaceWith(value);
-    } else if (isReactive(value)) {
+    } else if (typeof value === "function") {
         renderDynamicChild(elt, value);
     } else if (Array.isArray(value)) {
         if (value.length === 0) {
             elt.remove();
         } else if (value.length === 1) {
             renderChild(elt, value[0]);
-        } else if (value.some((item)=>isReactive(item))) {
+        } else if (value.some((item)=>typeof item === "function")) {
             renderDynamicChild(elt, value);
         } else {
             elt.replaceWith(...createNodeArray([], ...value));
@@ -490,9 +487,9 @@ function renderAttr(elt, prop, data) {
             const binding = createBinding(prop, data);
             createEffect(()=>directive(elt, binding));
         }
-    } else if (isReactive(data)) {
+    } else if (typeof data === "function") {
         createEffect((currentValue)=>{
-            const nextValue = toValue(data);
+            const nextValue = data();
             if (nextValue !== currentValue) {
                 setProperty(elt, prop, nextValue);
             }
@@ -528,7 +525,7 @@ function createNodeArray(nodeArray, ...elements) {
             nodeArray.push(elt);
         } else if (typeof elt === "string" || typeof elt === "number") {
             nodeArray.push(new Text(elt + ""));
-        } else if (isReactive(elt)) {
+        } else if (typeof elt === "function") {
             createNodeArray(nodeArray, toValue(elt));
         } else if (Symbol.iterator in elt) {
             createNodeArray(nodeArray, ...elt);

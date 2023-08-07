@@ -56,9 +56,6 @@ export function createComputed<Type>(
   callback: Callback<Type>,
   initialValue: Type,
 ): Getter<Type>
-export function isReactive<Type>(
-  data: Type | Getter<Type>,
-): data is Getter<Type>
 export function toValue<Type>(data: Type | Getter<Type>): Type
 export function createSignal<Type>(): Signal<Type | undefined>
 export function createSignal<Type>(initialValue: Type): Signal<Type>
