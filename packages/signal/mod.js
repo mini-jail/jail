@@ -365,7 +365,7 @@ function cleanNode(node, complete) {
  * @returns {any | undefined}
  */
 export function inject(key, defaultValue) {
-  return lookup(activeNode, key) || defaultValue
+  return lookup(activeNode, key) ?? defaultValue
 }
 
 /**

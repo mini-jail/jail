@@ -224,7 +224,7 @@ function cleanNode(node, complete) {
     }
 }
 function inject(key, defaultValue) {
-    return lookup(activeNode, key) || defaultValue;
+    return lookup(activeNode, key) ?? defaultValue;
 }
 function provide(key, value) {
     if (activeNode.injections === null) {
