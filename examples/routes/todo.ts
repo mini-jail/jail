@@ -1,5 +1,5 @@
 import { createSignal } from "jail/signal"
-import { template } from "jail/dom"
+import { type DOMEvent, template } from "jail/dom"
 
 type ToDoItem = {
   id: number
@@ -33,25 +33,21 @@ const Item = (props: ToDoItem) => {
 
 export default () => {
   const textValue = createSignal("")
-
-  const addItem = (ev: KeyboardEvent) => {
-    if (ev.key === "Enter") {
-      list(list().concat({ id: Date.now(), done: false, text: textValue() }))
-      textValue("")
+  const addItem = (ev: DOMEvent) => {
+    if (ev.key !== "Enter") {
       return
     }
+    list(list().concat({ id: Date.now(), done: false, text: textValue() }))
+    textValue("")
   }
-
-  function onInput(this: HTMLInputElement) {
-    textValue(this.value)
-  }
+  const onInput = (ev: DOMEvent<HTMLInputElement>) => textValue(ev.target.value)
   const length = () => list().length
   const done = () => list().filter((item) => item.done).length
   const ToDoItems = () => list().map((item) => Item(item))
 
   return template`
     <article class="todo-app">
-      <h4>
+      <h4> ${(ev) => {}}
         todo
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>
