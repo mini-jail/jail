@@ -30,7 +30,20 @@ export interface DOMNode extends Node {
   [prop: string | symbol | number]: any
 }
 export type DOMEventTarget<Target extends DOMElement> = Target & EventTarget
-export interface DOMEvent<Target extends DOMElement> extends Event {
+export interface DOMEvent<Target extends DOMElement = DOMElement>
+  extends
+    Event,
+    UIEvent,
+    InputEvent,
+    KeyboardEvent,
+    FocusEvent,
+    MouseEvent,
+    ClipboardEvent,
+    DragEvent,
+    FormDataEvent,
+    SubmitEvent,
+    TouchEvent,
+    WheelEvent {
   target: DOMEventTarget<Target>
   currentTarget: DOMEventTarget<Target>
 }

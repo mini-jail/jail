@@ -985,19 +985,17 @@ const Item = (props)=>{
 const __default4 = ()=>{
     const textValue = createSignal("");
     const addItem = (ev)=>{
-        if (ev.key === "Enter") {
-            list(list().concat({
-                id: Date.now(),
-                done: false,
-                text: textValue()
-            }));
-            textValue("");
+        if (ev.key !== "Enter") {
             return;
         }
+        list(list().concat({
+            id: Date.now(),
+            done: false,
+            text: textValue()
+        }));
+        textValue("");
     };
-    function onInput() {
-        textValue(this.value);
-    }
+    const onInput = (ev)=>textValue(ev.target.value);
     const length = ()=>list().length;
     const done = ()=>list().filter((item)=>item.done).length;
     const ToDoItems = ()=>list().map((item)=>Item(item));
