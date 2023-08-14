@@ -587,13 +587,12 @@ function ifDirective(elt, binding) {
  * @param {import("jail/dom").Binding<import("jail/dom").DOMListener>} binding
  */
 function onDirective(elt, binding) {
-  const name = binding.arg
-  const modifiers = binding.modifiers
-  let id = name, listener = binding.rawValue, eventOptions
+  let { arg: name, modifiers, rawValue: listener } = binding
+  let id = name, eventOptions
   if (modifiers) {
-    const { once, capture, passive } = modifiers
+    const { once, capture, passive, prevent, stop, delegate } = modifiers
     eventOptions = { once, capture, passive }
-    if (modifiers.prevent) {
+    if (prevent) {
       id = id + "_prevent"
       const listenerCopy = listener
       listener = function (event) {
@@ -601,7 +600,7 @@ function onDirective(elt, binding) {
         listenerCopy.call(elt, event)
       }
     }
-    if (modifiers.stop) {
+    if (stop) {
       id = id + "_stop"
       const listenerCopy = listener
       listener = function (event) {
@@ -618,18 +617,18 @@ function onDirective(elt, binding) {
     if (passive) {
       id = id + "_passive"
     }
-  }
-  if (modifiers?.delegate) {
-    elt[ON_DEL_DIR_SYM] = elt[ON_DEL_DIR_SYM] || {}
-    elt[ON_DEL_DIR_SYM][name] = elt[ON_DEL_DIR_SYM][name] || []
-    elt[ON_DEL_DIR_SYM][name].push(listener)
-    if (DELEGATED_EVENTS[id] === undefined) {
-      addEventListener(name, delegatedEventListener, eventOptions)
-      DELEGATED_EVENTS[id] = true
+    if (delegate) {
+      elt[ON_DEL_DIR_SYM] = elt[ON_DEL_DIR_SYM] || {}
+      elt[ON_DEL_DIR_SYM][name] = elt[ON_DEL_DIR_SYM][name] || []
+      elt[ON_DEL_DIR_SYM][name].push(listener)
+      if (DELEGATED_EVENTS[id] === undefined) {
+        addEventListener(name, delegatedEventListener, eventOptions)
+        DELEGATED_EVENTS[id] = true
+      }
+      return
     }
-  } else {
-    elt.addEventListener(name, listener, eventOptions)
   }
+  elt.addEventListener(name, listener, eventOptions)
 }
 
 /**
