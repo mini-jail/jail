@@ -47,7 +47,7 @@ const ATTR_VALUE_CACHE = {}
  * @type {{ [name: string]: boolean | undefined }}
  */
 const DELEGATED_EVENTS = {}
-const SC_TAGS = {
+const VOID_ELEMENTS = {
   "area": true,
   "base": true,
   "br": true,
@@ -267,7 +267,7 @@ export function createTemplateString(strings) {
   templateString = templateString + strings[arg]
   templateString = sub(templateString, START_WS_RE, "")
   templateString = sub(templateString, SC_TAG_RE, (match, tag, attr) => {
-    return SC_TAGS[tag] ? match : `<${tag}${attr}></${tag}>`
+    return VOID_ELEMENTS[tag] ? match : `<${tag}${attr}></${tag}>`
   })
   templateString = sub(templateString, CLOSING_COMP_RE, COMP_REPLACEMENTS[1])
   templateString = sub(templateString, TAG_RE, (match) => {
