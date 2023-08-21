@@ -687,12 +687,12 @@ const path = createSignal("");
 const routeTypeHandlerMap = {
     hash () {
         const hash = ()=>location.hash.slice(1) || "/";
-        const listener = ()=>path(hash());
+        const hashChangeListener = ()=>path(hash());
         onMount(()=>{
             path(hash());
-            addEventListener("hashchange", listener);
+            addEventListener("hashchange", hashChangeListener);
         });
-        onCleanup(()=>removeEventListener("hashchange", listener));
+        onCleanup(()=>removeEventListener("hashchange", hashChangeListener));
     },
     pathname () {
         const url = new URL(location.toString());
