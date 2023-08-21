@@ -754,14 +754,13 @@ function createRouter(routeMap, options) {
         });
     });
 }
-function Router(props) {
-    const router = createRouter(props.routeMap, {
-        fallback: props.fallback
-    });
-    routeTypeHandlerMap[props.type]();
+function Router({ routeMap , type , fallback , children  }) {
+    routeTypeHandlerMap[type]();
     return [
-        props.children,
-        router
+        children,
+        createRouter(routeMap, {
+            fallback
+        })
     ];
 }
 function install() {

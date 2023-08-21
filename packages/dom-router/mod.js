@@ -114,12 +114,9 @@ function createRouter(routeMap, options) {
  * @param {import("jail/dom-router").RouterProperties} props
  * @returns {[any, import("jail/signal").Getter]}
  */
-export function Router(props) {
-  const router = createRouter(props.routeMap, {
-    fallback: props.fallback,
-  })
-  routeTypeHandlerMap[props.type]()
-  return [props.children, router]
+export function Router({ routeMap, type, fallback, children }) {
+  routeTypeHandlerMap[type]()
+  return [children, createRouter(routeMap, { fallback })]
 }
 
 export function install() {
