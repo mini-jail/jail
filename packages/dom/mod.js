@@ -6,7 +6,6 @@ import {
   onCleanup,
   onUnmount,
   provide,
-  toValue,
 } from "jail/signal"
 
 export const APP_INJECTION_KEY = Symbol()
@@ -73,6 +72,14 @@ const VOID_ELEMENTS = {
   "rect": true,
   "stop": true,
   "use": true,
+}
+
+/**
+ * @param {any | import("jail/signal").Getter} data
+ * @returns {any}
+ */
+function toValue(data) {
+  return typeof data === "function" ? data() : data
 }
 
 /**

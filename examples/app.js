@@ -116,9 +116,6 @@ function setValue(source, nextValue) {
         });
     }
 }
-function toValue(data) {
-    return typeof data === "function" ? data() : data;
-}
 function createSignal(initialValue) {
     const source = createSource(initialValue);
     return function Signal(value) {
@@ -274,6 +271,9 @@ const VOID_ELEMENTS = {
     "stop": true,
     "use": true
 };
+function toValue(data) {
+    return typeof data === "function" ? data() : data;
+}
 function createDirective(name, directive) {
     const directives = inject(APP_INJECTION_KEY).directives;
     if (name in directives) {

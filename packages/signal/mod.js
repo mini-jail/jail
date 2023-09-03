@@ -202,14 +202,6 @@ function setValue(source, nextValue) {
 }
 
 /**
- * @param {any | import("jail/signal").Getter} data
- * @returns {any}
- */
-export function toValue(data) {
-  return typeof data === "function" ? data() : data
-}
-
-/**
  * @param {any} [initialValue]
  * @returns {import("jail/signal").Signal}
  */
