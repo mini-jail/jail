@@ -35,7 +35,7 @@ const Dot = (x: number, y: number, target: number) => {
       d-text=${text} style=${css} d-style:background-color=${bgColor}
       d-on:mouseover.delegate=${() => hover(true)}
       d-on:mouseout.delegate=${() => hover(false)}
-    />
+    ></div>
   `
 }
 

@@ -234,9 +234,10 @@ function provide(key, value) {
 }
 const APP_INJECTION_KEY = Symbol();
 const ON_DEL_DIR_SYM = Symbol(), IF_DIR_SYM = Symbol();
-const TYPE = "__type", VALUE = "__value", QUERY = `[${TYPE}]`;
+const HASH = "_" + Math.random().toString(36).slice(2, 7) + "_";
+const TYPE = HASH + "type", VALUE = HASH + "value", QUERY = `[${TYPE}]`;
 const DIR_PREFIX = "d-", DIR_PREFIX_LENGTH = DIR_PREFIX.length;
-const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`), DIR_KEY_RE = /[a-z\-\_]+/, ARG_RE = /#{(\d+)}/g, SINGLE_VALUE_RE = /^@{(\d+)}$/, KEBAB_NAME_RE = /-[a-z]/g, CAMEL_NAME_RE = /([A-Z])/g, MULTI_VALUE_RE = /@{(\d+)}/g, KEY_VALUE_RE = /^([^\s]+)\s(.*)$/, BINDING_MOD_RE = /\.(?:[^"'.])+/g, BINDING_ARG_RE = /:([^"'<>.]+)/, START_WS_RE = /^[\s]+/gm, CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm, QUOTE_RE = /["']/, COMP_RE = /^<((?:[A-Z][a-z]+)+)/, CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g, TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi, SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g, ATTR_RE = /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi;
+const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`), DIR_KEY_RE = /[a-z\-\_]+/, ARG_RE = /#{(\d+)}/g, SINGLE_VALUE_RE = /^@{(\d+)}$/, MULTI_VALUE_RE = /@{(\d+)}/g, KEBAB_RE = /-[a-z]/g, CAMEL_RE = /([A-Z])/g, KEY_VALUE_RE = /^([^\s]+)\s(.*)$/, BINDING_MOD_RE = /\.(?:[^"'.])+/g, BINDING_ARG_RE = /:([^"'<>.]+)/, START_WS_RE = /^[\s]+/gm, CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm, QUOTE_RE = /["']/, COMP_RE = /^<((?:[A-Z][a-z]+)+)/, CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g, TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi, SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g, ATTR_RE = /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi;
 const ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`, SLOT_REPLACEMENT = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`, COMP_REPLACEMENTS = [
     `<template ${TYPE}="comp" ${VALUE}="$1"`,
     "</template>"
@@ -244,33 +245,6 @@ const ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`, SLOT_REPLACEMENT = `<slot ${TYPE
 const FRAGMENT_CACHE = new Map();
 const ATTR_VALUE_CACHE = {};
 const DELEGATED_EVENTS = {};
-const VOID_ELEMENTS = {
-    "area": true,
-    "base": true,
-    "br": true,
-    "col": true,
-    "command": true,
-    "embed": true,
-    "hr": true,
-    "img": true,
-    "input": true,
-    "keygen": true,
-    "link": true,
-    "meta": true,
-    "param": true,
-    "source": true,
-    "track": true,
-    "wbr": true,
-    "circle": true,
-    "ellipse": true,
-    "line": true,
-    "path": true,
-    "polygon": true,
-    "polyline": true,
-    "rect": true,
-    "stop": true,
-    "use": true
-};
 function toValue(data) {
     return typeof data === "function" ? data() : data;
 }
@@ -368,7 +342,7 @@ function render(fragment, slots) {
 function createProps(elt, slots) {
     const props = {};
     for(const key in elt.dataset){
-        if (key.startsWith("__")) {
+        if (key.startsWith(HASH)) {
             const match = elt.dataset[key].match(KEY_VALUE_RE);
             props[match[1]] = createValue(match[2], slots);
             delete elt.dataset[key];
@@ -413,7 +387,7 @@ function createTemplateString(strings) {
     templateString = templateString + strings[arg];
     templateString = sub(templateString, START_WS_RE, "");
     templateString = sub(templateString, SC_TAG_RE, (match, tag, attr)=>{
-        return VOID_ELEMENTS[tag] ? match : `<${tag}${attr}></${tag}>`;
+        return CAMEL_RE.test(tag) ? `<${tag}${attr}></${tag}>` : match;
     });
     templateString = sub(templateString, CLOSING_COMP_RE, COMP_REPLACEMENTS[1]);
     templateString = sub(templateString, TAG_RE, (match)=>{
@@ -427,7 +401,7 @@ function createTemplateString(strings) {
             }
             const quote = match.match(QUOTE_RE)?.[0] || `"`;
             const value = sub(val1 ?? val2 ?? val3 ?? "", ARG_RE, "@{$1}");
-            return ` data-__${id++}=${quote}${name} ${value}${quote}`;
+            return ` data-${HASH}${id++}=${quote}${name} ${value}${quote}`;
         });
         if (isComp) {
             match = sub(match, COMP_RE, COMP_REPLACEMENTS[0]);
@@ -569,10 +543,10 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
     }
 }
 function toCamelCase(data) {
-    return sub(data, KEBAB_NAME_RE, (match)=>match.slice(1).toUpperCase());
+    return sub(data, KEBAB_RE, (match)=>match.slice(1).toUpperCase());
 }
 function toKebabCase(data) {
-    return sub(data, CAMEL_NAME_RE, "-$1").toLowerCase();
+    return sub(data, CAMEL_RE, "-$1").toLowerCase();
 }
 function setProperty(elt, prop, value) {
     if (prop in elt) {
@@ -868,7 +842,7 @@ const Dot = (x, y, target)=>{
       d-text=${text} style=${css} d-style:background-color=${bgColor}
       d-on:mouseover.delegate=${()=>hover(true)}
       d-on:mouseout.delegate=${()=>hover(false)}
-    />
+    ></div>
   `;
 };
 const Triangle = (x, y, target, size)=>{
@@ -1036,7 +1010,7 @@ const __default5 = ()=>{
       </h4>
       <div style="display: flex; gap: 16px; flex-direction: column;">
         <label style="flex: 1;">input: (${inputLength} characters)</label>
-        <textarea value=${text()} d-on:input=${onInput} />
+        <textarea value=${text()} d-on:input=${onInput}></textarea>
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
         <pre style="min-height: 60px; background-color: white; box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);">
           ${compiled}

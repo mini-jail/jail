@@ -27,7 +27,7 @@ export default () => {
       </h4>
       <div style="display: flex; gap: 16px; flex-direction: column;">
         <label style="flex: 1;">input: (${inputLength} characters)</label>
-        <textarea value=${text()} d-on:input=${onInput} />
+        <textarea value=${text()} d-on:input=${onInput}></textarea>
         <label style="flex: 1;">output: (compiled in ${time} ${timeMs}, ${outputLength} characters)</label> 
         <pre style="min-height: 60px; background-color: white; box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);">
           ${compiled}
