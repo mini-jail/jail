@@ -1068,7 +1068,7 @@ const App = ()=>{
     return template`
     <header>
       <h3>jail${path}</h3>
-      <nav d-if="false">
+      <nav>
         <a href="/">home</a>
         <a href="/counter">counter</a>
         <a href="/sierpinski">sierpinski</a>
