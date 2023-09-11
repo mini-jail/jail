@@ -559,8 +559,10 @@ function showDirective(elt, binding) {
  */
 function ifDirective(elt, binding) {
   elt[IF_DIR_SYM] = elt[IF_DIR_SYM] ?? new Text()
-  const value = binding.value, target = value ? elt[IF_DIR_SYM] : elt
-  target.replaceWith(value ? elt : elt[IF_DIR_SYM])
+  const value = binding.value,
+    isTrue = value === true || value === "true",
+    target = isTrue ? elt[IF_DIR_SYM] : elt
+  target.replaceWith(isTrue ? elt : elt[IF_DIR_SYM])
 }
 
 /**

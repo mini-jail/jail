@@ -602,8 +602,8 @@ function showDirective(elt, binding) {
 }
 function ifDirective(elt, binding) {
     elt[IF_DIR_SYM] = elt[IF_DIR_SYM] ?? new Text();
-    const value = binding.value, target = value ? elt[IF_DIR_SYM] : elt;
-    target.replaceWith(value ? elt : elt[IF_DIR_SYM]);
+    const value = binding.value, isTrue = value === true || value === "true", target = isTrue ? elt[IF_DIR_SYM] : elt;
+    target.replaceWith(isTrue ? elt : elt[IF_DIR_SYM]);
 }
 function onDirective(elt, binding) {
     let { arg: name , modifiers , rawValue: listener  } = binding;
@@ -1068,7 +1068,7 @@ const App = ()=>{
     return template`
     <header>
       <h3>jail${path}</h3>
-      <nav>
+      <nav d-if="false">
         <a href="/">home</a>
         <a href="/counter">counter</a>
         <a href="/sierpinski">sierpinski</a>
