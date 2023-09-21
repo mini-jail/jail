@@ -110,20 +110,17 @@ export function on(dependency, callback) {
 /**
  * @param {import("jail/signal").Callback<any>} callback
  * @param {any} [initialValue]
- * @returns {void}
+ * @returns {import("jail/signal").Cleanup}
  */
 export function createEffect(callback, initialValue) {
-  if (activeNode !== null) {
-    const localNode = createNode(initialValue)
-    localNode.onupdate = callback
-    if (isRunning) {
-      NodeQueue.add(localNode)
-    } else {
-      queueMicrotask(() => updateNode(localNode, false))
-    }
+  const effectNode = createNode(initialValue)
+  effectNode.onupdate = callback
+  if (isRunning) {
+    NodeQueue.add(effectNode)
   } else {
-    queueMicrotask(() => callback(initialValue))
+    queueMicrotask(() => updateNode(effectNode, false))
   }
+  return () => cleanNode(effectNode, true)
 }
 
 /**

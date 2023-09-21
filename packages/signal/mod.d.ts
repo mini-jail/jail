@@ -43,12 +43,14 @@ export function on<Type>(
   dependency: () => any,
   callback: Callback<Type>,
 ): Callback<Type>
-export function createEffect(callback: () => void): void
-export function createEffect<Type>(callback: Callback<Type | undefined>): void
+export function createEffect(callback: () => void): Cleanup
+export function createEffect<Type>(
+  callback: Callback<Type | undefined>,
+): Cleanup
 export function createEffect<Type>(
   callback: Callback<Type>,
   initialValue: Type,
-): void
+): Cleanup
 export function createComputed<Type>(
   callback: Callback<Type | undefined>,
 ): Getter<Type | undefined>
