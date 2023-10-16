@@ -7,7 +7,9 @@ export async function createBundle(
   sourceFile: string,
   options?: BundleOptions,
 ): Promise<string> {
+  const timeStart = performance.now()
   const { code } = await bundle(sourceFile, options)
-  console.info(`building "${sourceFile}" done.`)
+  const duration = performance.now() - timeStart
+  console.info(`building "${sourceFile}" done. (${duration}ms)`)
   return code
 }

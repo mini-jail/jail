@@ -9,8 +9,8 @@ import { createBundle } from "./create_bundle.ts"
 const {
   port = "8000",
   dev = "false",
-  index = "./examples/index.html",
-  src = "./examples/src/app.ts",
+  index = "/examples/index.html",
+  src = "/examples/src/app.ts",
   appRoute = "/examples/app.js",
   importMap = "./import_map.json",
 } = getParams()

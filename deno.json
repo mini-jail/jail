@@ -16,6 +16,6 @@
     "checkJs": false
   },
   "tasks": {
-    "dev": "deno run -A deploy.ts --src=./examples/src/app.ts --appRoute=/examples/app.js --dev=true"
+    "dev": "deno run -A deploy.ts --src=./examples/src/app.ts --appRoute=/examples/app.bundle.js --dev=true"
   }
 }
