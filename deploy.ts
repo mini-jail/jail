@@ -1,4 +1,8 @@
-import { Application, Router } from "https://deno.land/x/oak@v10.2.0/mod.ts"
+import {
+  Application,
+  Router,
+  type RouterMiddleware,
+} from "https://deno.land/x/oak@v10.2.0/mod.ts"
 import { getParams } from "https://raw.githubusercontent.com/mini-jail/deno_params/main/mod.ts"
 import { createBundle } from "./create_bundle.ts"
 
@@ -14,14 +18,12 @@ const {
 const app = new Application()
 const router = new Router()
 const initialBuild = await createBundle(src, { importMap })
-
-if (dev === "false") {
-  router.get(appRoute, (ctx) => {
+const frontEndApp: RouterMiddleware<string> = dev === "false"
+  ? (ctx) => {
     ctx.response.type = "js"
     ctx.response.body = initialBuild
-  })
-} else {
-  router.get(appRoute, async (ctx) => {
+  }
+  : async (ctx) => {
     ctx.response.type = "js"
     ctx.response.body = await createBundle(src, {
       importMap,
@@ -30,9 +32,9 @@ if (dev === "false") {
         inlineSourceMap: true,
       },
     })
-  })
-}
+  }
 
+router.get(appRoute, frontEndApp)
 app.use(router.routes())
 app.use(router.allowedMethods())
 app.use(async (ctx, next) => {
