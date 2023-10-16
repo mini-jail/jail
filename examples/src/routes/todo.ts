@@ -1,5 +1,6 @@
 import { createSignal } from "jail/signal"
 import { type DOMEvent, template } from "jail/dom"
+import { createComputed } from "jail/signal"
 
 type ToDoItem = {
   id: number
@@ -33,17 +34,16 @@ const Item = (props: ToDoItem) => {
 
 export default function Component() {
   const textValue = createSignal("")
-  const addItem = (ev: DOMEvent) => {
-    if (ev.key !== "Enter") {
-      return
-    }
-    list(list().concat({ id: Date.now(), done: false, text: textValue() }))
+  const addItem = () => {
+    list((items) => {
+      items.push({ id: Date.now(), done: false, text: textValue() })
+      return items
+    })
     textValue("")
   }
   const onInput = (ev: DOMEvent<HTMLInputElement>) => textValue(ev.target.value)
-  const length = () => list().length
-  const done = () => list().filter((item) => item.done).length
-  const ToDoItems = () => list().map((item) => Item(item))
+  const length = createComputed(() => list().length)
+  const done = createComputed(() => list().filter((item) => item.done).length)
 
   return template`
     <article class="todo-app">
@@ -52,12 +52,16 @@ export default function Component() {
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>
       <div class="todo-app-container">
-        <input 
-          type="text" placeholder="...milk?"
-          required class="todo_input" value=${textValue}
-          d-on:keyup=${addItem} d-on:input=${onInput}
-        />
-        <div class="todo-items">${ToDoItems}</div>
+        <form d-on:submit.prevent=${addItem}>
+          <input 
+            type="text" placeholder="...milk?"
+            required class="todo_input" value=${textValue}
+            d-on:input=${onInput}
+          />
+        </form>
+        <div class="todo-items">
+          ${() => list().map((item) => Item(item))}
+        </div>
         <label>progress: ${done}/${length}</label>
         <progress max=${length} value=${done}></progress>
       </div>
