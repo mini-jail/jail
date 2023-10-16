@@ -158,7 +158,7 @@ code pre:nth-child(odd) {
 
 .todo-app-container {
   width: 500px;
-  background-color: rgba(255, 255, 255, .5);
+  background-color: rgba(255, 255, 255, 0.5);
   padding: 10px;
   margin: 0 auto;
   display: flex;
@@ -188,7 +188,7 @@ code pre:nth-child(odd) {
   color: indianred;
 }
 
-.todo-app input, 
+.todo-app input,
 .todo-app label,
 .todo-app progress {
   width: 100%;
