@@ -1,5 +1,4 @@
 /// <reference types="./mod.d.ts" />
-
 const ErrorInjectionKey = Symbol()
 /**
  * @type {Set<import("jail/signal").Node>}
@@ -246,9 +245,9 @@ function flush() {
     return
   }
   for (const node of NodeQueue) {
+    NodeQueue.delete(node)
     updateNode(node, false)
   }
-  NodeQueue.clear()
   isRunning = false
 }
 

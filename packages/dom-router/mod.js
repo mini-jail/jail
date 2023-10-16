@@ -1,5 +1,4 @@
 /// <reference types="./mod.d.ts" />
-
 import {
   createComputed,
   createRoot,
