@@ -1,17 +1,18 @@
-import { createEffect, on } from "jail/signal"
+import { catchError, createEffect } from "jail/signal"
 import { createDirective, mount, template } from "jail/dom"
-import { install, path } from "jail/dom-router"
-import Home from "./routes/home.js"
-import Counter from "./routes/counter.js"
-import SimpleCounter from "./routes/simple-counter.js"
+import { installDOMRouter, path } from "jail/dom-router"
+
+import Home from "./routes/home.ts"
+import Counter from "./routes/counter.ts"
+import SimpleCounter from "./routes/simple-counter.ts"
 import Sierpinski from "./routes/sierpinski.ts"
-import About from "./routes/about.js"
+import About from "./routes/about.ts"
 import ToDo from "./routes/todo.ts"
-import Compiler from "./routes/compiler.js"
-import NotFound from "./routes/notfound.js"
+import Compiler from "./routes/compiler.ts"
+import NotFound from "./routes/notfound.ts"
 
 const App = () => {
-  createEffect(() => {
+  const _stopUpdatingTitle = createEffect(() => {
     document.title = `jail${path()}`
   })
 
@@ -27,13 +28,16 @@ const App = () => {
     "/compiler": Compiler,
   }
 
-  const animation = (): AnimateDirective => ({
-    frames: [
-      { opacity: 0, transform: "translateY(-10px)" },
-      { opacity: 1, transform: "unset" },
-    ],
-    options: { duration: 250, delay: 50, fill: "both" },
-  })
+  const pathAnimation = (): AnimateDirective => {
+    path()
+    return {
+      frames: [
+        { opacity: 0, transform: "translateY(-10px)" },
+        { opacity: 1, transform: "unset" },
+      ],
+      options: { duration: 250, delay: 50, fill: "both" },
+    }
+  }
 
   return template`
     <header>
@@ -47,28 +51,23 @@ const App = () => {
         <a href="/compiler">compiler</a>
       </nav>
     </header>
-    <main d-animate=${on(path, animation)}>
+    <main d-animate=${pathAnimation}>
       <Router type="pathname" fallback=${NotFound} routeMap=${routeMap} />
     </main>
   `
 }
 
 mount(document.body, () => {
-  install()
-  createDirective("animate", (elt, binding) => {
+  catchError(console.error)
+  installDOMRouter()
+  createDirective<AnimateDirective>("animate", (elt, binding) => {
     const { frames, options } = binding.value
     elt.animate(frames, options)
   })
   return App()
 })
 
-declare global {
-  interface AnimateDirective {
-    frames: Keyframe[]
-    options?: KeyframeAnimationOptions | number
-  }
-
-  interface DirectiveValueMap {
-    animate: AnimateDirective
-  }
+interface AnimateDirective {
+  frames: Keyframe[]
+  options?: KeyframeAnimationOptions | number
 }

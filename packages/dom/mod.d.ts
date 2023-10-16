@@ -1,24 +1,5 @@
+// deno-lint-ignore-file no-explicit-any
 import type { Cleanup } from "jail/signal"
-
-declare global {
-  interface InjectionValueMap {
-    [APP_INJECTION_KEY]?: App
-  }
-  interface DirectiveValueMap {
-    on: DOMListener<DOMElement>
-    ref: (elt: DOMElement) => void
-    show: boolean
-    if: boolean
-    html: string
-    text: string
-    style: string
-    bind: any
-    [name: string]: any
-  }
-  interface ComponentPropertyMap {
-    [name: string]: Properties
-  }
-}
 
 export interface Object {
   [prop: string | symbol | number]: any
@@ -32,18 +13,18 @@ export interface DOMNode extends Node {
 export type DOMEventTarget<Target extends DOMElement> = Target & EventTarget
 export interface DOMEvent<Target extends DOMElement = DOMElement>
   extends
-    Event,
-    UIEvent,
-    InputEvent,
-    KeyboardEvent,
-    FocusEvent,
-    MouseEvent,
-    ClipboardEvent,
-    DragEvent,
-    FormDataEvent,
-    SubmitEvent,
-    TouchEvent,
-    WheelEvent {
+  Event,
+  UIEvent,
+  InputEvent,
+  KeyboardEvent,
+  FocusEvent,
+  MouseEvent,
+  ClipboardEvent,
+  DragEvent,
+  FormDataEvent,
+  SubmitEvent,
+  TouchEvent,
+  WheelEvent {
   target: DOMEventTarget<Target>
   currentTarget: DOMEventTarget<Target>
 }
@@ -81,6 +62,12 @@ export interface Properties {
   children?: RenderResult | any
   [property: string]: any
 }
+export interface Directives {
+  [name: string]: any
+}
+export interface Components {
+  [name: string]: Component<Properties>
+}
 export interface Directive<Type = any> {
   (elt: DOMElement, binding: Binding<Type>): void
 }
@@ -90,22 +77,13 @@ export interface Component<Props extends Properties> {
 export interface RootComponent {
   (): any
 }
-export interface App {
-  directives: DirectiveValueMap
-  components: ComponentPropertyMap
+export interface Application {
+  directives: Directives
+  components: Components
 }
-export const APP_INJECTION_KEY: unique symbol
-export function createDirective<Name extends keyof DirectiveValueMap>(
-  name: Name,
-  directive: Directive<DirectiveValueMap[Name]>,
-): void
 export function createDirective<Type>(
   name: string,
   directive: Directive<Type>,
-): void
-export function createComponent<Name extends keyof ComponentPropertyMap>(
-  name: Name,
-  component: Component<ComponentPropertyMap[Name]>,
 ): void
 export function createComponent<Props extends Properties>(
   name: string,

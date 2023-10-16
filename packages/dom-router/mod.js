@@ -11,7 +11,7 @@ import {
 } from "jail/signal"
 import { createComponent } from "jail/dom"
 
-export const PARAMS_INJECTION_KEY = Symbol()
+const ParamsInjectionKey = Symbol()
 export const path = createSignal("")
 
 const routeTypeHandlerMap = {
@@ -32,7 +32,7 @@ const routeTypeHandlerMap = {
     const clickListener = (event) => {
       let elt = event.target, pathname
       while (elt != null) {
-        pathname = elt.getAttribute?.("href")
+        pathname = elt?.getAttribute?.("href")
         if (pathname?.startsWith("/")) {
           event.preventDefault()
           if (pathname !== url.pathname) {
@@ -64,7 +64,7 @@ const routeTypeHandlerMap = {
 }
 
 export function getParams() {
-  return inject(PARAMS_INJECTION_KEY)
+  return inject(ParamsInjectionKey)
 }
 
 /**
@@ -101,7 +101,8 @@ function createRouter(routeMap, options) {
     return createRoot(() => {
       for (const route of routeArray) {
         if (route.regexp.test(nextPath)) {
-          provide(PARAMS_INJECTION_KEY, route.regexp.exec(nextPath)?.groups)
+          const params = route.regexp.exec(nextPath)?.groups
+          provide(ParamsInjectionKey, params)
           return route.handler()
         }
       }
@@ -112,13 +113,14 @@ function createRouter(routeMap, options) {
 
 /**
  * @param {import("jail/dom-router").RouterProperties} props
- * @returns {[any, import("jail/signal").Getter]}
+ * @returns {import("jail/signal").Getter}
  */
 export function Router({ routeMap, type, fallback, children }) {
   routeTypeHandlerMap[type]()
-  return [children, createRouter(routeMap, { fallback })]
+  const router = createRouter(routeMap, { fallback })
+  return () => [children, router]
 }
 
-export function install() {
+export function installDOMRouter() {
   createComponent("Router", Router)
 }

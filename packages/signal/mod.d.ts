@@ -1,18 +1,20 @@
-declare global {
-  interface InjectionValueMap {
-    [ERROR_INJECTION_KEY]?: ((error: any) => void)[]
-    [key: string | symbol]: any
-  }
+// deno-lint-ignore-file no-explicit-any
+export type Injectionkey = string | symbol
+export interface Injections {
+  [key: Injectionkey]: any
 }
-
-export type Callback<Type = any> = (currentValue: Type) => Type
+export type UpdateFunction<Type = any> = (currentValue: Type) => Type
 export type Cleanup = () => void
 export type Getter<Type = any> = () => Type
-export type Signal<Type = any> = {
+export interface ReadOnlySignal<Type = any> {
   (): Type
-  (value: Type): void
-  (update: Callback<Type>): void
 }
+export interface WritableSignal<Type = any> {
+  (update: UpdateFunction<Type>): void
+  (value: Type): void
+}
+export interface Signal<Type = any>
+  extends ReadOnlySignal<Type>, WritableSignal<Type> {}
 export type Source<Type = any> = {
   value: Type | undefined
   nodes: Node[] | null
@@ -20,63 +22,39 @@ export type Source<Type = any> = {
 }
 export type Node<Type = any> = {
   value: Type | undefined | null
-  injections: InjectionValueMap | null
+  injections: Injections | null
   parentNode: Node | null
   childNodes: Node[] | null
   cleanups: Cleanup[] | null
-  onupdate: Callback<Type> | null
+  onupdate: UpdateFunction<Type> | null
   sources: Source[] | null
   sourceSlots: number[] | null
 }
-export const ERROR_INJECTION_KEY: unique symbol
 export function createRoot<Type>(
-  callback: (cleanup: Cleanup) => Type,
+  rootFunction: (cleanup: Cleanup) => Type,
 ): Type | undefined
-export function nodeRef(): Node | null
-export function withNode<Type>(
-  node: Node,
-  getter: Getter<Type>,
-): Type | undefined
-export function onMount(callback: () => void): void
-export function onUnmount(cleanup: Cleanup): void
-export function on<Type>(
-  dependency: () => any,
-  callback: Callback<Type>,
-): Callback<Type>
-export function createEffect(callback: () => void): Cleanup
+export function onMount(mountFunction: () => void): void
+export function onUnmount(cleanupFunction: Cleanup): void
+export function createEffect(effectFunction: () => void): Cleanup
 export function createEffect<Type>(
-  callback: Callback<Type | undefined>,
+  effectFunction: UpdateFunction<Type | undefined>,
 ): Cleanup
 export function createEffect<Type>(
-  callback: Callback<Type>,
+  effectFunction: UpdateFunction<Type>,
   initialValue: Type,
 ): Cleanup
 export function createComputed<Type>(
-  callback: Callback<Type | undefined>,
-): Getter<Type | undefined>
+  effectFunction: UpdateFunction<Type | undefined>,
+): ReadOnlySignal<Type | undefined>
 export function createComputed<Type>(
-  callback: Callback<Type>,
+  effectFunction: UpdateFunction<Type>,
   initialValue: Type,
-): Getter<Type>
+): ReadOnlySignal<Type>
 export function createSignal<Type>(): Signal<Type | undefined>
 export function createSignal<Type>(initialValue: Type): Signal<Type>
-export function catchError<Type>(callback: (error: Type) => void): void
-export function onCleanup(cleanup: Cleanup): void
+export function catchError<Type>(errorFunction: (error: Type) => void): void
+export function onCleanup(cleanupFunction: Cleanup): void
 export function untrack<Type>(getter: Getter<Type>): Type
-export function inject<Key extends keyof InjectionValueMap>(
-  key: Key,
-): InjectionValueMap[Key] | undefined
-export function inject<Key extends keyof InjectionValueMap, Default>(
-  key: Key,
-  defaultValue: Default | NonNullable<InjectionValueMap[Key]>,
-): Default | NonNullable<InjectionValueMap[Key]>
-export function inject<Type>(key: string | symbol): Type | undefined
-export function inject<Type>(key: string | symbol, defaultValue: Type): Type
-export function provide<Key extends keyof InjectionValueMap>(
-  key: Key,
-  value: NonNullable<InjectionValueMap[Key]>,
-): void
-export function provide<Type>(key: string | symbol, value: Type): void
-export function createCallback<Callback extends (...args: any[]) => any>(
-  callback: Callback,
-): Callback
+export function inject<Type>(key: Injectionkey): Type | undefined
+export function inject<Type>(key: Injectionkey, defaultValue: Type): Type
+export function provide<Type>(key: Injectionkey, value: Type): void

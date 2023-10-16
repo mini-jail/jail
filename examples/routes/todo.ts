@@ -31,7 +31,7 @@ const Item = (props: ToDoItem) => {
   `
 }
 
-export default () => {
+export default function Component() {
   const textValue = createSignal("")
   const addItem = (ev: DOMEvent) => {
     if (ev.key !== "Enter") {

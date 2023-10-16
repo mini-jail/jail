@@ -51,7 +51,7 @@ const Triangle = (x: number, y: number, target: number, size: number) => {
   ]
 }
 
-export default () => {
+export default function Component() {
   const { target = "750", size = "25" } = getParams() || {}
   let id: number
   const elapsed = createSignal(0)

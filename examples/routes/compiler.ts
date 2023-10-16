@@ -1,7 +1,7 @@
 import { createTemplateString, template } from "jail/dom"
 import { createSignal, untrack } from "jail/signal"
 
-export default () => {
+export default function Component() {
   const text = createSignal(
     `<div data-cool="user is \${state} cool!">\n  you are \${state} cool!\n</div>`,
   )

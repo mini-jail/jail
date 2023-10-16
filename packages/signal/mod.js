@@ -1,5 +1,6 @@
 /// <reference types="./mod.d.ts" />
-export const ERROR_INJECTION_KEY = Symbol()
+
+const ErrorInjectionKey = Symbol()
 /**
  * @type {Set<import("jail/signal").Node>}
  */
@@ -11,18 +12,14 @@ let isRunning = false
 let activeNode = null
 
 /**
- * @param {(cleanup: import("jail/signal").Cleanup) => any} callback
+ * @param {(cleanup: import("jail/signal").Cleanup) => any} rootFunction
  * @returns {any | undefined}
  */
-export function createRoot(callback) {
-  const previousNode = activeNode, localNode = createNode()
+export function createRoot(rootFunction) {
+  const previousNode = activeNode, node = createNode()
   try {
-    activeNode = localNode
-    return batch(() =>
-      callback(
-        callback.length === 0 ? undefined : () => cleanNode(localNode, true),
-      )
-    )
+    activeNode = node
+    return batch(() => rootFunction(() => cleanNode(node, true)))
   } catch (error) {
     handleError(error)
   } finally {
@@ -31,37 +28,11 @@ export function createRoot(callback) {
 }
 
 /**
- * @returns {import("jail/signal").Node | null}
- */
-export function nodeRef() {
-  return activeNode
-}
-
-/**
- * @param {import("jail/signal").Node} node
- * @param {import("jail/signal").Getter} getter
- * @returns {any | undefined}
- */
-export function withNode(node, getter) {
-  const localNode = activeNode
-  activeNode = node
-  let result
-  try {
-    result = getter()
-  } catch (error) {
-    handleError(error)
-  } finally {
-    activeNode = localNode
-  }
-  return result
-}
-
-/**
  * @param {any} [initialValue]
  * @returns {import("jail/signal").Node}
  */
 function createNode(initialValue) {
-  const localNode = {
+  const node = {
     value: initialValue,
     parentNode: activeNode,
     childNodes: null,
@@ -73,64 +44,57 @@ function createNode(initialValue) {
   }
   if (activeNode !== null) {
     if (activeNode.childNodes === null) {
-      activeNode.childNodes = [localNode]
+      activeNode.childNodes = [node]
     } else {
-      activeNode.childNodes.push(localNode)
+      activeNode.childNodes.push(node)
     }
   }
-  return localNode
+  return node
 }
 
 /**
- * @param {() => void} callback
+ * @param {() => void} mountFunction
  */
-export function onMount(callback) {
-  createEffect(() => untrack(callback))
+export function onMount(mountFunction) {
+  throwIfActiveNodeIsNull()
+  createEffect(() => untrack(mountFunction))
 }
 
 /**
- * @param {import("jail/signal").Cleanup} cleanup
+ * @param {import("jail/signal").Cleanup} unmountFunction
  */
-export function onUnmount(cleanup) {
-  onCleanup(() => untrack(cleanup))
+export function onUnmount(unmountFunction) {
+  throwIfActiveNodeIsNull()
+  onCleanup(() => untrack(unmountFunction))
 }
 
 /**
- * @param {() => void} dependency
- * @param {import("jail/signal").Callback} callback
- * @returns {import("jail/signal").Callback}
- */
-export function on(dependency, callback) {
-  return (currentValue) => {
-    dependency()
-    return untrack(() => callback(currentValue))
-  }
-}
-
-/**
- * @param {import("jail/signal").Callback<any>} callback
+ * @param {import("jail/signal").UpdateFunction} effectFunction
  * @param {any} [initialValue]
  * @returns {import("jail/signal").Cleanup}
  */
-export function createEffect(callback, initialValue) {
-  const effectNode = createNode(initialValue)
-  effectNode.onupdate = callback
+export function createEffect(effectFunction, initialValue) {
+  const node = createNode(initialValue)
+  node.onupdate = effectFunction
   if (isRunning) {
-    NodeQueue.add(effectNode)
+    NodeQueue.add(node)
   } else {
-    queueMicrotask(() => updateNode(effectNode, false))
+    queueMicrotask(() => updateNode(node, false))
   }
-  return () => cleanNode(effectNode, true)
+  return () => cleanNode(node, true)
 }
 
 /**
- * @param {import("jail/signal").Callback<any>} callback
+ * @param {import("jail/signal").UpdateFunction} effectFunction
  * @param {any} [initialValue]
  */
-export function createComputed(callback, initialValue) {
+export function createComputed(effectFunction, initialValue) {
   const source = createSource(initialValue)
-  createEffect(() => setValue(source, callback(source.value)))
-  return () => getValue(source)
+  createEffect(() => {
+    const nextValue = effectFunction(source.value)
+    setSourceValue(source, nextValue)
+  })
+  return () => getSourceValue(source)
 }
 
 /**
@@ -139,11 +103,13 @@ export function createComputed(callback, initialValue) {
  * @returns {any | undefined}
  */
 function lookup(node, key) {
-  return node !== null
-    ? node.injections !== null && key in node.injections
-      ? node.injections[key]
-      : lookup(node.parentNode, key)
-    : undefined
+  if (node === null) {
+    return
+  }
+  if (node.injections !== null && key in node.injections) {
+    return node.injections[key]
+  }
+  return lookup(node.parentNode, key)
 }
 
 /**
@@ -158,10 +124,10 @@ function createSource(initialValue) {
  * @param {import("jail/signal").Source} source
  * @returns {any}
  */
-function getValue(source) {
+function getSourceValue(source) {
   if (activeNode !== null && activeNode.onupdate !== null) {
-    const sourceSlot = source.nodes?.length || 0,
-      nodeSlot = activeNode.sources?.length || 0
+    const sourceSlot = source.nodes?.length ?? 0,
+      nodeSlot = activeNode.sources?.length ?? 0
     if (activeNode.sources === null) {
       activeNode.sources = [source]
       activeNode.sourceSlots = [sourceSlot]
@@ -182,9 +148,9 @@ function getValue(source) {
 
 /**
  * @param {import("jail/signal").Source} source
- * @param {any | import("jail/signal").Callback} nextValue
+ * @param {any | import("jail/signal").UpdateFunction} nextValue
  */
-function setValue(source, nextValue) {
+function setSourceValue(source, nextValue) {
   if (typeof nextValue === "function") {
     nextValue = nextValue(source.value)
   }
@@ -205,7 +171,10 @@ function setValue(source, nextValue) {
 export function createSignal(initialValue) {
   const source = createSource(initialValue)
   return function Signal(value) {
-    return arguments.length === 1 ? setValue(source, value) : getValue(source)
+    if (arguments.length === 0) {
+      return getSourceValue(source)
+    }
+    setSourceValue(source, value)
   }
 }
 
@@ -213,34 +182,36 @@ export function createSignal(initialValue) {
  * @param {any} error
  */
 function handleError(error) {
-  const errorCallbacks = lookup(activeNode, ERROR_INJECTION_KEY)
-  if (!errorCallbacks) {
+  const errorFunctions = lookup(activeNode, ErrorInjectionKey)
+  if (!errorFunctions) {
     return reportError(error)
   }
-  for (const callback of errorCallbacks) {
-    callback(error)
+  for (const errorFunction of errorFunctions) {
+    errorFunction(error)
   }
 }
 
 /**
- * @param {(error: any) => void} callback
+ * @param {(error: any) => void} errorFunction
  */
-export function catchError(callback) {
+export function catchError(errorFunction) {
+  throwIfActiveNodeIsNull()
   if (activeNode.injections === null) {
-    activeNode.injections = { [ERROR_INJECTION_KEY]: [callback] }
+    activeNode.injections = { [ErrorInjectionKey]: [errorFunction] }
   } else {
-    activeNode.injections[ERROR_INJECTION_KEY].push(callback)
+    activeNode.injections[ErrorInjectionKey].push(errorFunction)
   }
 }
 
 /**
- * @param {import("jail/signal").Cleanup} cleanup
+ * @param {import("jail/signal").Cleanup} cleanupFunction
  */
-export function onCleanup(cleanup) {
+export function onCleanup(cleanupFunction) {
+  throwIfActiveNodeIsNull()
   if (activeNode.cleanups === null) {
-    activeNode.cleanups = [cleanup]
+    activeNode.cleanups = [cleanupFunction]
   } else {
-    activeNode.cleanups.push(cleanup)
+    activeNode.cleanups.push(cleanupFunction)
   }
 }
 
@@ -249,23 +220,23 @@ export function onCleanup(cleanup) {
  * @returns {any}
  */
 export function untrack(getter) {
-  const localNode = activeNode
+  const previousNode = activeNode
   activeNode = null
   const result = getter()
-  activeNode = localNode
+  activeNode = previousNode
   return result
 }
 
 /**
- * @param {import("jail/signal").Getter} callback
+ * @param {import("jail/signal").Getter} getter
  * @returns {any}
  */
-function batch(callback) {
+function batch(getter) {
   if (isRunning) {
-    return callback()
+    return getter()
   }
   isRunning = true
-  const result = callback()
+  const result = getter()
   queueMicrotask(flush)
   return result
 }
@@ -275,9 +246,9 @@ function flush() {
     return
   }
   for (const node of NodeQueue) {
-    NodeQueue.delete(node)
     updateNode(node, false)
   }
+  NodeQueue.clear()
   isRunning = false
 }
 
@@ -354,6 +325,7 @@ function cleanNode(node, complete) {
  * @returns {any | undefined}
  */
 export function inject(key, defaultValue) {
+  throwIfActiveNodeIsNull()
   return lookup(activeNode, key) ?? defaultValue
 }
 
@@ -362,6 +334,7 @@ export function inject(key, defaultValue) {
  * @param {any} value
  */
 export function provide(key, value) {
+  throwIfActiveNodeIsNull()
   if (activeNode.injections === null) {
     activeNode.injections = { [key]: value }
   } else {
@@ -369,13 +342,8 @@ export function provide(key, value) {
   }
 }
 
-/**
- * @param {((...args: any[]) => any)} callback
- * @returns {((...args: any[]) => any)}
- */
-export function createCallback(callback) {
-  const localNode = activeNode
-  return function Callback(...args) {
-    return withNode(localNode, () => callback(...args))
+function throwIfActiveNodeIsNull() {
+  if (activeNode === null) {
+    throw new Error("activeNode is null.")
   }
 }

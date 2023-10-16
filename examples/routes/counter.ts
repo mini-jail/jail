@@ -17,7 +17,7 @@ function Counter() {
   \`
 }`.trim()
 
-export default () => {
+export default function Component() {
   const counter = createSignal(0)
   const show = createSignal(false)
   const up = () => counter((value) => ++value)

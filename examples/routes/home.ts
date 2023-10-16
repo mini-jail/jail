@@ -1,6 +1,6 @@
 import { template } from "jail/dom"
 
-export default () => {
+export default function Component() {
   return template`
     <article>
       <h4>

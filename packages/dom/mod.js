@@ -3,17 +3,20 @@ import {
   createEffect,
   createRoot,
   inject,
-  onCleanup,
   onUnmount,
   provide,
 } from "jail/signal"
 
-export const APP_INJECTION_KEY = Symbol()
-const ON_DEL_DIR_SYM = Symbol(), IF_DIR_SYM = Symbol()
-const HASH = "_" + Math.random().toString(36).slice(2, 7) + "_"
-const TYPE = HASH + "type", VALUE = HASH + "value", QUERY = `[${TYPE}]`
-const DIR_PREFIX = "d-", DIR_PREFIX_LENGTH = DIR_PREFIX.length
-const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
+const AppInjectionKey = Symbol(),
+  ON_DEL_DIR_SYM = Symbol(),
+  IF_DIR_SYM = Symbol(),
+  HASH = "_" + Math.random().toString(36).slice(2, 7) + "_",
+  TYPE = HASH + "type",
+  VALUE = HASH + "value",
+  QUERY = `[${TYPE}]`,
+  DIR_PREFIX = "d-",
+  DIR_PREFIX_LENGTH = DIR_PREFIX.length,
+  DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
   DIR_KEY_RE = /[a-z\-\_]+/,
   ARG_RE = /#{(\d+)}/g,
   SINGLE_VALUE_RE = /^@{(\d+)}$/,
@@ -31,22 +34,23 @@ const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
   TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi,
   SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g,
   ATTR_RE =
-    /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi
-const ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`,
+    /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi,
+  ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`,
   SLOT_REPLACEMENT = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`,
   COMP_REPLACEMENTS = [`<template ${TYPE}="comp" ${VALUE}="$1"`, "</template>"]
+
 /**
  * @type {Map<TemplateStringsArray, DocumentFragment>}
  */
-const FRAGMENT_CACHE = new Map()
+const FragmentCache = new Map()
 /**
  * @type {{ [value: string]: string | string[] | undefined }}
  */
-const ATTR_VALUE_CACHE = {}
+const AttrValueCache = {}
 /**
  * @type {{ [name: string]: boolean | undefined }}
  */
-const DELEGATED_EVENTS = {}
+const DelegatedEvents = {}
 
 /**
  * @param {any | import("jail/signal").Getter} data
@@ -62,7 +66,7 @@ function toValue(data) {
  * @returns {void}
  */
 export function createDirective(name, directive) {
-  const directives = inject(APP_INJECTION_KEY).directives
+  const directives = inject(AppInjectionKey).directives
   if (name in directives) {
     const directiveCopy = directives[name]
     onUnmount(() => directives[name] = directiveCopy)
@@ -76,7 +80,7 @@ export function createDirective(name, directive) {
  * @returns {void}
  */
 export function createComponent(name, component) {
-  const components = inject(APP_INJECTION_KEY).components
+  const components = inject(AppInjectionKey).components
   if (name in components) {
     const componentCopy = components[name]
     onUnmount(() => components[name] = componentCopy)
@@ -86,12 +90,12 @@ export function createComponent(name, component) {
 
 /**
  * @param {import("jail/dom").DOMElement} rootElement
- * @param {import("jail/dom").RootComp} rootComp
+ * @param {import("jail/dom").RootComponent} rootComponent
  * @returns {import("jail/signal").Cleanup}
  */
-export function mount(rootElement, rootComp) {
+export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
-    provide(APP_INJECTION_KEY, {
+    provide(AppInjectionKey, {
       directives: {
         on: onDirective,
         ref: refDirective,
@@ -104,19 +108,7 @@ export function mount(rootElement, rootComp) {
       },
       components: {},
     })
-    let anchor = rootElement.appendChild(new Text())
-    let currentNodes = null
-    createEffect(() => {
-      const nextNodes = createNodeArray([], rootComp())
-      reconcileNodes(anchor, currentNodes, nextNodes)
-      currentNodes = nextNodes
-    })
-    onCleanup(() => {
-      reconcileNodes(anchor, currentNodes, [])
-      anchor.remove()
-      anchor = null
-      currentNodes = null
-    })
+    renderDynamicChild(rootElement, rootComponent, false)
     return cleanup
   })
 }
@@ -146,7 +138,7 @@ const renderMap = {
   },
   comp: (elt, slots) => {
     const name = elt.getAttribute(VALUE)
-    const component = inject(APP_INJECTION_KEY).components[name]
+    const component = inject(AppInjectionKey).components[name]
     if (component === undefined) {
       elt.remove()
       return
@@ -203,18 +195,18 @@ function createProps(elt, slots) {
  * @returns {string | string[] | undefined}
  */
 function getOrCreateValueCache(value) {
-  if (value in ATTR_VALUE_CACHE) {
-    return ATTR_VALUE_CACHE[value]
+  if (value in AttrValueCache) {
+    return AttrValueCache[value]
   }
   const id = value.match(SINGLE_VALUE_RE)?.[1]
   if (id) {
-    return ATTR_VALUE_CACHE[value] = id
+    return AttrValueCache[value] = id
   }
   const matches = [...value.matchAll(MULTI_VALUE_RE)]
   if (matches.length === 0) {
-    return ATTR_VALUE_CACHE[value] = undefined
+    return AttrValueCache[value] = undefined
   }
-  return ATTR_VALUE_CACHE[value] = matches.map((match) => match[1])
+  return AttrValueCache[value] = matches.map((match) => match[1])
 }
 
 /**
@@ -281,11 +273,11 @@ export function createTemplateString(strings) {
  * @returns {DocumentFragment}
  */
 function createOrGetFragment(templateStrings) {
-  let template = FRAGMENT_CACHE.get(templateStrings)
+  let template = FragmentCache.get(templateStrings)
   if (template === undefined) {
     const element = document.createElement("template")
     element.innerHTML = createTemplateString(templateStrings)
-    FRAGMENT_CACHE.set(templateStrings, template = element.content)
+    FragmentCache.set(templateStrings, template = element.content)
   }
   return template.cloneNode(true)
 }
@@ -300,14 +292,14 @@ function renderChild(elt, value) {
   } else if (value instanceof Node) {
     elt.replaceWith(value)
   } else if (typeof value === "function") {
-    renderDynamicChild(elt, value)
+    renderDynamicChild(elt, value, true)
   } else if (Array.isArray(value)) {
     if (value.length === 0) {
       elt.remove()
     } else if (value.length === 1) {
       renderChild(elt, value[0])
     } else if (value.some((item) => typeof item === "function")) {
-      renderDynamicChild(elt, value)
+      renderDynamicChild(elt, value, true)
     } else {
       elt.replaceWith(...createNodeArray([], ...value))
     }
@@ -319,10 +311,11 @@ function renderChild(elt, value) {
 /**
  * @param {import("jail/dom").DOMElement} elt
  * @param {(() => any) | any[]} childElement
+ * @param {boolean} replace
  */
-function renderDynamicChild(elt, childElement) {
+function renderDynamicChild(elt, childElement, replace) {
   const anchor = new Text()
-  elt.replaceWith(anchor)
+  replace ? elt.replaceWith(anchor) : elt.appendChild(anchor)
   createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], toValue(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
@@ -338,7 +331,7 @@ function renderDynamicChild(elt, childElement) {
 function renderAttr(elt, prop, data) {
   if (prop.startsWith(DIR_PREFIX)) {
     const key = prop.slice(DIR_PREFIX_LENGTH).match(DIR_KEY_RE)[0]
-    const directive = inject(APP_INJECTION_KEY).directives[key]
+    const directive = inject(AppInjectionKey).directives[key]
     if (directive) {
       const binding = createBinding(prop, data)
       createEffect(() => directive(elt, binding))
@@ -415,11 +408,12 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
     }
     return
   }
-  let i = 0, j = 0, c = currentNodes.length, n = nextNodes.length
+  let i = 0, j = 0
+  const cLength = currentNodes.length, nLength = nextNodes.length
   next:
-  for (; i < n; i++) {
+  for (; i < nLength; i++) {
     const currentNode = currentNodes[i]
-    for (; j < c; j++) {
+    for (; j < cLength; j++) {
       if (currentNodes[j] === null) {
         continue
       }
@@ -604,9 +598,9 @@ function onDirective(elt, binding) {
       elt[ON_DEL_DIR_SYM] = elt[ON_DEL_DIR_SYM] || {}
       elt[ON_DEL_DIR_SYM][name] = elt[ON_DEL_DIR_SYM][name] || []
       elt[ON_DEL_DIR_SYM][name].push(listener)
-      if (DELEGATED_EVENTS[id] === undefined) {
+      if (DelegatedEvents[id] === undefined) {
         addEventListener(name, delegatedEventListener, eventOptions)
-        DELEGATED_EVENTS[id] = true
+        DelegatedEvents[id] = true
       }
       return
     }

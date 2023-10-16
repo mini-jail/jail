@@ -1,13 +1,5 @@
+// deno-lint-ignore-file no-explicit-any
 import type { Getter, Signal } from "jail/signal"
-
-declare global {
-  interface InjectionValueMap {
-    [PARAMS_INJECTION_KEY]?: Params
-  }
-  interface ComponentPropertyMap {
-    Router: RouterProperties
-  }
-}
 
 export type RouterType = "pathname" | "hash"
 export type Params = { readonly [param: string]: string }
@@ -23,15 +15,15 @@ export type RouterOptions<Type = any> = {
 }
 export type RouterProperties<Type = any> = {
   type: RouterType
-  fallback?: RouteHandler<Type>
   routeMap: RouteMap<Type>
+  children?: any
+  fallback?: RouteHandler<Type>
 }
-export const PARAMS_INJECTION_KEY: unique symbol
 export const path: Signal<string>
 export function getParams(): Params | undefined
 export function Router<Type>(
   props: RouterProperties<Type>,
-): [any, Getter<Type | undefined>]
+): Getter<[children: any, result: Type]>
 /**
  * Allows usage of the following:
  * @example
@@ -49,4 +41,4 @@ export function Router<Type>(
  * `
  * ```
  */
-export function install(): void
+export function installDOMRouter(): void
