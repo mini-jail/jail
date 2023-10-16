@@ -4,50 +4,17 @@ import {
 } from "https://deno.land/x/emit@0.24.0/mod.ts"
 import { getParams } from "https://raw.githubusercontent.com/mini-jail/deno_params/main/mod.ts"
 
-const {
-  src,
-  target,
-  dev = "false",
-  importMap = "./import_map.json",
-} = getParams()
+const { src, importMap = "./import_map.json" } = getParams()
 
 if (src === undefined) {
   console.info("--src is missing")
   Deno.exit(1)
 }
 
-if (target === undefined) {
-  console.info("--target is missing")
-  Deno.exit(1)
-}
-
 const options: BundleOptions = { importMap }
-const root = src.split("/").at(-2) || "./"
-let built = false
 
-await createBundle(src, target)
-
-if (dev === "true") {
-  for await (const event of Deno.watchFs([root, src])) {
-    if (built) {
-      continue
-    }
-    await createBundle(src, target)
-  }
-}
-
-async function createBundle(
-  sourceFile: string,
-  targetFile: string,
-): Promise<void> {
-  if (built) {
-    return
-  }
-  built = true
-  const startTime = performance.now()
-  const { code } = await bundle(sourceFile, options)
-  await Deno.writeTextFile(targetFile, code)
-  const endTime = performance.now()
-  console.log(`creating "${targetFile}" (${endTime - startTime}ms)`)
-  setTimeout(() => built = false, 500)
+export async function createBundle(): Promise<string> {
+  const { code } = await bundle(src!, options)
+  console.info(`building "${src!}" done.`)
+  return code
 }

@@ -16,8 +16,6 @@
     "checkJs": false
   },
   "tasks": {
-    "deploy": "deno run -A deploy.ts",
-    "create_app": "deno run -A create_app.ts",
-    "dev": "deno task create_app --src=./examples/app.ts --target=./examples/app.js --dev=true"
+    "dev": "deno run -A deploy.ts --src=./examples/src/app.ts --appRoute=/examples/app.js --dev=true"
   }
 }
