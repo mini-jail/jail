@@ -11,7 +11,7 @@ const {
   dev = "false",
   index = "./examples/index.html",
   src = "./examples/src/app.ts",
-  appRoute = "/examples/app.js",
+  appRoute = "/examples/app.bundle.js",
   importMap = "./import_map.json",
 } = getParams()
 
