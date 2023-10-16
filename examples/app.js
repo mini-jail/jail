@@ -239,6 +239,7 @@ function cleanNode(node, complete) {
     }
 }
 function inject(key, defaultValue) {
+    throwIfActiveNodeIsNull();
     return lookup(activeNode, key) ?? defaultValue;
 }
 function provide(key, value) {
@@ -256,13 +257,7 @@ function throwIfActiveNodeIsNull() {
         throw new Error("activeNode is null.");
     }
 }
-const AppInjectionKey = Symbol();
-const ON_DEL_DIR_SYM = Symbol(), IF_DIR_SYM = Symbol();
-const HASH = "_" + Math.random().toString(36).slice(2, 7) + "_";
-const TYPE = HASH + "type", VALUE = HASH + "value", QUERY = `[${TYPE}]`;
-const DIR_PREFIX = "d-", DIR_PREFIX_LENGTH = DIR_PREFIX.length;
-const DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`), DIR_KEY_RE = /[a-z\-\_]+/, ARG_RE = /#{(\d+)}/g, SINGLE_VALUE_RE = /^@{(\d+)}$/, MULTI_VALUE_RE = /@{(\d+)}/g, KEBAB_RE = /-[a-z]/g, CAMEL_RE = /([A-Z])/g, KEY_VALUE_RE = /^([^\s]+)\s(.*)$/, BINDING_MOD_RE = /\.(?:[^"'.])+/g, BINDING_ARG_RE = /:([^"'<>.]+)/, START_WS_RE = /^[\s]+/gm, CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm, QUOTE_RE = /["']/, COMP_RE = /^<((?:[A-Z][a-z]+)+)/, CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g, TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi, SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g, ATTR_RE = /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi;
-const ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`, SLOT_REPLACEMENT = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`, COMP_REPLACEMENTS = [
+const AppInjectionKey = Symbol(), ON_DEL_DIR_SYM = Symbol(), IF_DIR_SYM = Symbol(), HASH = "_" + Math.random().toString(36).slice(2, 7) + "_", TYPE = HASH + "type", VALUE = HASH + "value", QUERY = `[${TYPE}]`, DIR_PREFIX = "d-", DIR_PREFIX_LENGTH = DIR_PREFIX.length, DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`), DIR_KEY_RE = /[a-z\-\_]+/, ARG_RE = /#{(\d+)}/g, SINGLE_VALUE_RE = /^@{(\d+)}$/, MULTI_VALUE_RE = /@{(\d+)}/g, KEBAB_RE = /-[a-z]/g, CAMEL_RE = /([A-Z])/g, KEY_VALUE_RE = /^([^\s]+)\s(.*)$/, BINDING_MOD_RE = /\.(?:[^"'.])+/g, BINDING_ARG_RE = /:([^"'<>.]+)/, START_WS_RE = /^[\s]+/gm, CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm, QUOTE_RE = /["']/, COMP_RE = /^<((?:[A-Z][a-z]+)+)/, CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g, TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi, SC_TAG_RE = /<([a-zA-Z-]+)(("[^"]*"|'[^']*'|[^'">])*)\s*\/>/g, ATTR_RE = /\s([a-z]+[^\s=>"']*)(?:(?:="([^"]*)"|(?:='([^']*)'))|(?:=([^\s=>"']+)))?/gi, ATTR_REPLACEMENT = `<$1 ${TYPE}="attr">`, SLOT_REPLACEMENT = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`, COMP_REPLACEMENTS = [
     `<template ${TYPE}="comp" ${VALUE}="$1"`,
     "</template>"
 ];
@@ -458,11 +453,7 @@ function renderChild(elt, value) {
 }
 function renderDynamicChild(elt, childElement, replace) {
     const anchor = new Text();
-    if (replace) {
-        elt.replaceWith(anchor);
-    } else {
-        elt.appendChild(anchor);
-    }
+    replace ? elt.replaceWith(anchor) : elt.appendChild(anchor);
     createEffect((currentNodes)=>{
         const nextNodes = createNodeArray([], toValue(childElement));
         reconcileNodes(anchor, currentNodes, nextNodes);
@@ -759,7 +750,7 @@ function Router({ routeMap , type , fallback , children  }) {
 function installDOMRouter() {
     createComponent("Router", Router);
 }
-const __default = ()=>{
+function Component() {
     return template`
     <article>
       <h4>
@@ -780,7 +771,7 @@ const __default = ()=>{
       </div>
     </article>
   `;
-};
+}
 const code = `
 import { createSignal } from "jail/signal"
 import { template } from "jail/dom"
@@ -796,7 +787,7 @@ function Counter() {
     <button d-on:click.delegate=\${up}>+</button>
   \`
 }`.trim();
-const __default1 = ()=>{
+function Component1() {
     const counter = createSignal(0);
     const show = createSignal(false);
     const up = ()=>counter((value)=>++value);
@@ -827,8 +818,8 @@ const __default1 = ()=>{
       </code>
     </article>
   `;
-};
-function Counter() {
+}
+function Component2() {
     const counter = createSignal(0);
     const up = ()=>counter((value)=>++value);
     const down = ()=>counter((value)=>--value);
@@ -875,7 +866,7 @@ const Triangle = (x, y, target, size)=>{
         Triangle(x + target, y + target / 2, target, size)
     ];
 };
-const __default2 = ()=>{
+function Component3() {
     const { target ="750" , size ="25"  } = getParams() || {};
     let id;
     const elapsed = createSignal(0);
@@ -909,8 +900,8 @@ const __default2 = ()=>{
       ${Triangle(0, 0, +target, +size)}
     </div>
   `;
-};
-const __default3 = ()=>{
+}
+function Component4() {
     return template`
     <article>
       <h4>
@@ -940,7 +931,7 @@ const __default3 = ()=>{
       </div>
     </article>
   `;
-};
+}
 const list = createSignal([
     {
         id: 0,
@@ -970,7 +961,7 @@ const Item = (props)=>{
     </div>
   `;
 };
-const __default4 = ()=>{
+function Component5() {
     const textValue = createSignal("");
     const addItem = (ev)=>{
         if (ev.key !== "Enter") {
@@ -1005,8 +996,8 @@ const __default4 = ()=>{
       </div>
     </article>
   `;
-};
-const __default5 = ()=>{
+}
+function Component6() {
     const text = createSignal(`<div data-cool="user is \${state} cool!">\n  you are \${state} cool!\n</div>`);
     const inputLength = ()=>text().length;
     const time = createSignal(0);
@@ -1037,8 +1028,8 @@ const __default5 = ()=>{
       </div>
     </article>
   `;
-};
-const __default6 = ()=>{
+}
+function Component7() {
     const { backgroundColor  } = document.body.style;
     onMount(()=>document.body.style.backgroundColor = "indianred");
     onUnmount(()=>document.body.style.backgroundColor = backgroundColor);
@@ -1051,21 +1042,21 @@ const __default6 = ()=>{
       <p>There is no content for "${location}".</p>
     </article>
   `;
-};
+}
 const App = ()=>{
     createEffect(()=>{
         document.title = `jail${path()}`;
     });
     const routeMap = {
-        "/": __default,
-        "/counter": __default1,
-        "/counter/simple": Counter,
-        "/sierpinski": __default2,
-        "/sierpinski/:target": __default2,
-        "/sierpinski/:target/:size": __default2,
-        "/about": __default3,
-        "/todo": __default4,
-        "/compiler": __default5
+        "/": Component,
+        "/counter": Component1,
+        "/counter/simple": Component2,
+        "/sierpinski": Component3,
+        "/sierpinski/:target": Component3,
+        "/sierpinski/:target/:size": Component3,
+        "/about": Component4,
+        "/todo": Component5,
+        "/compiler": Component6
     };
     const pathAnimation = ()=>{
         path();
@@ -1100,7 +1091,7 @@ const App = ()=>{
       </nav>
     </header>
     <main d-animate=${pathAnimation}>
-      <Router type="pathname" fallback=${__default6} routeMap=${routeMap} />
+      <Router type="pathname" fallback=${Component7} routeMap=${routeMap} />
     </main>
   `;
 };
