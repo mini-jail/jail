@@ -4,7 +4,10 @@ import {
 } from "https://deno.land/x/emit@0.24.0/mod.ts"
 import { getParams } from "https://raw.githubusercontent.com/mini-jail/deno_params/main/mod.ts"
 
-const { src, importMap = "./import_map.json" } = getParams()
+const {
+  src = "./examples/src/app.ts",
+  importMap = "./import_map.json",
+} = getParams()
 
 if (src === undefined) {
   console.info("--src is missing")
