@@ -12,7 +12,7 @@ import {
  * @typedef {SlotPrimitive | Iterable<SlotPrimitive> | (() => SlotPrimitive) | DOMListener<HTMLElement>} Slot
  * @typedef {Node | Node[] | undefined} RenderResult
  * @typedef {{ readonly [key: string]: boolean }} Modifiers
- * @typedef {{ [name: string]: * }} Directives
+ * @typedef {{ [name: string]: Directive<*> }} Directives
  * @typedef {{ [name: string]: Component<Properties> }} Components
  * @typedef {() => *} RootComponent
  * @typedef {{
