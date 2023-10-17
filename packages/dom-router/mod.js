@@ -45,12 +45,6 @@ import { createComponent } from "jail/dom"
  * }} RouterProperties
  */
 
-/**
-export function Router<Type>(
-  props: RouterProperties<Type>,
-): Getter<[children: any, result: Type]>
- */
-
 const ParamsInjectionKey = Symbol()
 export const path = createSignal("")
 
