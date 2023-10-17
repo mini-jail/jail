@@ -1,4 +1,3 @@
-/// <reference types="./mod.d.ts" />
 import {
   createEffect,
   createRoot,
@@ -6,6 +5,73 @@ import {
   onUnmount,
   provide,
 } from "jail/signal"
+
+/**
+ * @typedef {import("jail/signal").Cleanup} Cleanup
+ * @typedef {string | number | boolean | null | undefined | { [property: string | number | symbol]: * } | Node} SlotPrimitive
+ * @typedef {SlotPrimitive | Iterable<SlotPrimitive> | (() => SlotPrimitive) | DOMListener<HTMLElement>} Slot
+ * @typedef {Node | Node[] | undefined} RenderResult
+ * @typedef {{ readonly [key: string]: boolean }} Modifiers
+ * @typedef {{ [name: string]: * }} Directives
+ * @typedef {{ [name: string]: Component<Properties> }} Components
+ * @typedef {() => *} RootComponent
+ * @typedef {{
+ *   directives: Directives
+ *   components: Components
+ * }} Application
+ */
+/**
+ * @template {{ [key: string]: * }} [Type = { [key: string]: * }]
+ * @typedef {Type & { children?: RenderResult | * }} Properties
+ */
+/**
+ * @template [Type = *]
+ * @typedef {(elt: HTMLElement, binding: Binding<Type>) => void} Directive
+ */
+/**
+ * @template {Properties} [Props = *]
+ * @typedef {(props: Props) => *} Component
+ */
+/**
+ * @template [Type = *]
+ * @typedef {{
+ *   readonly value: Type
+ *   readonly rawValue: (() => Type) | Type
+ *   readonly arg: string | null
+ *   readonly modifiers: Modifiers | null
+ * }} Binding
+ */
+/**
+ * @template {HTMLElement} [Type = HTMLElement]
+ * @typedef {Type & EventTarget} DOMEventTarget
+ */
+/**
+ * @template {HTMLElement} [Type = HTMLElement]
+ * @typedef {object} DOMEventTargetProperties
+ * @property {DOMEventTarget<Type>} target
+ * @property {DOMEventTarget<Type>} currentTarget
+ */
+/**
+ * @template {HTMLElement} [Type = HTMLElement]
+ * @typedef {DOMEventTargetProperties<Type> &
+ *   Event &
+ *   UIEvent &
+ *   InputEvent &
+ *   KeyboardEvent &
+ *   FocusEvent &
+ *   MouseEvent &
+ *   ClipboardEvent &
+ *   DragEvent &
+ *   FormDataEvent &
+ *   SubmitEvent &
+ *   TouchEvent &
+ *   WheelEvent
+ * } DOMEvent
+ */
+/**
+ * @template {HTMLElement} [Type = HTMLElement]
+ * @typedef {(this: Type, event: DOMEvent<Type>) => void} DOMListener
+ */
 
 const AppInjectionKey = Symbol(),
   ON_DEL_DIR_SYM = Symbol(),
@@ -39,34 +105,33 @@ const AppInjectionKey = Symbol(),
   SLOT_REPLACEMENT = `<slot ${TYPE}="slot" ${VALUE}="$1"></slot>`,
   COMP_REPLACEMENTS = [`<template ${TYPE}="comp" ${VALUE}="$1"`, "</template>"]
 
-/**
- * @type {Map<TemplateStringsArray, DocumentFragment>}
- */
+/** @type {Map<TemplateStringsArray, DocumentFragment>} */
 const FragmentCache = new Map()
-/**
- * @type {{ [value: string]: string | string[] | undefined }}
- */
+/** @type {{ [value: string]: string | string[] | undefined }} */
 const AttrValueCache = {}
-/**
- * @type {{ [name: string]: boolean | undefined }}
- */
+/** @type {{ [name: string]: boolean | undefined }} */
 const DelegatedEvents = {}
 
 /**
- * @param {any | import("jail/signal").Getter} data
- * @returns {any}
+ * @returns {Application}
  */
-function toValue(data) {
-  return typeof data === "function" ? data() : data
+function injectApp() {
+  /** @type {Application | undefined} */
+  const app = inject(AppInjectionKey)
+  if (app === undefined) {
+    throw new Error("Missing App Injection")
+  }
+  return app
 }
 
 /**
+ * @template Type
  * @param {string} name
- * @param {import("jail/dom").Directive} directive
+ * @param {Directive<Type>} directive
  * @returns {void}
  */
 export function createDirective(name, directive) {
-  const directives = inject(AppInjectionKey).directives
+  const directives = injectApp().directives
   if (name in directives) {
     const directiveCopy = directives[name]
     onUnmount(() => directives[name] = directiveCopy)
@@ -75,12 +140,13 @@ export function createDirective(name, directive) {
 }
 
 /**
+ * @template {Properties} Props
  * @param {string} name
- * @param {import("jail/dom").Component} component
+ * @param {Component<Props>} component
  * @returns {void}
  */
 export function createComponent(name, component) {
-  const components = inject(AppInjectionKey).components
+  const components = injectApp().components
   if (name in components) {
     const componentCopy = components[name]
     onUnmount(() => components[name] = componentCopy)
@@ -89,9 +155,9 @@ export function createComponent(name, component) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} rootElement
- * @param {import("jail/dom").RootComponent} rootComponent
- * @returns {import("jail/signal").Cleanup}
+ * @param {HTMLElement} rootElement
+ * @param {RootComponent} rootComponent
+ * @returns {Cleanup}
  */
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
@@ -115,30 +181,39 @@ export function mount(rootElement, rootComponent) {
 
 /**
  * @param {TemplateStringsArray} templateStrings
- * @param  {...import("jail/dom").Slot[]} slots
- * @returns {import("jail/dom").RenderResult}
+ * @param  {...Slot} slots
+ * @returns {RenderResult}
  */
 export function template(templateStrings, ...slots) {
   return render(createOrGetFragment(templateStrings), slots)
 }
 
-/**
- * @type {import("jail/dom").RenderTypeMap}
- */
 const renderMap = {
+  /**
+   * @param {HTMLElement} elt
+   * @param {Slot[]} slots
+   */
   attr: (elt, slots) => {
     const props = createProps(elt, slots)
     for (const key in props) {
       renderAttr(elt, key, props[key])
     }
   },
+  /**
+   * @param {HTMLSlotElement} elt
+   * @param {Slot[]} slots
+   */
   slot: (elt, slots) => {
     const key = elt.getAttribute(VALUE)
     renderChild(elt, slots[key])
   },
+  /**
+   * @param {HTMLTemplateElement} elt
+   * @param {Slot[]} slots
+   */
   comp: (elt, slots) => {
     const name = elt.getAttribute(VALUE)
-    const component = inject(AppInjectionKey).components[name]
+    const component = injectApp().components[name]
     if (component === undefined) {
       elt.remove()
       return
@@ -155,15 +230,15 @@ const renderMap = {
 
 /**
  * @param {DocumentFragment} fragment
- * @param {import("jail/dom").Slot[]} slots
- * @returns {import("jail/dom").RenderResult}
+ * @param {Slot[]} slots
+ * @returns {RenderResult}
  */
 function render(fragment, slots) {
-  for (const elt of fragment.querySelectorAll(QUERY)) {
+  fragment.querySelectorAll(QUERY).forEach((elt) => {
     const type = elt.getAttribute(TYPE)
     elt.removeAttribute(TYPE)
     renderMap[type]?.(elt, slots)
-  }
+  })
   if (fragment.childNodes.length === 0) {
     return
   }
@@ -174,9 +249,9 @@ function render(fragment, slots) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Slot[]} slots
- * @returns {import("jail/dom").Properties}
+ * @param {HTMLElement} elt
+ * @param {Slot[]} slots
+ * @returns {Properties}
  */
 function createProps(elt, slots) {
   const props = {}
@@ -211,8 +286,8 @@ function getOrCreateValueCache(value) {
 
 /**
  * @param {string} value
- * @param {import("jail/dom").Slot[]} slots
- * @returns {string | (() => string) | any}
+ * @param {Slot[]} slots
+ * @returns {string | (() => string) | *}
  */
 function createValue(value, slots) {
   const keyOrKeys = getOrCreateValueCache(value)
@@ -283,8 +358,8 @@ function createOrGetFragment(templateStrings) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {any} value
+ * @param {HTMLElement} elt
+ * @param {Slot} value
  */
 function renderChild(elt, value) {
   if (value == null || typeof value === "boolean") {
@@ -309,8 +384,8 @@ function renderChild(elt, value) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {(() => any) | any[]} childElement
+ * @param {HTMLElement} elt
+ * @param {(() => Slot) | Slot[]} childElement
  * @param {boolean} replace
  */
 function renderDynamicChild(elt, childElement, replace) {
@@ -324,14 +399,14 @@ function renderDynamicChild(elt, childElement, replace) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
+ * @param {HTMLElement} elt
  * @param {string} prop
- * @param {any} data
+ * @param {*} data
  */
 function renderAttr(elt, prop, data) {
   if (prop.startsWith(DIR_PREFIX)) {
     const key = prop.slice(DIR_PREFIX_LENGTH).match(DIR_KEY_RE)[0]
-    const directive = inject(AppInjectionKey).directives[key]
+    const directive = injectApp().directives[key]
     if (directive) {
       const binding = createBinding(prop, data)
       createEffect(() => directive(elt, binding))
@@ -350,9 +425,10 @@ function renderAttr(elt, prop, data) {
 }
 
 /**
+ * @template Type
  * @param {string} prop
- * @param {any} rawValue
- * @returns {import("jail/dom").Binding}
+ * @param {Type | (() => Type)} rawValue
+ * @returns {Binding<Type>}
  */
 function createBinding(prop, rawValue) {
   const arg = prop.match(BINDING_ARG_RE)?.[1] || null
@@ -371,9 +447,9 @@ function createBinding(prop, rawValue) {
 }
 
 /**
- * @param {import("jail/dom").DOMNode[]} nodeArray
- * @param  {...import("jail/dom").Element} elements
- * @returns {import("jail/dom").DOMNode[]}
+ * @param {Node[]} nodeArray
+ * @param  {...SlotPrimitive} elements
+ * @returns {Node[]}
  */
 function createNodeArray(nodeArray, ...elements) {
   for (const elt of elements) {
@@ -396,9 +472,9 @@ function createNodeArray(nodeArray, ...elements) {
 }
 
 /**
- * @param {import("jail/dom").DOMNode} anchor
- * @param {(import("jail/dom").DOMNode | null)[] | null} currentNodes
- * @param {import("jail/dom").DOMNode[]} nextNodes
+ * @param {Node} anchor
+ * @param {(Node | null)[] | null} currentNodes
+ * @param {Node[]} nextNodes
  */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
   const parentNode = anchor.parentNode
@@ -455,9 +531,9 @@ function toKebabCase(data) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
+ * @param {HTMLElement} elt
  * @param {string} prop
- * @param {any} value
+ * @param {*} value
  */
 function setProperty(elt, prop, value) {
   if (prop in elt) {
@@ -472,13 +548,18 @@ function setProperty(elt, prop, value) {
   }
 }
 
+/**
+ * @param {Node} node
+ * @param {Node} otherNode
+ * @returns {boolean}
+ */
 function sameCharacterDataType(node, otherNode) {
   const type = node.nodeType
   return (type === 3 || type === 8) && otherNode.nodeType === type
 }
 
 /**
- * @param {Event} event
+ * @param {DOMEvent} event
  */
 function delegatedEventListener(event) {
   const type = event.type
@@ -490,24 +571,24 @@ function delegatedEventListener(event) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<(elt: import("jail/dom").DOMElement) => void>} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<(elt: HTMLElement) => void>} binding
  */
 function refDirective(elt, binding) {
   binding.rawValue?.(elt)
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<string>} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<string>} binding
  */
 function styleDirective(elt, binding) {
   elt.style[binding.arg] = binding.value || null
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<*>} binding
  */
 function bindDirective(elt, binding) {
   let prop = binding.arg
@@ -524,32 +605,32 @@ function bindDirective(elt, binding) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<string>} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<string>} binding
  */
 function htmlDirective(elt, binding) {
   elt.innerHTML = binding.value
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<string>} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<string>} binding
  */
 function textDirective(elt, binding) {
   elt.textContent = binding.value
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<boolean>} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<boolean>} binding
  */
 function showDirective(elt, binding) {
   elt.style.display = binding.value ? "" : "none"
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<boolean>} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<boolean>} binding
  */
 function ifDirective(elt, binding) {
   elt[IF_DIR_SYM] = elt[IF_DIR_SYM] ?? new Text()
@@ -560,8 +641,8 @@ function ifDirective(elt, binding) {
 }
 
 /**
- * @param {import("jail/dom").DOMElement} elt
- * @param {import("jail/dom").Binding<import("jail/dom").DOMListener>} binding
+ * @param {HTMLElement} elt
+ * @param {Binding<DOMListener>} binding
  */
 function onDirective(elt, binding) {
   let { arg: name, modifiers, rawValue: listener } = binding
@@ -625,9 +706,18 @@ function onDirective(elt, binding) {
 /**
  * @param {string} data
  * @param {string | RegExp} match
- * @param {any} replacer
+ * @param {*} replacer
  * @returns {string}
  */
 function sub(data, match, replacer) {
   return data.replace(match, replacer)
+}
+
+/**
+ * @template Type
+ * @param {Type | import("jail/signal").Getter<Type>} data
+ * @returns {Type | ReturnType<import("jail/signal").Getter<Type>>}
+ */
+function toValue(data) {
+  return typeof data === "function" ? data() : data
 }

@@ -1,4 +1,3 @@
-/// <reference types="./mod.d.ts" />
 import {
   createComputed,
   createRoot,
@@ -9,6 +8,48 @@ import {
   provide,
 } from "jail/signal"
 import { createComponent } from "jail/dom"
+
+/**
+ * @typedef {"pathname" | "hash"} RouterType
+ * @typedef {{ readonly [param: string]: string }} Params
+ */
+/**
+ * @template [Type = *]
+ * @typedef {() => Type} RouteHandler
+ */
+/**
+ * @template [Type = *]
+ * @typedef {{
+ *   path: string
+ *   regexp: RegExp
+ *   handler: RouteHandler<Type>
+ * }} Route
+ */
+/**
+ * @template [Type = *]
+ * @typedef {{ [path: string]: RouteHandler<Type> }} RouteMap
+ */
+/**
+ * @template [Type = *]
+ * @typedef {{
+ *   fallback?: RouteHandler<Type>
+ * }} RouterOptions
+ */
+/**
+ * @template [Type = *]
+ * @typedef {{
+ *   type: RouterType
+ *   routeMap: RouteMap<Type>
+ *   children?: *
+ *   fallback?: RouteHandler<Type>
+ * }} RouterProperties
+ */
+
+/**
+export function Router<Type>(
+  props: RouterProperties<Type>,
+): Getter<[children: any, result: Type]>
+ */
 
 const ParamsInjectionKey = Symbol()
 export const path = createSignal("")
@@ -62,6 +103,9 @@ const routeTypeHandlerMap = {
   },
 }
 
+/**
+ * @returns {Params | undefined}
+ */
 export function getParams() {
   return inject(ParamsInjectionKey)
 }
@@ -77,8 +121,8 @@ function createMatcher(path) {
 }
 
 /**
- * @param {import("jail/dom-router").RouteMap} routeMap
- * @returns {import("jail/dom-router").Route[]}
+ * @param {RouteMap} routeMap
+ * @returns {Route[]}
  */
 function createRoutes(routeMap) {
   return Object.keys(routeMap).map((path) => ({
@@ -89,9 +133,9 @@ function createRoutes(routeMap) {
 }
 
 /**
- * @param {import("jail/dom-router").RouteMap} routeMap
- * @param {import("jail/dom-router").RouterOptions} options
- * @returns {import("jail/signal").Getter}
+ * @param {RouteMap} routeMap
+ * @param {RouterOptions} options
+ * @returns {Getter}
  */
 function createRouter(routeMap, options) {
   const routeArray = createRoutes(routeMap)
@@ -111,8 +155,9 @@ function createRouter(routeMap, options) {
 }
 
 /**
- * @param {import("jail/dom-router").RouterProperties} props
- * @returns {import("jail/signal").Getter}
+ * @template [Type = *]
+ * @param {RouterProperties<Type>} props
+ * @returns {() => [children, Type]}
  */
 export function Router({ routeMap, type, fallback, children }) {
   routeTypeHandlerMap[type]()
@@ -120,6 +165,24 @@ export function Router({ routeMap, type, fallback, children }) {
   return () => [children, router]
 }
 
+/**
+ * Allows usage of the following:
+ * @example
+ * ```javascript
+ * const routeMap = {
+ *   "/": () => { ... }
+ * }
+ * const fallbackRoute = () => { ... }
+ * template`
+ *   <Router
+ *     type="hash"
+ *     routeMap=${routeMap}
+ *     fallback=${fallbackRoute}
+ *   />
+ * `
+ * ```
+ * @returns {void}
+ */
 export function installDOMRouter() {
   createComponent("Router", Router)
 }

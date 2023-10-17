@@ -1,39 +1,86 @@
-/// <reference types="./mod.d.ts" />
-const ErrorInjectionKey = Symbol()
 /**
- * @type {Set<import("jail/signal").Node>}
+ * @typedef {string | number | symbol} Injectionkey
+ * @typedef {{ [key: Injectionkey]: * }} Injections
+ * @typedef {() => void} Cleanup
  */
+/**
+ * @template [Type = *]
+ * @typedef {(currentValue: Type) => Type} UpdateFunction
+ */
+/**
+ * @template [Type = *]
+ * @typedef {() => Type} Getter
+ */
+/**
+ * @template [Type = *]
+ * @typedef {ReadOnlySignal<Type> & WritableSignal<Type>} Signal
+ */
+/**
+ * @template [Type = *]
+ * @typedef {() => Type} ReadOnlySignal
+ */
+/**
+ * @template [Type = *]
+ * @typedef {{
+ *   (update: UpdateFunction<Type>): void
+ *   (value: Type): void
+ * }} WritableSignal
+ */
+/**
+ * @template [Type = *]
+ * @typedef {object} Node
+ * @property {Type | undefined | null} value
+ * @property {Injections | null} injections
+ * @property {Node | null} parentNode
+ * @property {Node[] | null} childNodes
+ * @property {Cleanup[] | null} cleanups
+ * @property {UpdateFunction<Type> | null} onupdate
+ * @property {Source[] | null} sources
+ * @property {number[] | null} sourceSlots
+ */
+/**
+ * @template [Type = *]
+ * @typedef {object} Source
+ * @property {Type | undefined} value
+ * @property {Node[] | null} nodes
+ * @property {number[] | null} nodeSlots
+ */
+
+const ActiveNodeIsNull = new Error("activeNode is null.")
+const ErrorInjectionKey = Symbol()
+/** @type {Set<Node>} */
 const NodeQueue = new Set()
 let isRunning = false
-/**
- * @type {import("jail/signal").Node | null}
- */
+/** @type {Node | null} */
 let activeNode = null
 
 /**
- * @param {(cleanup: import("jail/signal").Cleanup) => any} rootFunction
- * @returns {any | undefined}
+ * @template Type
+ * @param {(cleanup: Cleanup) => Type} rootFunction
+ * @returns {Type | undefined}
  */
 export function createRoot(rootFunction) {
-  const previousNode = activeNode, node = createNode()
+  const node = createNode()
   try {
     activeNode = node
     return batch(() => rootFunction(() => cleanNode(node, true)))
   } catch (error) {
     handleError(error)
   } finally {
-    activeNode = previousNode
+    activeNode = node.parentNode
   }
 }
 
 /**
- * @param {any} [initialValue]
- * @returns {import("jail/signal").Node}
+ * @template Type
+ * @param {Type} [initialValue]
+ * @returns {Node<Type>}
  */
 function createNode(initialValue) {
+  /** @type {Node<Type>} */
   const node = {
     value: initialValue,
-    parentNode: activeNode,
+    parentNode: null,
     childNodes: null,
     injections: null,
     cleanups: null,
@@ -42,6 +89,7 @@ function createNode(initialValue) {
     sourceSlots: null,
   }
   if (activeNode !== null) {
+    node.parentNode = activeNode
     if (activeNode.childNodes === null) {
       activeNode.childNodes = [node]
     } else {
@@ -55,22 +103,44 @@ function createNode(initialValue) {
  * @param {() => void} mountFunction
  */
 export function onMount(mountFunction) {
-  throwIfActiveNodeIsNull()
+  if (activeNode === null) {
+    throw ActiveNodeIsNull
+  }
   createEffect(() => untrack(mountFunction))
 }
 
 /**
- * @param {import("jail/signal").Cleanup} unmountFunction
+ * @param {Cleanup} unmountFunction
  */
 export function onUnmount(unmountFunction) {
-  throwIfActiveNodeIsNull()
+  if (activeNode === null) {
+    throw ActiveNodeIsNull
+  }
   onCleanup(() => untrack(unmountFunction))
 }
 
 /**
- * @param {import("jail/signal").UpdateFunction} effectFunction
- * @param {any} [initialValue]
- * @returns {import("jail/signal").Cleanup}
+ * @overload
+ * @param {() => void} effectFunction
+ * @returns {Cleanup}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {UpdateFunction<Type | undefined>} effectFunction
+ * @returns {Cleanup}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {UpdateFunction<Type>} effectFunction
+ * @param {Type} initialValue
+ * @returns {Cleanup}
+ */
+/**
+ * @param {UpdateFunction<*>} effectFunction
+ * @param {*} [initialValue]
+ * @returns {Cleanup}
  */
 export function createEffect(effectFunction, initialValue) {
   const node = createNode(initialValue)
@@ -84,8 +154,22 @@ export function createEffect(effectFunction, initialValue) {
 }
 
 /**
- * @param {import("jail/signal").UpdateFunction} effectFunction
- * @param {any} [initialValue]
+ * @template Type
+ * @overload
+ * @param {UpdateFunction<Type | undefined>} effectFunction
+ * @returns {ReadOnlySignal<Type | undefined>}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {UpdateFunction<Type>} effectFunction
+ * @param {Type} initialValue
+ * @returns {ReadOnlySignal<Type>}
+ */
+/**
+ * @param {UpdateFunction<*>} effectFunction
+ * @param {*} [initialValue]
+ * @returns {ReadOnlySignal<*>}
  */
 export function createComputed(effectFunction, initialValue) {
   const source = createSource(initialValue)
@@ -97,9 +181,9 @@ export function createComputed(effectFunction, initialValue) {
 }
 
 /**
- * @param {import("jail/signal").Node | null} node
- * @param {string | symbol} key
- * @returns {any | undefined}
+ * @param {Node | null} node
+ * @param {Injectionkey} key
+ * @returns {* | undefined}
  */
 function lookup(node, key) {
   if (node === null) {
@@ -112,16 +196,18 @@ function lookup(node, key) {
 }
 
 /**
- * @param {any} [initialValue]
- * @returns {import("jail/signal").Source}
+ * @template Type
+ * @param {Type} [initialValue]
+ * @returns {Source<Type>}
  */
 function createSource(initialValue) {
   return { value: initialValue, nodes: null, nodeSlots: null }
 }
 
 /**
- * @param {import("jail/signal").Source} source
- * @returns {any}
+ * @template Type
+ * @param {Source<Type>} source
+ * @returns {Type | undefined}
  */
 function getSourceValue(source) {
   if (activeNode !== null && activeNode.onupdate !== null) {
@@ -146,8 +232,21 @@ function getSourceValue(source) {
 }
 
 /**
- * @param {import("jail/signal").Source} source
- * @param {any | import("jail/signal").UpdateFunction} nextValue
+ * @template Type
+ * @overload
+ * @param {Source<Type>} source
+ * @param {Type} nextValue
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {Source<Type>} source
+ * @param {UpdateFunction<Type>} nextValue
+ */
+/**
+ * @template Type
+ * @param {Source<Type>} source
+ * @param {*} nextValue
  */
 function setSourceValue(source, nextValue) {
   if (typeof nextValue === "function") {
@@ -164,8 +263,20 @@ function setSourceValue(source, nextValue) {
 }
 
 /**
- * @param {any} [initialValue]
- * @returns {import("jail/signal").Signal}
+ * @template Type
+ * @overload
+ * @returns {Signal<Type | undefined>}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {Type} initialValue
+ * @returns {Signal<Type>}
+ */
+/**
+ * @template Type
+ * @param {*} [initialValue]
+ * @returns {Signal<*>}
  */
 export function createSignal(initialValue) {
   const source = createSource(initialValue)
@@ -178,7 +289,8 @@ export function createSignal(initialValue) {
 }
 
 /**
- * @param {any} error
+ * @template [Type = *]
+ * @param {Type} error
  */
 function handleError(error) {
   const errorFunctions = lookup(activeNode, ErrorInjectionKey)
@@ -191,10 +303,14 @@ function handleError(error) {
 }
 
 /**
- * @param {(error: any) => void} errorFunction
+ * @template [Type = *]
+ * @param {(error: Type) => void} errorFunction
+ * @returns {void}
  */
 export function catchError(errorFunction) {
-  throwIfActiveNodeIsNull()
+  if (activeNode === null) {
+    throw ActiveNodeIsNull
+  }
   if (activeNode.injections === null) {
     activeNode.injections = { [ErrorInjectionKey]: [errorFunction] }
   } else {
@@ -203,10 +319,12 @@ export function catchError(errorFunction) {
 }
 
 /**
- * @param {import("jail/signal").Cleanup} cleanupFunction
+ * @param {Cleanup} cleanupFunction
  */
 export function onCleanup(cleanupFunction) {
-  throwIfActiveNodeIsNull()
+  if (activeNode === null) {
+    throw ActiveNodeIsNull
+  }
   if (activeNode.cleanups === null) {
     activeNode.cleanups = [cleanupFunction]
   } else {
@@ -215,8 +333,9 @@ export function onCleanup(cleanupFunction) {
 }
 
 /**
- * @param {import("jail/signal").Getter} getter
- * @returns {any}
+ * @template Type
+ * @param {Getter<Type>} getter
+ * @returns {Type}
  */
 export function untrack(getter) {
   const previousNode = activeNode
@@ -227,8 +346,9 @@ export function untrack(getter) {
 }
 
 /**
- * @param {import("jail/signal").Getter} getter
- * @returns {any}
+ * @template Type
+ * @param {Getter<Type>} getter
+ * @returns {Type}
  */
 function batch(getter) {
   if (isRunning) {
@@ -252,7 +372,7 @@ function flush() {
 }
 
 /**
- * @param {import("jail/signal").Node} node
+ * @param {Node<*>} node
  * @param {boolean} [complete]
  */
 function updateNode(node, complete) {
@@ -272,7 +392,7 @@ function updateNode(node, complete) {
 }
 
 /**
- * @param {import("jail/signal").Node} node
+ * @param {Node} node
  * @param {boolean} [complete]
  */
 function cleanNode(node, complete) {
@@ -303,7 +423,7 @@ function cleanNode(node, complete) {
   }
   if (node.cleanups?.length) {
     while (node.cleanups.length) {
-      node.cleanups.pop()()
+      node.cleanups.pop()?.()
     }
   }
   node.injections = null
@@ -319,30 +439,42 @@ function cleanNode(node, complete) {
 }
 
 /**
- * @param {string | symbol} key
- * @param {any} [defaultValue]
- * @returns {any | undefined}
+ * @template Type
+ * @overload
+ * @param {Injectionkey} key
+ * @returns {Type | undefined}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {Injectionkey} key
+ * @param {Type} defaultValue
+ * @returns {Type}
+ */
+/**
+ * @param {Injectionkey} key
+ * @param {*} [defaultValue]
+ * @returns {* | undefined}
  */
 export function inject(key, defaultValue) {
-  throwIfActiveNodeIsNull()
+  if (activeNode === null) {
+    throw ActiveNodeIsNull
+  }
   return lookup(activeNode, key) ?? defaultValue
 }
 
 /**
- * @param {string | symbol} key
- * @param {any} value
+ * @template Type
+ * @param {Injectionkey} key
+ * @param {Type} value
  */
 export function provide(key, value) {
-  throwIfActiveNodeIsNull()
+  if (activeNode === null) {
+    throw ActiveNodeIsNull
+  }
   if (activeNode.injections === null) {
     activeNode.injections = { [key]: value }
   } else {
     activeNode.injections[key] = value
-  }
-}
-
-function throwIfActiveNodeIsNull() {
-  if (activeNode === null) {
-    throw new Error("activeNode is null.")
   }
 }
