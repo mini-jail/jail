@@ -12,8 +12,8 @@ import {
  * @typedef {SlotPrimitive | Iterable<SlotPrimitive> | (() => SlotPrimitive) | DOMListener<HTMLElement>} Slot
  * @typedef {Node | Node[] | undefined} RenderResult
  * @typedef {{ readonly [key: string]: boolean }} Modifiers
- * @typedef {{ [name: string]: Directive<*> }} Directives
- * @typedef {{ [name: string]: Component<Properties> }} Components
+ * @typedef {{ [name: string]: Directive<*> | undefined }} Directives
+ * @typedef {{ [name: string]: Component<Properties> | undefined }} Components
  * @typedef {() => *} RootComponent
  * @typedef {{
  *   directives: Directives
@@ -22,7 +22,7 @@ import {
  */
 /**
  * @template {{ [key: string]: * }} [Type = { [key: string]: * }]
- * @typedef {Type & { children?: RenderResult | * }} Properties
+ * @typedef {Type & { children?: * }} Properties
  */
 /**
  * @template [Type = *]
@@ -203,17 +203,13 @@ const renderMap = {
    * @param {HTMLSlotElement} elt
    * @param {Slot[]} slots
    */
-  slot: (elt, slots) => {
-    const key = elt.getAttribute(VALUE)
-    renderChild(elt, slots[key])
-  },
+  slot: (elt, slots) => renderChild(elt, slots[elt.getAttribute(VALUE)]),
   /**
    * @param {HTMLTemplateElement} elt
    * @param {Slot[]} slots
    */
   comp: (elt, slots) => {
-    const name = elt.getAttribute(VALUE)
-    const component = injectApp().components[name]
+    const component = injectApp().components[elt.getAttribute(VALUE)]
     if (component === undefined) {
       elt.remove()
       return
@@ -359,7 +355,7 @@ function createOrGetFragment(templateStrings) {
 
 /**
  * @param {HTMLElement} elt
- * @param {Slot} value
+ * @param {*} value
  */
 function renderChild(elt, value) {
   if (value == null || typeof value === "boolean") {
@@ -385,7 +381,7 @@ function renderChild(elt, value) {
 
 /**
  * @param {HTMLElement} elt
- * @param {(() => Slot) | Slot[]} childElement
+ * @param {(() => *) | *[]} childElement
  * @param {boolean} replace
  */
 function renderDynamicChild(elt, childElement, replace) {
