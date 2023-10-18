@@ -195,6 +195,7 @@ const renderMap = {
    */
   attr: (elt, slots) => {
     const props = createProps(elt, slots)
+    elt.removeAttribute(TYPE)
     for (const key in props) {
       renderAttr(elt, key, props[key])
     }
@@ -231,9 +232,7 @@ const renderMap = {
  */
 function render(fragment, slots) {
   fragment.querySelectorAll(QUERY).forEach((elt) => {
-    const type = elt.getAttribute(TYPE)
-    elt.removeAttribute(TYPE)
-    renderMap[type]?.(elt, slots)
+    renderMap[elt.getAttribute(TYPE)](elt, slots)
   })
   if (fragment.childNodes.length === 0) {
     return
