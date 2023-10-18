@@ -345,9 +345,9 @@ export function createTemplateString(strings) {
 function createOrGetFragment(templateStrings) {
   let template = FragmentCache.get(templateStrings)
   if (template === undefined) {
-    const element = document.createElement("template")
-    element.innerHTML = createTemplateString(templateStrings)
-    FragmentCache.set(templateStrings, template = element.content)
+    const elt = document.createElement("template")
+    elt.innerHTML = createTemplateString(templateStrings)
+    FragmentCache.set(templateStrings, template = elt.content)
   }
   return template.cloneNode(true)
 }
