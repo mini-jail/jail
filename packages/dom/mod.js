@@ -541,33 +541,32 @@ function delegatedEventListener(event) {
  * @param {HTMLElement} elt
  * @param {Binding<(elt: HTMLElement) => void>} binding
  */
-function refDirective(elt, binding) {
-  binding.rawValue?.(elt)
+function refDirective(elt, { rawValue }) {
+  rawValue(elt)
 }
 
 /**
  * @param {HTMLElement} elt
  * @param {Binding<string>} binding
  */
-function styleDirective(elt, binding) {
-  elt.style[binding.arg] = binding.value || null
+function styleDirective(elt, { arg, value }) {
+  elt.style[arg] = value || null
 }
 
 /**
  * @param {HTMLElement} elt
  * @param {Binding<*>} binding
  */
-function bindDirective(elt, binding) {
-  let prop = binding.arg
-  if (binding.modifiers?.camel) {
+function bindDirective(elt, { arg: prop, modifiers, value }) {
+  if (modifiers?.camel) {
     prop = toCamelCase(prop)
-  } else if (binding.modifiers?.attr) {
+  } else if (modifiers?.attr) {
     prop = toKebabCase(prop)
   }
-  if (binding.modifiers?.prop === true || prop in elt) {
-    elt[prop] = binding.value
+  if (modifiers?.prop === true || prop in elt) {
+    elt[prop] = value
   } else {
-    elt.setAttribute(prop, binding.value + "")
+    elt.setAttribute(prop, value + "")
   }
 }
 
@@ -575,34 +574,33 @@ function bindDirective(elt, binding) {
  * @param {HTMLElement} elt
  * @param {Binding<string>} binding
  */
-function htmlDirective(elt, binding) {
-  elt.innerHTML = binding.value
+function htmlDirective(elt, { value }) {
+  elt.innerHTML = value
 }
 
 /**
  * @param {HTMLElement} elt
  * @param {Binding<string>} binding
  */
-function textDirective(elt, binding) {
-  elt.textContent = binding.value
+function textDirective(elt, { value }) {
+  elt.textContent = value
 }
 
 /**
  * @param {HTMLElement} elt
  * @param {Binding<boolean>} binding
  */
-function showDirective(elt, binding) {
-  elt.style.display = binding.value ? "" : "none"
+function showDirective(elt, { value }) {
+  elt.style.display = value ? "" : "none"
 }
 
 /**
  * @param {HTMLElement} elt
  * @param {Binding<boolean>} binding
  */
-function ifDirective(elt, binding) {
+function ifDirective(elt, { value }) {
   elt[IF_DIR_SYM] = elt[IF_DIR_SYM] ?? new Text()
-  const value = binding.value,
-    isTrue = value === true || value === "true",
+  const isTrue = value === true || value === "true",
     target = isTrue ? elt[IF_DIR_SYM] : elt
   target.replaceWith(isTrue ? elt : elt[IF_DIR_SYM])
 }
@@ -611,8 +609,7 @@ function ifDirective(elt, binding) {
  * @param {HTMLElement} elt
  * @param {Binding<DOMListener>} binding
  */
-function onDirective(elt, binding) {
-  let { arg: name, modifiers, rawValue: listener } = binding
+function onDirective(elt, { arg: name, modifiers, rawValue: listener }) {
   let id = name, eventOptions
   if (modifiers) {
     const { once, capture, passive, prevent, stop, delegate } = modifiers
