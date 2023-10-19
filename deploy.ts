@@ -1,55 +1,72 @@
-import {
-  Application,
-  Router,
-  type RouterMiddleware,
-} from "https://deno.land/x/oak@v10.2.0/mod.ts"
-import { getParams } from "https://raw.githubusercontent.com/mini-jail/deno_params/main/mod.ts"
-import { createBundle } from "./create_bundle.ts"
+import { Application, Router } from "https://deno.land/x/oak@v10.2.0/mod.ts"
+import { bundle } from "https://deno.land/x/emit@0.24.0/mod.ts"
 
-const {
-  port = "8000",
-  dev = "false",
-  index = "./examples/index.html",
-  src = "./examples/src/app.ts",
-  importMap = "./import_map.json",
-  appRoute = "/examples/app.bundle.js",
-} = getParams()
+const PROD = Deno.env.get("APP_PROD")! === "true"
+const PORT = +Deno.env.get("APP_PORT")!
+const PUBLIC = Deno.env.get("APP_PUBLIC") || Deno.cwd()
+const HTML = Deno.env.get("APP_HTML")!
+const TARGET = Deno.env.get("APP_TARGET")!
+const SOURCE = Deno.env.get("APP_SOURCE")!
+const SOURCE_ROOT = Deno.env.get("APP_SOURCE_ROOT")!
+const IMPORT_MAP = Deno.env.get("APP_IMPORT_MAP")!
+
+console.log(PUBLIC)
+
+let build = await createBundle()
 
 const app = new Application()
 const router = new Router()
-const initialBuild = await createBundle(src, { importMap })
-const frontEndApp: RouterMiddleware<string> = dev === "false"
-  ? (ctx) => {
-    ctx.response.type = "js"
-    ctx.response.body = initialBuild
-  }
-  : async (ctx) => {
-    ctx.response.type = "js"
-    ctx.response.body = await createBundle(src, {
-      importMap,
-      compilerOptions: {
-        inlineSources: true,
-        inlineSourceMap: true,
-      },
-    })
-  }
 
-router.get(appRoute, frontEndApp)
+router.get(TARGET, (ctx) => {
+  ctx.response.type = "js"
+  ctx.response.body = build
+})
+
 app.use(router.routes())
 app.use(router.allowedMethods())
 app.use(async (ctx, next) => {
   try {
-    await ctx.send({ root: Deno.cwd(), index })
+    await ctx.send({ root: PUBLIC, index: HTML })
   } catch {
     await next()
   }
 })
 app.use(async (ctx, next) => {
   try {
-    await ctx.send({ root: Deno.cwd(), path: index })
+    await ctx.send({ root: PUBLIC, path: HTML })
   } catch {
     await next()
   }
 })
 
-await app.listen({ port: +port })
+app.listen({ port: PORT })
+
+if (PROD === false) {
+  runDev()
+}
+
+async function createBundle(): Promise<string> {
+  const timeStart = performance.now()
+  const { code } = await bundle(SOURCE, {
+    importMap: IMPORT_MAP,
+    compilerOptions: {
+      inlineSources: !PROD,
+      inlineSourceMap: !PROD,
+    },
+  })
+  const duration = performance.now() - timeStart
+  console.info(`createBundle (${duration}ms)`)
+  return code
+}
+
+async function runDev() {
+  let built = false
+  for await (const _event of Deno.watchFs([SOURCE_ROOT, SOURCE])) {
+    if (built) {
+      continue
+    }
+    build = await createBundle()
+    built = true
+    setTimeout(() => built = false, 100)
+  }
+}
