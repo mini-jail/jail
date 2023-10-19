@@ -467,9 +467,9 @@ function createNodeArray(nodeArray, ...elements) {
 }
 
 /**
- * @param {Node} anchor
- * @param {Node[]} currentNodes
- * @param {Node[]} nextNodes
+ * @param {Node | ChildNode} anchor
+ * @param {ChildNode[]} currentNodes
+ * @param {(Node | ChildNode)[]} nextNodes
  */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
   nextNodes.length && nextNodes.forEach((nextNode, i) => {
@@ -488,9 +488,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
       anchor.parentNode.insertBefore(nextNodes[i], child?.nextSibling || anchor)
     }
   })
-  while (currentNodes.length) {
-    currentNodes.pop().remove()
-  }
+  currentNodes.length && currentNodes.forEach((node) => node.remove())
 }
 
 /**
