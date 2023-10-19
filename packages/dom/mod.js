@@ -383,9 +383,9 @@ function renderChild(elt, value) {
  * @param {(() => *) | *[]} childElement
  * @param {boolean} replace
  */
-function renderDynamicChild(elt, childElement, replace) {
+function renderDynamicChild(elt, childElement, replaceRoot) {
   const anchor = new Text()
-  replace ? elt.replaceWith(anchor) : elt.appendChild(anchor)
+  replaceRoot ? elt.replaceWith(anchor) : elt.appendChild(anchor)
   createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], toValue(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
