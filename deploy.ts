@@ -10,8 +10,6 @@ const SOURCE = Deno.env.get("APP_SOURCE")!
 const SOURCE_ROOT = Deno.env.get("APP_SOURCE_ROOT")!
 const IMPORT_MAP = Deno.env.get("APP_IMPORT_MAP")!
 
-console.log(PUBLIC)
-
 let build = await createBundle()
 
 const app = new Application()
