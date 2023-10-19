@@ -390,7 +390,7 @@ function renderDynamicChild(elt, childElement, replace) {
     const nextNodes = createNodeArray([], toValue(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
     return nextNodes
-  }, null)
+  }, [])
 }
 
 /**
@@ -468,44 +468,28 @@ function createNodeArray(nodeArray, ...elements) {
 
 /**
  * @param {Node} anchor
- * @param {(Node | null)[] | null} currentNodes
+ * @param {Node[]} currentNodes
  * @param {Node[]} nextNodes
  */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
-  const parentNode = anchor.parentNode
-  if (currentNodes === null) {
-    for (const nextNode of nextNodes) {
-      parentNode?.insertBefore(nextNode, anchor)
+  nextNodes.length && nextNodes.forEach((nextNode, i) => {
+    const child = currentNodes[i]
+    currentNodes.length && currentNodes.some((currentNode, j) => {
+      if (nextNode.nodeType === 3 && currentNode.nodeType === 3) {
+        currentNode.data = nextNode.data
+      }
+      if (nextNode.isEqualNode(currentNode)) {
+        nextNodes[i] = currentNode
+        currentNodes.splice(j, 1)
+        return true
+      }
+    })
+    if (nextNodes[i] !== child) {
+      anchor.parentNode.insertBefore(nextNodes[i], child?.nextSibling || anchor)
     }
-    return
-  }
-  let i = 0, j = 0
-  const cLength = currentNodes.length, nLength = nextNodes.length
-  next:
-  for (; i < nLength; i++) {
-    const currentNode = currentNodes[i]
-    for (; j < cLength; j++) {
-      if (currentNodes[j] === null) {
-        continue
-      }
-      if (sameCharacterDataType(currentNodes[j], nextNodes[i])) {
-        currentNodes[j].data = nextNodes[i].data
-        nextNodes[i] = currentNodes[j]
-      } else if (currentNodes[j].isEqualNode(nextNodes[i])) {
-        nextNodes[i] = currentNodes[j]
-      }
-      if (nextNodes[i] === currentNodes[j]) {
-        currentNodes[j] = null
-        if (i === j) {
-          continue next
-        }
-        break
-      }
-    }
-    parentNode?.insertBefore(nextNodes[i], currentNode?.nextSibling || anchor)
-  }
+  })
   while (currentNodes.length) {
-    currentNodes.pop()?.remove()
+    currentNodes.pop().remove()
   }
 }
 
@@ -541,16 +525,6 @@ function setProperty(elt, prop, value) {
   } else {
     elt.removeAttribute(name)
   }
-}
-
-/**
- * @param {Node} node
- * @param {Node} otherNode
- * @returns {boolean}
- */
-function sameCharacterDataType(node, otherNode) {
-  const type = node.nodeType
-  return (type === 3 || type === 8) && otherNode.nodeType === type
 }
 
 /**
