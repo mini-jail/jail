@@ -32,7 +32,7 @@ const Dot = (x: number, y: number, target: number) => {
 
   return template`
     <div
-      d-text=${text} style=${css} d-style:background-color=${bgColor}
+      d-my-text=${text} style=${css} d-style:background-color=${bgColor}
       d-on:mouseover.delegate=${() => hover(true)}
       d-on:mouseout.delegate=${() => hover(false)}
     ></div>
@@ -75,7 +75,7 @@ export default function Component() {
 
   onUnmount(() => clearInterval(id))
 
-  createDirective("text", (elt, binding) => {
+  createDirective<string>("my-text", (elt, binding) => {
     const value = binding.value + ""
     if (elt.firstChild?.nodeType === 3) {
       const textNode = elt.firstChild as Text
