@@ -381,7 +381,7 @@ function renderChild(elt, value) {
 /**
  * @param {HTMLElement} elt
  * @param {(() => *) | *[]} childElement
- * @param {boolean} replace
+ * @param {boolean} replaceRoot
  */
 function renderDynamicChild(elt, childElement, replaceRoot) {
   const anchor = new Text()
