@@ -1,5 +1,7 @@
 #/bin/bash
 export APP_PROD=false
+export APP_DEV_TIMEOUT=100
+export APP_LOG=true
 export APP_PORT=8000
 export APP_PUBLIC=./
 export APP_WRITE=false

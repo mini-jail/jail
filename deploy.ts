@@ -1,7 +1,9 @@
 import { Application, Router } from "https://deno.land/x/oak@v10.2.0/mod.ts"
 import { bundle } from "https://deno.land/x/emit@0.24.0/mod.ts"
 
-const PROD = Deno.env.get("APP_PROD")! === "true"
+const PROD = Deno.env.get("APP_PROD") === "true"
+const LOG = Deno.env.get("APP_LOG") === "true"
+const DEV_TIMEOUT = +(Deno.env.get("APP_DEV_TIMEOUT") ?? "100")
 const WRITE = Deno.env.get("APP_WRITE") === "true"
 const PORT = +Deno.env.get("APP_PORT")!
 const PUBLIC = Deno.env.get("APP_PUBLIC") || Deno.cwd()
@@ -9,7 +11,7 @@ const HTML = Deno.env.get("APP_HTML")!
 const TARGET = Deno.env.get("APP_TARGET")!
 const SOURCE = Deno.env.get("APP_SOURCE")!
 const SOURCE_ROOT = Deno.env.get("APP_SOURCE_ROOT")!
-const IMPORT_MAP = Deno.env.get("APP_IMPORT_MAP")!
+const IMPORT_MAP = Deno.env.get("APP_IMPORT_MAP")
 
 let build = await createBundle()
 
@@ -56,7 +58,7 @@ async function createBundle(): Promise<string> {
     },
   })
   const duration = performance.now() - timeStart
-  console.info("app build in", duration, "ms")
+  LOG && console.info("app build in", duration, "ms")
   if (WRITE === true) {
     await Deno.writeTextFile(Deno.cwd() + TARGET, code)
   }
@@ -71,6 +73,6 @@ async function runDev() {
     }
     build = await createBundle()
     built = true
-    setTimeout(() => built = false, 100)
+    setTimeout(() => built = false, DEV_TIMEOUT)
   }
 }
