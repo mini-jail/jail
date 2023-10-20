@@ -58,7 +58,7 @@ async function createBundle(): Promise<string> {
     },
   })
   const duration = performance.now() - timeStart
-  LOG && console.info("app build in", duration, "ms")
+  LOG && console.info("app built in", duration, "ms")
   if (WRITE === true) {
     await Deno.writeTextFile(Deno.cwd() + TARGET, code)
   }
