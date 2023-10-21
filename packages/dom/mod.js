@@ -114,6 +114,12 @@ const AttrValueCache = {}
 /** @type {{ [name: string]: boolean | undefined }} */
 const DelegatedEvents = {}
 
+const ERR_MISSING_INJECTION_APP = new Error("Missing App Injection"),
+  ERR_MISSING_ATTRIBUTE_VALUE = new Error("Missing Attribute _###_value"),
+  ERR_MISSING_COMPONENT = new Error("Missing Component"),
+  ERR_MISSING_DIRECTIVE = new Error("Missing Directive"),
+  ERR_MISSING_BINDING_ARG = new Error("Missing Binding.arg")
+
 /**
  * @returns {Application}
  */
@@ -121,7 +127,7 @@ function injectApp() {
   /** @type {Application | undefined} */
   const app = inject(AppInjectionKey)
   if (app === undefined) {
-    throw new Error("missing app injection")
+    throw ERR_MISSING_INJECTION_APP
   }
   return app
 }
@@ -209,7 +215,7 @@ const renderMap = {
   slot: (elt, slots) => {
     const slot = elt.getAttribute(VALUE)
     if (slot === null) {
-      throw new Error(`missing attribute ${VALUE}`)
+      throw ERR_MISSING_ATTRIBUTE_VALUE
     }
     renderChild(elt, slots[slot])
   },
@@ -220,11 +226,11 @@ const renderMap = {
   comp: (elt, slots) => {
     const componentName = elt.getAttribute(VALUE)
     if (componentName === null) {
-      throw new Error(`missing attribute ${VALUE}`)
+      throw ERR_MISSING_ATTRIBUTE_VALUE
     }
     const component = injectApp().components[componentName]
     if (component === undefined) {
-      throw new Error(`missing component injection (${componentName})`)
+      throw ERR_MISSING_COMPONENT
     }
     createRoot(() => {
       const props = createProps(elt, slots)
@@ -419,7 +425,7 @@ function renderAttr(elt, prop, data) {
     const key = prop.slice(DIR_PREFIX_LENGTH).match(DIR_KEY_RE)[0]
     const directive = injectApp().directives[key]
     if (directive === undefined) {
-      throw new Error(`missing directive injection (${key})`)
+      throw ERR_MISSING_DIRECTIVE
     }
     const binding = createBinding(prop, data)
     createEffect(() => directive(elt, binding))
@@ -573,7 +579,7 @@ function refDirective(elt, { rawValue }) {
  */
 function styleDirective(elt, { arg, value }) {
   if (arg === null) {
-    throw new Error(`d-style: missing binding.arg`)
+    throw ERR_MISSING_BINDING_ARG
   }
   elt.style[arg] = value || null
 }
@@ -582,19 +588,19 @@ function styleDirective(elt, { arg, value }) {
  * @param {HTMLElement} elt
  * @param {Binding<*>} binding
  */
-function bindDirective(elt, { arg: prop, modifiers, value }) {
-  if (prop === null) {
-    throw new Error(`d-bind: missing binding.arg`)
+function bindDirective(elt, { arg, modifiers, value }) {
+  if (arg === null) {
+    throw ERR_MISSING_BINDING_ARG
   }
   if (modifiers?.camel) {
-    prop = toCamelCase(prop)
+    arg = toCamelCase(arg)
   } else if (modifiers?.attr) {
-    prop = toKebabCase(prop)
+    arg = toKebabCase(arg)
   }
-  if (modifiers?.prop === true || prop in elt) {
-    elt[prop] = value
+  if (modifiers?.prop === true || arg in elt) {
+    elt[arg] = value
   } else {
-    elt.setAttribute(prop, value + "")
+    elt.setAttribute(arg, value + "")
   }
 }
 
@@ -637,11 +643,11 @@ function ifDirective(elt, { value }) {
  * @param {HTMLElement} elt
  * @param {Binding<DOMListener>} binding
  */
-function onDirective(elt, { arg: name, modifiers, rawValue: listener }) {
-  if (name === null) {
-    throw new Error(`d-on: missing binding.arg`)
+function onDirective(elt, { arg, modifiers, rawValue: listener }) {
+  if (arg === null) {
+    throw ERR_MISSING_BINDING_ARG
   }
-  let id = name, eventOptions
+  let id = arg, eventOptions
   if (modifiers) {
     const { once, capture, passive, prevent, stop, delegate } = modifiers
     eventOptions = { once, capture, passive }
@@ -672,18 +678,18 @@ function onDirective(elt, { arg: name, modifiers, rawValue: listener }) {
     }
     if (delegate) {
       elt[ON_DEL_DIR_SYM] = elt[ON_DEL_DIR_SYM] || {}
-      elt[ON_DEL_DIR_SYM][name] = elt[ON_DEL_DIR_SYM][name] || []
-      elt[ON_DEL_DIR_SYM][name].push(listener)
+      elt[ON_DEL_DIR_SYM][arg] = elt[ON_DEL_DIR_SYM][arg] || []
+      elt[ON_DEL_DIR_SYM][arg].push(listener)
       if (DelegatedEvents[id] === undefined) {
         // @ts-expect-error: delegatedEventListener is of type DOMListener
-        addEventListener(name, delegatedEventListener, eventOptions)
+        addEventListener(arg, delegatedEventListener, eventOptions)
         DelegatedEvents[id] = true
       }
       return
     }
   }
   // @ts-expect-error: listener is of type DOMListener
-  elt.addEventListener(name, listener, eventOptions)
+  elt.addEventListener(arg, listener, eventOptions)
 }
 
 /**
