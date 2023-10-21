@@ -721,13 +721,8 @@ function replace(data, match, replacer) {
 
 /**
  * @template Type
- * @overload
  * @param {Type} data
  * @returns {Type extends (() => *) ? ReturnType<Type> : Type}
- */
-/**
- * @param {* | import("jail/signal").Getter<*>} data
- * @returns {* | ReturnType<import("jail/signal").Getter<*>>}
  */
 function resolve(data) {
   return typeof data === "function" ? data() : data
