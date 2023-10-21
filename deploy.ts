@@ -1,7 +1,7 @@
 import { Application, Router } from "https://deno.land/x/oak@v10.2.0/mod.ts"
 import { bundle } from "https://deno.land/x/emit@0.24.0/mod.ts"
 
-const PROD = Deno.env.get("APP_PROD") === "true"
+const DEV = Deno.env.get("APP_DEV") === "true"
 const LOG = Deno.env.get("APP_LOG") === "true"
 const DEV_TIMEOUT = +(Deno.env.get("APP_DEV_TIMEOUT") ?? "100")
 const WRITE = Deno.env.get("APP_WRITE") === "true"
@@ -44,7 +44,7 @@ app.use(async (ctx, next) => {
 
 app.listen({ port: PORT })
 
-if (PROD === false) {
+if (DEV === true) {
   runDev()
 }
 
@@ -53,8 +53,8 @@ async function createBundle(): Promise<string> {
   const { code } = await bundle(SOURCE, {
     importMap: IMPORT_MAP,
     compilerOptions: {
-      inlineSources: !PROD,
-      inlineSourceMap: !PROD,
+      inlineSources: DEV,
+      inlineSourceMap: DEV,
     },
   })
   const duration = performance.now() - timeStart
