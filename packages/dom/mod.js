@@ -84,7 +84,7 @@ const AppInjectionKey = Symbol(),
   QUERY = `[${TYPE}]`,
   DIR_PREFIX = "d-",
   DIR_PREFIX_LENGTH = DIR_PREFIX.length,
-  DIR_RE = RegExp(`${sub(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
+  DIR_RE = RegExp(`${replace(DIR_PREFIX, "-", "\\-")}[^"'<>=\\s]`),
   DIR_KEY_RE = /[a-z\-\_]+/,
   ARG_RE = /#{(\d+)}/g,
   SINGLE_VALUE_RE = /^@{(\d+)}$/,
@@ -312,9 +312,9 @@ function createValue(value, slots) {
     return slots[keyOrKeys]
   }
   if (keyOrKeys.some((key) => typeof slots[key] === "function")) {
-    return () => sub(value, MULTI_VALUE_RE, (_, key) => toValue(slots[key]))
+    return () => replace(value, MULTI_VALUE_RE, (_, key) => resolve(slots[key]))
   }
-  return sub(value, MULTI_VALUE_RE, (_, key) => slots[key])
+  return replace(value, MULTI_VALUE_RE, (_, key) => slots[key])
 }
 
 /**
@@ -327,33 +327,37 @@ export function createTemplateString(strings) {
     templateString = templateString + strings[arg] + `#{${arg++}}`
   }
   templateString = templateString + strings[arg]
-  templateString = sub(templateString, START_WS_RE, "")
-  templateString = sub(templateString, SC_TAG_RE, (match, tag, attr) => {
+  templateString = replace(templateString, START_WS_RE, "")
+  templateString = replace(templateString, SC_TAG_RE, (match, tag, attr) => {
     return CAMEL_RE.test(tag) ? `<${tag}${attr}></${tag}>` : match
   })
-  templateString = sub(templateString, CLOSING_COMP_RE, COMP_REPLACEMENTS[1])
-  templateString = sub(templateString, TAG_RE, (match) => {
+  templateString = replace(
+    templateString,
+    CLOSING_COMP_RE,
+    COMP_REPLACEMENTS[1],
+  )
+  templateString = replace(templateString, TAG_RE, (match) => {
     const isComp = COMP_RE.test(match)
     let id = 0
-    match = sub(match, ATTR_RE, (match, name, val1, val2, val3) => {
+    match = replace(match, ATTR_RE, (match, name, val1, val2, val3) => {
       if (isComp === false) {
         if (!ARG_RE.test(match) && !DIR_RE.test(match)) {
           return match
         }
       }
       const quote = match.match(QUOTE_RE)?.[0] || `"`
-      const value = sub(val1 ?? val2 ?? val3 ?? "", ARG_RE, "@{$1}")
+      const value = replace(val1 ?? val2 ?? val3 ?? "", ARG_RE, "@{$1}")
       return ` data-${HASH}${id++}=${quote}${name} ${value}${quote}`
     })
     if (isComp) {
-      match = sub(match, COMP_RE, COMP_REPLACEMENTS[0])
+      match = replace(match, COMP_RE, COMP_REPLACEMENTS[0])
     } else if (id !== 0) {
-      match = sub(match, TAG_RE, ATTR_REPLACEMENT)
+      match = replace(match, TAG_RE, ATTR_REPLACEMENT)
     }
     return match
   })
-  templateString = sub(templateString, ARG_RE, SLOT_REPLACEMENT)
-  templateString = sub(templateString, CONTENT_RE, "$1$2")
+  templateString = replace(templateString, ARG_RE, SLOT_REPLACEMENT)
+  templateString = replace(templateString, CONTENT_RE, "$1$2")
   return templateString
 }
 
@@ -408,7 +412,7 @@ function renderDynamicChild(elt, childElement, replaceRoot) {
   replaceRoot ? elt.replaceWith(anchor) : elt.appendChild(anchor)
   // @ts-expect-error: (currentNodes, nextNodes) will be of type ChildNode[]
   createEffect((currentNodes) => {
-    const nextNodes = createNodeArray([], toValue(childElement))
+    const nextNodes = createNodeArray([], resolve(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
     return nextNodes
   }, [])
@@ -456,7 +460,7 @@ function createBinding(prop, rawValue) {
   }, {}) || null
   return {
     get value() {
-      return toValue(rawValue)
+      return resolve(rawValue)
     },
     rawValue,
     arg,
@@ -482,7 +486,7 @@ function createNodeArray(nodeArray, ...elements) {
     } else if (typeof elt === "string" || typeof elt === "number") {
       nodeArray.push(new Text(elt + ""))
     } else if (typeof elt === "function") {
-      createNodeArray(nodeArray, toValue(elt))
+      createNodeArray(nodeArray, resolve(elt))
     } else if (Symbol.iterator in elt) {
       // @ts-expect-error: elt[Symbol.iterator] should be iterable by design
       createNodeArray(nodeArray, ...elt)
@@ -523,7 +527,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
  * @returns {string}
  */
 function toCamelCase(data) {
-  return sub(data, KEBAB_RE, (match) => match.slice(1).toUpperCase())
+  return replace(data, KEBAB_RE, (match) => match.slice(1).toUpperCase())
 }
 
 /**
@@ -531,7 +535,7 @@ function toCamelCase(data) {
  * @returns {string}
  */
 function toKebabCase(data) {
-  return sub(data, CAMEL_RE, "-$1").toLowerCase()
+  return replace(data, CAMEL_RE, "-$1").toLowerCase()
 }
 
 /**
@@ -625,7 +629,7 @@ function textDirective(elt, { value }) {
  * @param {Binding<boolean | "true" | "false">} binding
  */
 function showDirective(elt, { value }) {
-  elt.style.display = value ? "" : "none"
+  elt.style.display = value === true || value === "true" ? "" : "none"
 }
 
 /**
@@ -712,7 +716,7 @@ function onDirective(elt, { arg, modifiers, rawValue: listener }) {
  * @param {*} replacer
  * @returns {string}
  */
-function sub(data, match, replacer) {
+function replace(data, match, replacer) {
   return data.replace(match, replacer)
 }
 
@@ -726,6 +730,6 @@ function sub(data, match, replacer) {
  * @param {* | import("jail/signal").Getter<*>} data
  * @returns {* | ReturnType<import("jail/signal").Getter<*>>}
  */
-function toValue(data) {
+function resolve(data) {
   return typeof data === "function" ? data() : data
 }
