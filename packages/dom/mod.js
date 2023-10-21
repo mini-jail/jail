@@ -37,8 +37,8 @@ import {
 /**
  * @template [Type = *]
  * @typedef {{
- *   readonly value: Type
- *   readonly rawValue: (() => Type) | Type
+ *   readonly value: Type extends (() => *) ?  ReturnType<Type> : Type
+ *   readonly rawValue: Type | (() => Type)
  *   readonly arg: string | null
  *   readonly modifiers: Modifiers | null
  * }} Binding
@@ -449,7 +449,7 @@ function renderAttr(elt, prop, data) {
 /**
  * @template Type
  * @param {string} prop
- * @param {Type | (() => Type)} rawValue
+ * @param {Type} rawValue
  * @returns {Binding<Type>}
  */
 function createBinding(prop, rawValue) {
@@ -557,11 +557,12 @@ function setProperty(elt, prop, value) {
 }
 
 /**
- * @param {DOMEvent} event
+ * @param {Event} event
  */
 function delegatedEventListener(event) {
   const type = event.type
-  /** @type {Node | null} */
+  /** @type {Node | ParentNode | null} */
+  // @ts-expect-error: it is ok TS...everything will be fine
   let elt = event.target
   while (elt !== null) {
     elt?.[ON_DEL_DIR_SYM]?.[type]?.forEach?.((fn) => fn.call(elt, event))
@@ -645,7 +646,7 @@ function ifDirective(elt, { value }) {
 
 /**
  * @param {HTMLElement} elt
- * @param {Binding<DOMListener>} binding
+ * @param {Binding<EventListener>} binding
  */
 function onDirective(elt, { arg, modifiers, rawValue: listener }) {
   if (arg === null) {
@@ -685,14 +686,12 @@ function onDirective(elt, { arg, modifiers, rawValue: listener }) {
       elt[ON_DEL_DIR_SYM][arg] = elt[ON_DEL_DIR_SYM][arg] || []
       elt[ON_DEL_DIR_SYM][arg].push(listener)
       if (DelegatedEvents[id] === undefined) {
-        // @ts-expect-error: delegatedEventListener is of type DOMListener
         addEventListener(arg, delegatedEventListener, eventOptions)
         DelegatedEvents[id] = true
       }
       return
     }
   }
-  // @ts-expect-error: listener is of type DOMListener
   elt.addEventListener(arg, listener, eventOptions)
 }
 
@@ -723,8 +722,8 @@ function replace(data, match, replacer) {
 /**
  * @template Type
  * @overload
- * @param {Type | import("jail/signal").Getter<Type>} data
- * @returns {Type | ReturnType<import("jail/signal").Getter<Type>>}
+ * @param {Type} data
+ * @returns {Type extends (() => *) ? ReturnType<Type> : Type}
  */
 /**
  * @param {* | import("jail/signal").Getter<*>} data
