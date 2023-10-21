@@ -218,6 +218,7 @@ function getSourceValue(source) {
       activeNode.sourceSlots = [sourceSlot]
     } else {
       activeNode.sources.push(source)
+      // @ts-expect-error: activeNode.sourceSlots will be not null
       activeNode.sourceSlots.push(sourceSlot)
     }
     if (source.nodes === null) {
@@ -225,6 +226,7 @@ function getSourceValue(source) {
       source.nodeSlots = [nodeSlot]
     } else {
       source.nodes.push(activeNode)
+      // @ts-expect-error: source.nodeSlots will be not null
       source.nodeSlots.push(nodeSlot)
     }
   }
@@ -255,6 +257,7 @@ function setSourceValue(source, nextValue) {
   source.value = nextValue
   if (source.nodes?.length) {
     batch(() => {
+      // @ts-expect-error: source.nodes will be not null
       for (const node of source.nodes) {
         NodeQueue.add(node)
       }
@@ -398,14 +401,24 @@ function updateNode(node, complete) {
 function cleanNode(node, complete) {
   if (node.sources?.length) {
     while (node.sources.length) {
+      /** @type {Source} */
+      // @ts-expect-error: node.sources will be not null
       const source = node.sources.pop()
+      /** @type {number} */
+      // @ts-expect-error: node.sourceSlots will be not null
       const sourceSlot = node.sourceSlots.pop()
       if (source.nodes?.length) {
+        /** @type {Node} */
+        // @ts-expect-error: source.nodes will be not null
         const sourceNode = source.nodes.pop()
+        /** @type {number} */
+        // @ts-expect-error: source.nodeSlots will be not null
         const nodeSlot = source.nodeSlots.pop()
         if (sourceSlot < source.nodes.length) {
           source.nodes[sourceSlot] = sourceNode
+          // @ts-expect-error: source.nodeSlots will be not null
           source.nodeSlots[sourceSlot] = nodeSlot
+          // @ts-expect-error: sourceNode.sourceSlots will be not null
           sourceNode.sourceSlots[nodeSlot] = sourceSlot
         }
       }
@@ -414,6 +427,8 @@ function cleanNode(node, complete) {
   if (node.childNodes?.length) {
     const isUpdatable = node.onupdate !== null
     while (node.childNodes.length) {
+      /** @type {Node} */
+      // @ts-expect-error: node.childNodes.pop() will return a node here
       const childNode = node.childNodes.pop()
       cleanNode(
         childNode,

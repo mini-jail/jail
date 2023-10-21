@@ -60,11 +60,12 @@ const routeTypeHandlerMap = {
   },
   pathname() {
     const url = new URL(location.toString())
-    /**
-     * @param {MouseEvent} event
-     */
+    /** @type {import("jail/dom").DOMListener & ((this: Window, event: MouseEvent) => void)} */
     const clickListener = (event) => {
-      let elt = event.target, pathname
+      /** @type {HTMLElement | null} */
+      let elt = event.target
+      /** @type {string | undefined | null} */
+      let pathname
       while (elt != null) {
         pathname = elt?.getAttribute?.("href")
         if (pathname?.startsWith("/")) {
@@ -75,7 +76,7 @@ const routeTypeHandlerMap = {
             return history.pushState(null, "", url)
           }
         }
-        elt = elt?.parentNode
+        elt = elt?.parentElement
       }
     }
     /**
@@ -129,7 +130,7 @@ function createRoutes(routeMap) {
 /**
  * @param {RouteMap} routeMap
  * @param {RouterOptions} options
- * @returns {Getter}
+ * @returns {import("jail/signal").Getter}
  */
 function createRouter(routeMap, options) {
   const routeArray = createRoutes(routeMap)
@@ -149,9 +150,9 @@ function createRouter(routeMap, options) {
 }
 
 /**
- * @template [Type = *]
+ * @template Type
  * @param {RouterProperties<Type>} props
- * @returns {() => [children, Type]}
+ * @returns {() => [children, import("jail/signal").Getter<Type | undefined>]}
  */
 export function Router({ routeMap, type, fallback, children }) {
   routeTypeHandlerMap[type]()
@@ -178,5 +179,6 @@ export function Router({ routeMap, type, fallback, children }) {
  * @returns {void}
  */
 export function installDOMRouter() {
+  // @ts-expect-error: honestly? no idea for now
   createComponent("Router", Router)
 }

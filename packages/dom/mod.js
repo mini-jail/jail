@@ -13,7 +13,7 @@ import {
  * @typedef {Node | Node[] | undefined} RenderResult
  * @typedef {{ readonly [key: string]: boolean }} Modifiers
  * @typedef {{ [name: string]: Directive<*> | undefined }} Directives
- * @typedef {{ [name: string]: Component<Properties> | undefined }} Components
+ * @typedef {{ [name: string]: Component<*> | undefined }} Components
  * @typedef {() => *} RootComponent
  * @typedef {{
  *   directives: Directives
@@ -21,8 +21,10 @@ import {
  * }} Application
  */
 /**
- * @template {{ [key: string]: * }} [Type = { [key: string]: * }]
- * @typedef {Type & { children?: * }} Properties
+ * @typedef {{
+ *   children?: *
+ *   [key: string]: *
+ * }} Properties
  */
 /**
  * @template [Type = *]
@@ -119,7 +121,7 @@ function injectApp() {
   /** @type {Application | undefined} */
   const app = inject(AppInjectionKey)
   if (app === undefined) {
-    throw new Error("Missing App Injection")
+    throw new Error("missing app injection")
   }
   return app
 }
@@ -157,7 +159,7 @@ export function createComponent(name, component) {
 /**
  * @param {HTMLElement} rootElement
  * @param {RootComponent} rootComponent
- * @returns {Cleanup}
+ * @returns {Cleanup | undefined}
  */
 export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
@@ -204,16 +206,25 @@ const renderMap = {
    * @param {HTMLSlotElement} elt
    * @param {Slot[]} slots
    */
-  slot: (elt, slots) => renderChild(elt, slots[elt.getAttribute(VALUE)]),
+  slot: (elt, slots) => {
+    const slot = elt.getAttribute(VALUE)
+    if (slot === null) {
+      throw new Error(`missing attribute ${VALUE}`)
+    }
+    renderChild(elt, slots[slot])
+  },
   /**
    * @param {HTMLTemplateElement} elt
    * @param {Slot[]} slots
    */
   comp: (elt, slots) => {
-    const component = injectApp().components[elt.getAttribute(VALUE)]
+    const componentName = elt.getAttribute(VALUE)
+    if (componentName === null) {
+      throw new Error(`missing attribute ${VALUE}`)
+    }
+    const component = injectApp().components[componentName]
     if (component === undefined) {
-      elt.remove()
-      return
+      throw new Error(`missing component injection (${componentName})`)
     }
     createRoot(() => {
       const props = createProps(elt, slots)
@@ -252,6 +263,8 @@ function createProps(elt, slots) {
   const props = {}
   for (const key in elt.dataset) {
     if (key.startsWith(HASH)) {
+      /** @type {RegExpMatchArray} */
+      // @ts-expect-error: elt.dataset[key] will be available and match with KEY_VALUE_RE
       const match = elt.dataset[key].match(KEY_VALUE_RE)
       props[match[1]] = createValue(match[2], slots)
       delete elt.dataset[key]
@@ -349,6 +362,7 @@ function createOrGetFragment(templateStrings) {
     elt.innerHTML = createTemplateString(templateStrings)
     FragmentCache.set(templateStrings, template = elt.content)
   }
+  // @ts-expect-error: Clone of DocumentFragment is still of type DocumentFragment
   return template.cloneNode(true)
 }
 
@@ -386,6 +400,7 @@ function renderChild(elt, value) {
 function renderDynamicChild(elt, childElement, replaceRoot) {
   const anchor = new Text()
   replaceRoot ? elt.replaceWith(anchor) : elt.appendChild(anchor)
+  // @ts-expect-error: (currentNodes, nextNodes) will be of type ChildNode[]
   createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], toValue(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
@@ -400,12 +415,14 @@ function renderDynamicChild(elt, childElement, replaceRoot) {
  */
 function renderAttr(elt, prop, data) {
   if (prop.startsWith(DIR_PREFIX)) {
+    // @ts-expect-error: sliced prop will match DIR_KEY_RE
     const key = prop.slice(DIR_PREFIX_LENGTH).match(DIR_KEY_RE)[0]
     const directive = injectApp().directives[key]
-    if (directive) {
-      const binding = createBinding(prop, data)
-      createEffect(() => directive(elt, binding))
+    if (directive === undefined) {
+      throw new Error(`missing directive injection (${key})`)
     }
+    const binding = createBinding(prop, data)
+    createEffect(() => directive(elt, binding))
   } else if (typeof data === "function") {
     createEffect((currentValue) => {
       const nextValue = data()
@@ -452,6 +469,7 @@ function createNodeArray(nodeArray, ...elements) {
       continue
     }
     if (elt instanceof DocumentFragment) {
+      // @ts-expect-error: NodeListOf<ChildNode> is iterable
       nodeArray.push(...elt.childNodes)
     } else if (elt instanceof Node) {
       nodeArray.push(elt)
@@ -460,6 +478,7 @@ function createNodeArray(nodeArray, ...elements) {
     } else if (typeof elt === "function") {
       createNodeArray(nodeArray, toValue(elt))
     } else if (Symbol.iterator in elt) {
+      // @ts-expect-error: elt[Symbol.iterator] should be iterable by design
       createNodeArray(nodeArray, ...elt)
     }
   }
@@ -476,6 +495,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
     const child = currentNodes[i]
     currentNodes.length && currentNodes.some((currentNode, j) => {
       if (nextNode.nodeType === 3 && currentNode.nodeType === 3) {
+        // @ts-expect-error: both nodes are of type Text
         currentNode.data = nextNode.data
       }
       if (nextNode.isEqualNode(currentNode)) {
@@ -485,6 +505,7 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
       }
     })
     if (nextNodes[i] !== child) {
+      // @ts-expect-error: anchor should always have a parentNode
       anchor.parentNode.insertBefore(nextNodes[i], child?.nextSibling || anchor)
     }
   })
@@ -530,6 +551,7 @@ function setProperty(elt, prop, value) {
  */
 function delegatedEventListener(event) {
   const type = event.type
+  /** @type {Node | null} */
   let elt = event.target
   while (elt !== null) {
     elt?.[ON_DEL_DIR_SYM]?.[type]?.forEach?.((fn) => fn.call(elt, event))
@@ -550,6 +572,9 @@ function refDirective(elt, { rawValue }) {
  * @param {Binding<string>} binding
  */
 function styleDirective(elt, { arg, value }) {
+  if (arg === null) {
+    throw new Error(`d-style: missing binding.arg`)
+  }
   elt.style[arg] = value || null
 }
 
@@ -558,6 +583,9 @@ function styleDirective(elt, { arg, value }) {
  * @param {Binding<*>} binding
  */
 function bindDirective(elt, { arg: prop, modifiers, value }) {
+  if (prop === null) {
+    throw new Error(`d-bind: missing binding.arg`)
+  }
   if (modifiers?.camel) {
     prop = toCamelCase(prop)
   } else if (modifiers?.attr) {
@@ -588,7 +616,7 @@ function textDirective(elt, { value }) {
 
 /**
  * @param {HTMLElement} elt
- * @param {Binding<boolean>} binding
+ * @param {Binding<boolean | "true" | "false">} binding
  */
 function showDirective(elt, { value }) {
   elt.style.display = value ? "" : "none"
@@ -596,7 +624,7 @@ function showDirective(elt, { value }) {
 
 /**
  * @param {HTMLElement} elt
- * @param {Binding<boolean>} binding
+ * @param {Binding<boolean | "true" | "false">} binding
  */
 function ifDirective(elt, { value }) {
   elt[IF_DIR_SYM] = elt[IF_DIR_SYM] ?? new Text()
@@ -610,6 +638,9 @@ function ifDirective(elt, { value }) {
  * @param {Binding<DOMListener>} binding
  */
 function onDirective(elt, { arg: name, modifiers, rawValue: listener }) {
+  if (name === null) {
+    throw new Error(`d-on: missing binding.arg`)
+  }
   let id = name, eventOptions
   if (modifiers) {
     const { once, capture, passive, prevent, stop, delegate } = modifiers
@@ -644,12 +675,14 @@ function onDirective(elt, { arg: name, modifiers, rawValue: listener }) {
       elt[ON_DEL_DIR_SYM][name] = elt[ON_DEL_DIR_SYM][name] || []
       elt[ON_DEL_DIR_SYM][name].push(listener)
       if (DelegatedEvents[id] === undefined) {
+        // @ts-expect-error: delegatedEventListener is of type DOMListener
         addEventListener(name, delegatedEventListener, eventOptions)
         DelegatedEvents[id] = true
       }
       return
     }
   }
+  // @ts-expect-error: listener is of type DOMListener
   elt.addEventListener(name, listener, eventOptions)
 }
 
@@ -664,7 +697,7 @@ function onDirective(elt, { arg: name, modifiers, rawValue: listener }) {
  * @overload
  * @param {string} data
  * @param {string | RegExp} match
- * @param {(match: string, ...matches: (string | number | undefined)[]) => string} replacer
+ * @param {(match: string, ...matches: string[]) => string} replacer
  * @returns {string}
  */
 /**
@@ -679,8 +712,13 @@ function sub(data, match, replacer) {
 
 /**
  * @template Type
+ * @overload
  * @param {Type | import("jail/signal").Getter<Type>} data
  * @returns {Type | ReturnType<import("jail/signal").Getter<Type>>}
+ */
+/**
+ * @param {* | import("jail/signal").Getter<*>} data
+ * @returns {* | ReturnType<import("jail/signal").Getter<*>>}
  */
 function toValue(data) {
   return typeof data === "function" ? data() : data

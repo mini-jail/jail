@@ -13,6 +13,6 @@
     "allowUnreachableCode": true,
     "allowJs": true,
     "noImplicitAny": false,
-    "checkJs": false
+    "checkJs": true
   }
 }
