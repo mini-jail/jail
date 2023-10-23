@@ -2,6 +2,7 @@
   "imports": {
     "jail/signal": "./packages/signal/mod.js",
     "jail/dom": "./packages/dom/mod.js",
-    "jail/dom-router": "./packages/dom-router/mod.js"
+    "jail/dom-router": "./packages/dom-router/mod.js",
+    "deploy": "https://raw.githubusercontent.com/mini-jail/deno_deploy/main/mod.ts"
   }
 }
