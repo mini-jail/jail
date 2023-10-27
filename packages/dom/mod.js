@@ -486,7 +486,7 @@ function createNodeArray(nodeArray, ...elements) {
     } else if (typeof elt === "string" || typeof elt === "number") {
       nodeArray.push(new Text(elt + ""))
     } else if (typeof elt === "function") {
-      createNodeArray(nodeArray, resolve(elt))
+      createNodeArray(nodeArray, elt())
     } else if (Symbol.iterator in elt) {
       // @ts-expect-error: elt[Symbol.iterator] should be iterable by design
       createNodeArray(nodeArray, ...elt)
