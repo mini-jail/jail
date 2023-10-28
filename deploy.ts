@@ -1,3 +1,3 @@
-import { app, PORT } from "deploy"
+import { app, PORT } from "jail/deploy"
 
-app.listen({ port: PORT })
+await app.listen({ port: PORT })

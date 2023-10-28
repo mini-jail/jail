@@ -1,11 +1,7 @@
 #/bin/bash
 export APP_DEV=true
-export APP_DEV_TIMEOUT=100
-export APP_LOG=true
 export APP_PORT=8000
 export APP_PUBLIC=./examples
-export APP_WRITE=false
-export APP_HTML=./index.html
 export APP_TARGET=/app.bundle.js
 export APP_SOURCE=./examples/src/app.ts
 export APP_SOURCE_ROOT=./examples/src
