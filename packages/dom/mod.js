@@ -248,6 +248,8 @@ const renderMap = {
  * @returns {RenderResult}
  */
 function render(fragment, slots) {
+  // @ts-expect-error: clone of DocumentFragment is still a DocumentFragment
+  fragment = fragment.cloneNode(true)
   fragment.querySelectorAll(QUERY).forEach((elt) => {
     renderMap[elt.getAttribute(TYPE)](elt, slots)
   })
@@ -366,14 +368,13 @@ export function createTemplateString(strings) {
  * @returns {DocumentFragment}
  */
 function createOrGetFragment(templateStrings) {
-  let template = FragmentCache.get(templateStrings)
-  if (template === undefined) {
+  let fragment = FragmentCache.get(templateStrings)
+  if (fragment === undefined) {
     const elt = document.createElement("template")
     elt.innerHTML = createTemplateString(templateStrings)
-    FragmentCache.set(templateStrings, template = elt.content)
+    FragmentCache.set(templateStrings, fragment = elt.content)
   }
-  // @ts-expect-error: Clone of DocumentFragment is still of type DocumentFragment
-  return template.cloneNode(true)
+  return fragment
 }
 
 /**
