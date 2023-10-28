@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "jail/signal": "https://raw.githubusercontent.com/mini-jail/jail/main/packages/signal/mod.js",
+    "jail/dom": "https://raw.githubusercontent.com/mini-jail/jail/main/packages/dom/mod.js",
+    "jail/dom-router": "https://raw.githubusercontent.com/mini-jail/jail/main/packages/dom-router/mod.js",
+    "deploy": "https://raw.githubusercontent.com/mini-jail/deno_deploy/main/mod.ts"
+  }
+}

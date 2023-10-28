@@ -474,11 +474,10 @@ function createBinding(prop, rawValue) {
  * @returns {Node[]}
  */
 function createNodeArray(nodeArray, ...elements) {
-  for (const elt of elements) {
+  elements.length && elements.forEach((elt) => {
     if (elt == null || typeof elt === "boolean") {
-      continue
-    }
-    if (elt instanceof DocumentFragment) {
+      return
+    } else if (elt instanceof DocumentFragment) {
       // @ts-expect-error: NodeListOf<ChildNode> is iterable
       nodeArray.push(...elt.childNodes)
     } else if (elt instanceof Node) {
@@ -491,7 +490,7 @@ function createNodeArray(nodeArray, ...elements) {
       // @ts-expect-error: elt[Symbol.iterator] should be iterable by design
       createNodeArray(nodeArray, ...elt)
     }
-  }
+  })
   return nodeArray
 }
 
