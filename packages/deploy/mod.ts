@@ -18,7 +18,8 @@ router.get(TARGET, (ctx) => {
   ctx.response.type = "js"
   ctx.response.body = build
 })
-
+app.use(router.routes())
+app.use(router.allowedMethods())
 app.use(async (ctx, next) => {
   try {
     await ctx.send({ root: PUBLIC, index: "./index.html" })

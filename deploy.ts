@@ -1,4 +1,2 @@
-import { app, PORT, router } from "jail/deploy"
-app.use(router.routes())
-app.use(router.allowedMethods())
+import { app, PORT } from "jail/deploy"
 await app.listen({ port: PORT })
