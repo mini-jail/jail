@@ -377,28 +377,28 @@ function createOrGetFragment(templateStrings) {
 }
 
 /**
- * @param {HTMLElement} elt
- * @param {*} value
+ * @param {HTMLElement} targetElt
+ * @param {*} child
  */
-function renderChild(elt, value) {
-  if (value == null || typeof value === "boolean") {
-    elt.remove()
-  } else if (value instanceof Node) {
-    elt.replaceWith(value)
-  } else if (typeof value === "function") {
-    renderDynamicChild(elt, value, true)
-  } else if (typeof value === "string" || typeof value === "number") {
-    elt.replaceWith(value + "")
-  } else if (Symbol.iterator in value) {
-    value = Array.isArray(value) ? value : Array.from(value)
-    if (value.length === 0) {
-      elt.remove()
-    } else if (value.length === 1) {
-      renderChild(elt, value[0])
-    } else if (value.some((item) => typeof item === "function")) {
-      renderDynamicChild(elt, value, true)
+function renderChild(targetElt, child) {
+  if (child == null || typeof child === "boolean") {
+    targetElt.remove()
+  } else if (child instanceof Node) {
+    targetElt.replaceWith(child)
+  } else if (typeof child === "string" || typeof child === "number") {
+    targetElt.replaceWith(child + "")
+  } else if (typeof child === "function") {
+    renderDynamicChild(targetElt, child, true)
+  } else if (Symbol.iterator in child) {
+    child = Array.isArray(child) ? child : Array.from(child)
+    if (child.length === 0) {
+      targetElt.remove()
+    } else if (child.length === 1) {
+      renderChild(targetElt, child[0])
+    } else if (child.some((item) => typeof item === "function")) {
+      renderDynamicChild(targetElt, child, true)
     } else {
-      elt.replaceWith(...createNodeArray([], ...value))
+      targetElt.replaceWith(...createNodeArray([], ...child))
     }
   }
 }
@@ -478,10 +478,8 @@ function createNodeArray(nodeArray, ...elements) {
   elements.length && elements.forEach((elt) => {
     if (elt == null || typeof elt === "boolean") {
       return
-    } else if (elt instanceof DocumentFragment) {
-      // @ts-expect-error: NodeListOf<ChildNode> is iterable
-      nodeArray.push(...elt.childNodes)
-    } else if (elt instanceof Node) {
+    }
+    if (elt instanceof Node) {
       nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
       nodeArray.push(new Text(elt + ""))
