@@ -387,6 +387,8 @@ function renderChild(elt, value) {
     elt.replaceWith(value)
   } else if (typeof value === "function") {
     renderDynamicChild(elt, value, true)
+  } else if (typeof value === "string" || typeof value === "number") {
+    elt.replaceWith(value + "")
   } else if (Symbol.iterator in value) {
     value = Array.isArray(value) ? value : Array.from(value)
     if (value.length === 0) {
@@ -398,8 +400,6 @@ function renderChild(elt, value) {
     } else {
       elt.replaceWith(...createNodeArray([], ...value))
     }
-  } else {
-    elt.replaceWith(value + "")
   }
 }
 
