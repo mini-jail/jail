@@ -387,7 +387,8 @@ function renderChild(elt, value) {
     elt.replaceWith(value)
   } else if (typeof value === "function") {
     renderDynamicChild(elt, value, true)
-  } else if (Array.isArray(value)) {
+  } else if (Symbol.iterator in value) {
+    value = Array.isArray(value) ? value : Array.from(value)
     if (value.length === 0) {
       elt.remove()
     } else if (value.length === 1) {
