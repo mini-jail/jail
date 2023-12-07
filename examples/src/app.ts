@@ -34,6 +34,8 @@ const App = () => {
     ]
   }
 
+  const duration = () => `duration(${(Math.random() * 3000).toFixed(0)})`
+
   return html`
     <header>
       <h3>jail${path}</h3>
@@ -45,28 +47,24 @@ const App = () => {
         <a href="/about">about</a>
       </nav>
     </header>
-    <main 
-      d-animate
-        .delay(30)
-        .fill(both)
-        .duration(250)=${pathAnimation}
-    >
+    <main d-${animate}.fillBoth.${duration}=${pathAnimation}>
       <Router type="pathname" fallback=${NotFound} routeMap=${routeMap} />
     </main>
   `
 }
 
+const delayRegExp = /delay\((\d+)\)/
+const durationRegExp = /duration\((\d+)\)/
 const animate: Directive<Keyframe[]> = (elt, binding) => {
   const options: KeyframeAnimationOptions = {}
-  if (binding.modifiers) {
-    const delayRegExp = /delay\((\d+)\)/
-    const fillRegExp = /fill\((\w+)\)/
-    const durationRegExp = /duration\((\d+)\)/
-    for (const key in binding.modifiers) {
+  const modifiers = binding.modifiers
+  if (modifiers) {
+    if (modifiers.fillBoth) {
+      options.fill = "both"
+    }
+    for (const key in modifiers) {
       if (delayRegExp.test(key)) {
         options.delay = +(delayRegExp.exec(key)![1]!)
-      } else if (fillRegExp.test(key)) {
-        options.fill = fillRegExp.exec(key)![1]! as FillMode
       } else if (durationRegExp.test(key)) {
         options.duration = +(durationRegExp.exec(key)![1]!)
       }
@@ -77,6 +75,5 @@ const animate: Directive<Keyframe[]> = (elt, binding) => {
 
 mount(document.body, () => {
   installDOMRouter()
-  createDirective("animate", animate)
   return App()
 })

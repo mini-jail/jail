@@ -7,13 +7,22 @@ import {
   provide,
   type Signal,
 } from "jail/signal"
-import html, { createDirective } from "jail/dom"
+import html, { Directive } from "jail/dom"
 import { getParams } from "jail/dom-router"
+
+const txtSymbol = Symbol()
+const txt: Directive<string> = (elt, binding) => {
+  if (elt[txtSymbol] === undefined) {
+    elt[txtSymbol] = new Text()
+    elt.prepend(elt[txtSymbol])
+  }
+  elt[txtSymbol].data = binding.value + ""
+}
 
 const Dot = (x: number, y: number, target: number) => {
   const counter = inject<Signal<number>>("counter")!
   const hover = createSignal(false)
-  const text = () => hover() ? "*" + counter() + "*" : counter()
+  const text = () => hover() ? "*" + counter() + "*" : counter() + ""
   const bgColor = () => hover() ? "lightpink" : "white"
 
   const css = `
@@ -32,7 +41,7 @@ const Dot = (x: number, y: number, target: number) => {
 
   return html`
     <div
-      d-my-text=${text} style=${css} d-style:background-color=${bgColor}
+      d-${txt}=${text} style=${css} d-style:background-color=${bgColor}
       d-on:mouseover.delegate=${(_event) => hover(true)}
       d-on:mouseout.delegate=${(_event) => hover(false)}
     ></div>
@@ -74,16 +83,6 @@ export default function Component() {
   })
 
   onUnmount(() => clearInterval(id))
-
-  createDirective<string>("my-text", (elt, binding) => {
-    const value = binding.value + ""
-    if (elt.firstChild?.nodeType === 3) {
-      const textNode = elt.firstChild as Text
-      textNode.data = value
-    } else {
-      elt.prepend(value)
-    }
-  })
 
   return html`
     <div style="position: absolute; left: 50%; top: 50%;" d-style:transform="scale(${scale}) translateZ(0.1px)">

@@ -9,7 +9,7 @@ import {
 } from "jail/signal"
 interface DOMElement extends Element {
   [unknown: string | number | symbol]: any
-  [eventsSymbol]?: Record<string, EventListener[]>
+  [eventsSymbol]?: Record<string, Set<DOMEventListener>>
   content?: DocumentFragment
 }
 interface DOMNode extends ChildNode {
@@ -65,7 +65,7 @@ type ComponentData = {
   readonly slot: number | null
   readonly tagName: string | null
   readonly props: ComponentDataProps
-  readonly children: boolean
+  readonly hasChildren: boolean
 }
 type Data = { [element: number]: number | ComponentData | AttributeData[] }
 type Template = {
@@ -89,15 +89,15 @@ type AttributeData = {
   readonly modifiers: Modifiers | null
   readonly directiveName: string | null
   readonly directiveSlot: number | null
-  readonly hasDynamicArg: boolean
-  readonly hasDynamicModifers: boolean
+  readonly argSlot: number | null
+  readonly modifierSlots: number[] | null
 }
-export type Directive<Type> = (elt: DOMElement, binding: Binding<Type>) => void
+export interface Directive<Type> {
+  (elt: DOMElement, binding: Binding<Type>): Cleanup | undefined | void | null
+}
 export interface Component<Props extends Record<string, any>> {
   (props: Props): any
 }
-type DirectiveMap = Record<string, Directive<any> | undefined>
-type ComponentMap = Record<string, Component<any> | undefined>
 type AttributeMatches = [
   fullMatch: string,
   directiveName: string | undefined,
@@ -113,9 +113,9 @@ type AttributeMatches = [
   value: string | undefined,
 ]
 interface App {
-  delegatedEvents: Record<string, true | undefined>
-  directiveMap: DirectiveMap
-  componentMap: ComponentMap
+  readonly delegatedEvents: Record<string, true | undefined>
+  readonly directiveMap: Record<string, Directive<any> | undefined>
+  readonly componentMap: Record<string, Component<any> | undefined>
 }
 const appSymbol = Symbol()
 const ifSymbol = Symbol()
@@ -174,11 +174,11 @@ const styleDirective: Directive<string | SlotObject> = (elt, binding) => {
     }
   }
 }
-const onDirective: Directive<string | EventListener> = (elt, binding) => {
+const onDirective: Directive<string | DOMEventListener> = (elt, binding) => {
   let listener = typeof binding.value === "function"
-    ? binding.value
-    : Function(binding.value) as EventListener
-  let options: AddEventListenerOptions | undefined
+      ? binding.value
+      : Function(binding.value) as DOMEventListener,
+    options: AddEventListenerOptions | undefined
   const name = binding.arg, modifiers = binding.modifiers
   if (name === null) {
     throw new Error(`Missing binding.arg for ${directive}:on`)
@@ -202,18 +202,19 @@ const onDirective: Directive<string | EventListener> = (elt, binding) => {
     }
     if (delegate) {
       elt[eventsSymbol] = elt[eventsSymbol] || {}
-      elt[eventsSymbol][name] = elt[eventsSymbol][name] || []
-      elt[eventsSymbol][name].push(listener)
+      elt[eventsSymbol][name] = elt[eventsSymbol][name] || new Set()
+      elt[eventsSymbol][name].add(listener)
       const id = JSON.stringify({ name, options })
       const delegatedEvents = injectApp().delegatedEvents
       if (delegatedEvents[id] === undefined) {
-        addEventListener(name, delegatedEventListener, options)
+        addEventListener(name, <EventListener> delegatedEventListener, options)
         delegatedEvents[id] = true
       }
-      return
+      return () => elt[eventsSymbol]![name].delete(listener)
     }
   }
-  elt.addEventListener(name, listener, options)
+  elt.addEventListener(name, <EventListener> listener, options)
+  return () => elt.removeEventListener(name, <EventListener> listener, options)
 }
 const refDirective: Directive<(elt: DOMElement) => void> = (elt, binding) => {
   binding.value(elt)
@@ -259,7 +260,10 @@ function setElementData(
       bindingAttribute = attribute
       bindingValue = value
       bindingSlots = slots
-      directive!(elt, binding)
+      const cleanup = directive!(elt, binding)
+      if (typeof cleanup === "function") {
+        onCleanup(cleanup)
+      }
       bindingAttribute = null
       bindingValue = null
       bindingSlots = null
@@ -325,7 +329,7 @@ function renderElement(
       const value = data.props[prop]
       props[prop] = typeof value === "number" ? slots[value] : value
     }
-    if (data.children) {
+    if (data.hasChildren) {
       props.children = renderFragment(elt.content!, template, slots)
     }
     renderChild(elt, component!(props))
@@ -399,9 +403,9 @@ function createValue(attribute: AttributeData, slots: Slot[]): Slot {
   )
 }
 
-let bindingSlots: Slot[] | null = null
-let bindingValue: unknown | null = null
-let bindingAttribute: AttributeData | null = null
+let bindingSlots: Slot[] | null = null,
+  bindingValue: unknown | null = null,
+  bindingAttribute: AttributeData | null = null
 const binding: Binding<unknown> = {
   get value() {
     if (typeof bindingValue === "function" && bindingValue.length === 0) {
@@ -413,11 +417,8 @@ const binding: Binding<unknown> = {
     if (bindingAttribute?.arg == null) {
       return null
     }
-    if (bindingAttribute.hasDynamicArg) {
-      return bindingAttribute.arg.replace(
-        placeholderRegExp,
-        (_match, slot) => resolve(bindingSlots![+slot]) + "",
-      )
+    if (bindingAttribute.argSlot !== null) {
+      return String(bindingSlots![bindingAttribute.argSlot])
     }
     return bindingAttribute.arg
   },
@@ -425,16 +426,11 @@ const binding: Binding<unknown> = {
     if (bindingAttribute?.modifiers == null) {
       return null
     }
-    if (bindingAttribute.hasDynamicModifers) {
-      return Object.keys(bindingAttribute.modifiers)
-        .reduce((modifiers, key) => {
-          const field = key.replace(
-            placeholderRegExp,
-            (_match, slot) => resolve(bindingSlots![+slot]) + "",
-          )
-          modifiers[field] = true
-          return modifiers
-        }, {})
+    if (bindingAttribute.modifierSlots) {
+      return bindingAttribute.modifierSlots.reduce((modifiers, slot) => {
+        modifiers[String(resolve(bindingSlots![+slot]))] = true
+        return modifiers
+      }, { ...bindingAttribute.modifiers })
     }
     return bindingAttribute.modifiers
   },
@@ -498,13 +494,22 @@ function reconcileNodes(
 }
 
 function createAttributeData(matches: AttributeMatches): AttributeData {
-  const arg = matches[4] ?? null
-  const modifiers = matches[5]?.slice(1).split(".").reduce((modifiers, key) => {
-    modifiers[key] = true
-    return modifiers
-  }, {}) ?? null
-  const slot = matches[6] ?? matches[7] ?? matches[8] ?? null
-  const value = matches[9] ?? matches[10] ?? matches[11] ?? null
+  const arg = matches[4] ?? null,
+    argSlot = arg ? placeholderRegExp.exec(arg)?.[1] ?? null : null,
+    slot = matches[6] ?? matches[7] ?? matches[8] ?? null,
+    value = matches[9] ?? matches[10] ?? matches[11] ?? null,
+    modifierSlots: number[] = [],
+    modifiers = matches[5]?.split(".").reduce((modifiers, key) => {
+      if ((key = key.trim()).length > 0) {
+        const modifierSlot = placeholderRegExp.exec(key)?.[1] ?? null
+        if (modifierSlot !== null) {
+          modifierSlots.push(+modifierSlot)
+        } else {
+          modifiers[key] = true
+        }
+      }
+      return modifiers
+    }, {}) ?? null
   return {
     name: matches[3] ?? null,
     slot: slot === null ? slot : +slot,
@@ -516,8 +521,8 @@ function createAttributeData(matches: AttributeMatches): AttributeData {
     modifiers,
     directiveName: matches[1] ?? null,
     directiveSlot: matches[2] ? +matches[2] : null,
-    hasDynamicArg: arg ? placeholderRegExp.test(arg) : false,
-    hasDynamicModifers: modifiers ? placeholderRegExp.test(matches[5]!) : false,
+    argSlot: argSlot ? +argSlot : null,
+    modifierSlots: modifierSlots.length > 0 ? modifierSlots : null,
   }
 }
 
@@ -552,7 +557,7 @@ function renderChild(targetElt: DOMElement, child: Slot): void {
       targetElt.remove()
     } else if (iterableChild.length === 1) {
       renderChild(targetElt, iterableChild[0])
-    } else if (iterableChild.some((item) => typeof item === "function")) {
+    } else if (iterableChild.some((child) => typeof child === "function")) {
       renderDynamicChild(targetElt, iterableChild, true)
     } else {
       targetElt.replaceWith(...createNodeArray([], ...iterableChild))
@@ -562,7 +567,7 @@ function renderChild(targetElt: DOMElement, child: Slot): void {
   }
 }
 
-function delegatedEventListener(event: Event): void {
+function delegatedEventListener(event: DOMEvent): void {
   const type = event.type
   let elt = event.target as DOMElement
   while (elt !== null) {
@@ -571,7 +576,7 @@ function delegatedEventListener(event: Event): void {
   }
 }
 
-function throwOnAttributeSyntaxError(data: string) {
+function throwOnAttributeSyntaxError(data: string): void {
   for (const _matches of data.matchAll(placeholderRegExp)) {
     throw new SyntaxError(`Unsupported Syntax\n${data}`)
   }
@@ -581,15 +586,15 @@ function createComponentData(matches: string[]): ComponentData {
   const props: ComponentDataProps = {},
     content = matches[3].endsWith("/")
   for (const results of matches[3].matchAll(componentPropsRegExp)) {
-    const slot = results[2] ?? results[3] ?? results[4] ?? null
-    const value = results[5] ?? results[6] ?? results[7] ?? true
+    const slot = results[2] ?? results[3] ?? results[4] ?? null,
+      value = results[5] ?? results[6] ?? results[7] ?? true
     props[results[1]] = slot ? +slot : value
   }
   return {
     slot: matches[1] ? +matches[1] : null,
     tagName: matches[2] ? matches[2] : null,
     props,
-    children: content,
+    hasChildren: content,
   }
 }
 
@@ -598,7 +603,7 @@ function createTemplate(
 ): Template {
   let template = templateCache.get(templateStringsArray)
   if (template === undefined) {
-    let element = -1
+    let id = -1
     const hash = "_" + Math.random().toString(36).slice(2, 7) + "_",
       data: Data = {},
       elt = document.createElement("template")
@@ -606,9 +611,9 @@ function createTemplate(
       .replace(/^[\s]+/gm, "")
       .replace(componentRegExp, (...matches) => {
         const componentData = createComponentData(matches),
-          content = componentData.children
-        data[++element] = componentData
-        return `<template ${hash}="${element}">${content ? "</template>" : ""}`
+          content = componentData.hasChildren
+        data[++id] = componentData
+        return `<template ${hash}="${id}">${content ? "</template>" : ""}`
       })
       .replace(componentRegExp2, "</template>")
       .replace(tagRegExp, (match) => {
@@ -625,17 +630,17 @@ function createTemplate(
               return matches[0]
             }
             if (attributes === null) {
-              attributes = data[++element] = []
+              attributes = data[++id] = []
             }
             attributes.push(attribute)
-            return ` ${hash}="${element}"`
+            return ` ${hash}="${id}"`
           })
         throwOnAttributeSyntaxError(match)
         return match
       })
       .replace(placeholderRegExp, (_match, key) => {
-        data[++element] = +key
-        return `<template ${hash}="${element}"></template>`
+        data[++id] = +key
+        return `<template ${hash}="${id}"></template>`
       })
       .replace(/^\r\n|\n|\r(>)\s+(<)$/gm, "$1$2")
     template = {
