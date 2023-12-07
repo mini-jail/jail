@@ -96,7 +96,6 @@ const AppInjectionKey = Symbol(),
   BINDING_ARG_RE = /:([^"'<>.]+)/,
   START_WS_RE = /^[\s]+/gm,
   CONTENT_RE = /^\r\n|\n|\r(>)\s+(<)$/gm,
-  QUOTE_RE = /["']/,
   COMP_RE = /^<((?:[A-Z][a-z]+)+)/,
   CLOSING_COMP_RE = /<\/(?:[A-Z][a-z]+)+>/g,
   TAG_RE = /<(([a-z\-]+)(?:"[^"]*"|'[^']*'|[^'">])*)>/gi,
@@ -345,9 +344,8 @@ export function createTemplateString(strings) {
           return match
         }
       }
-      const quote = match.match(QUOTE_RE)?.[0] || `"`
       const value = replace(val1 ?? val2 ?? val3 ?? "", ARG_RE, "@{$1}")
-      return ` data-${HASH}${id++}=${quote}${name} ${value}${quote}`
+      return ` data-${HASH}${id++}="${name} ${value}"`
     })
     if (isComp) {
       match = replace(match, COMP_RE, COMP_REPLACEMENTS[0])

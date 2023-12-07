@@ -7,7 +7,7 @@ import {
   provide,
   type Signal,
 } from "jail/signal"
-import { createDirective, template } from "jail/dom"
+import html, { createDirective } from "jail/dom"
 import { getParams } from "jail/dom-router"
 
 const Dot = (x: number, y: number, target: number) => {
@@ -30,11 +30,11 @@ const Dot = (x: number, y: number, target: number) => {
     user-select: none;
   `
 
-  return template`
+  return html`
     <div
       d-my-text=${text} style=${css} d-style:background-color=${bgColor}
-      d-on:mouseover.delegate=${() => hover(true)}
-      d-on:mouseout.delegate=${() => hover(false)}
+      d-on:mouseover.delegate=${(_event) => hover(true)}
+      d-on:mouseout.delegate=${(_event) => hover(false)}
     ></div>
   `
 }
@@ -85,7 +85,7 @@ export default function Component() {
     }
   })
 
-  return template`
+  return html`
     <div style="position: absolute; left: 50%; top: 50%;" d-style:transform="scale(${scale}) translateZ(0.1px)">
       ${Triangle(0, 0, +target, +size)}
     </div>

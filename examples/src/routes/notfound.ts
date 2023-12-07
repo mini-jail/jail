@@ -1,4 +1,4 @@
-import { template } from "jail/dom"
+import html from "jail/dom"
 import { onMount, onUnmount } from "jail/signal"
 
 export default function Component() {
@@ -6,7 +6,7 @@ export default function Component() {
   onMount(() => document.body.style.backgroundColor = "indianred")
   onUnmount(() => document.body.style.backgroundColor = backgroundColor)
 
-  return template`
+  return html`
     <article>
       <h4>
         Page not found :(

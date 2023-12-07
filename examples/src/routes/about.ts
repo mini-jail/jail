@@ -1,7 +1,7 @@
-import { template } from "jail/dom"
+import html from "jail/dom"
 
 export default function Component() {
-  return template`
+  return html`
     <article>
       <h4>
         about

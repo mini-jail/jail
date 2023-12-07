@@ -1,5 +1,5 @@
-import { catchError, createEffect } from "jail/signal"
-import { createDirective, mount, template } from "jail/dom"
+import { createEffect } from "jail/signal"
+import html, { createComponent, createDirective, mount } from "jail/dom"
 import { installDOMRouter, path } from "jail/dom-router"
 
 import Home from "./routes/home.ts"
@@ -8,11 +8,10 @@ import SimpleCounter from "./routes/simple-counter.ts"
 import Sierpinski from "./routes/sierpinski.ts"
 import About from "./routes/about.ts"
 import ToDo from "./routes/todo.ts"
-import Compiler from "./routes/compiler.ts"
 import NotFound from "./routes/notfound.ts"
 
 const App = () => {
-  const _stopUpdatingTitle = createEffect(() => {
+  createEffect(() => {
     document.title = `jail${path()}`
   })
 
@@ -25,21 +24,17 @@ const App = () => {
     "/sierpinski/:target/:size": Sierpinski,
     "/about": About,
     "/todo": ToDo,
-    "/compiler": Compiler,
   }
 
-  const pathAnimation = (): AnimateDirective => {
+  const pathAnimation = (): Keyframe[] => {
     path()
-    return {
-      frames: [
-        { opacity: 0, transform: "translateY(-10px)" },
-        { opacity: 1, transform: "unset" },
-      ],
-      options: { duration: 250, delay: 50, fill: "both" },
-    }
+    return [
+      { opacity: 0, transform: "translateY(-10px)" },
+      { opacity: 1, transform: "unset" },
+    ]
   }
 
-  return template`
+  return html`
     <header>
       <h3>jail${path}</h3>
       <nav>
@@ -48,26 +43,39 @@ const App = () => {
         <a href="/sierpinski">sierpinski</a>
         <a href="/todo">todo</a>
         <a href="/about">about</a>
-        <a href="/compiler">compiler</a>
       </nav>
     </header>
-    <main d-animate=${pathAnimation}>
+    <main 
+      d-animate
+        :anal(false)
+        .delay(30)
+        .fill(both)
+        .duration(250)=${pathAnimation}
+    >
       <Router type="pathname" fallback=${NotFound} routeMap=${routeMap} />
     </main>
   `
 }
 
 mount(document.body, () => {
-  catchError(console.error)
   installDOMRouter()
-  createDirective<AnimateDirective>("animate", (elt, binding) => {
-    const { frames, options } = binding.value
-    elt.animate(frames, options)
+  createDirective<Keyframe[]>("animate", (elt, binding) => {
+    const options: KeyframeAnimationOptions = {}
+    if (binding.modifiers) {
+      const delayRegExp = /delay\((\d+)\)/
+      const fillRegExp = /fill\((\w+)\)/
+      const durationRegExp = /duration\((\d+)\)/
+      for (const key in binding.modifiers) {
+        if (delayRegExp.test(key)) {
+          options.delay = +(delayRegExp.exec(key)![1]!)
+        } else if (fillRegExp.test(key)) {
+          options.fill = fillRegExp.exec(key)![1]! as FillMode
+        } else if (durationRegExp.test(key)) {
+          options.duration = +(durationRegExp.exec(key)![1]!)
+        }
+      }
+    }
+    elt.animate(binding.value, options)
   })
   return App()
 })
-
-interface AnimateDirective {
-  frames: Keyframe[]
-  options?: KeyframeAnimationOptions | number
-}

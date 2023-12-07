@@ -1,5 +1,5 @@
 import { createSignal } from "jail/signal"
-import { type DOMEvent, template } from "jail/dom"
+import html, { DOMEvent } from "jail/dom"
 import { createComputed } from "jail/signal"
 
 type ToDoItem = {
@@ -14,14 +14,16 @@ const list = createSignal<ToDoItem[]>([
 ])
 
 const Item = (props: ToDoItem) => {
-  const deleteItem = () => list(list().filter((item) => item.id !== props.id))
-  const toggleItem = () => list((items) => (props.done = !props.done, items))
+  const deleteItem = (_event: Event) =>
+    list(list().filter((item) => item.id !== props.id))
+  const toggleItem = (_event: Event) =>
+    list((items) => (props.done = !props.done, items))
 
-  return template`
-    <div class="todo-item" id=item_${props.id}>
+  return html`
+    <div class="todo-item" id="item_${props.id}">
       <div 
         class="todo-item-text" d-on:click.delegate=${toggleItem}
-        style=${props.done ? "color: grey; font-style: italic;" : null}
+        style="${props.done ? "color: grey; font-style: italic;" : null}"
       >
         ${props.text}
       </div>
@@ -34,18 +36,17 @@ const Item = (props: ToDoItem) => {
 
 export default function Component() {
   const textValue = createSignal("")
-  const addItem = () => {
-    list((items) => {
-      items.push({ id: Date.now(), done: false, text: textValue() })
-      return items
-    })
+  const addItem = (_event: Event) => {
+    list(list().concat({ id: Date.now(), done: false, text: textValue() }))
     textValue("")
   }
   const onInput = (ev: DOMEvent<HTMLInputElement>) => textValue(ev.target.value)
-  const length = createComputed(() => list().length)
-  const done = createComputed(() => list().filter((item) => item.done).length)
+  const length = createComputed(() => list().length, 0)
+  const done = createComputed(() => {
+    return list().filter((item) => item.done).length
+  }, 0)
 
-  return template`
+  return html`
     <article class="todo-app">
       <h4>
         todo

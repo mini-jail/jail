@@ -4,30 +4,30 @@
  * @typedef {() => void} Cleanup
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {(currentValue: Type) => Type} UpdateFunction
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {() => Type} Getter
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {ReadOnlySignal<Type> & WritableSignal<Type>} Signal
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {() => Type} ReadOnlySignal
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {{
  *   (update: UpdateFunction<Type>): void
  *   (value: Type): void
  * }} WritableSignal
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {object} Node
  * @property {Type | undefined | null} value
  * @property {Injections | null} injections
@@ -39,7 +39,7 @@
  * @property {number[] | null} sourceSlots
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {object} Source
  * @property {Type | undefined} value
  * @property {Node[] | null} nodes
@@ -47,9 +47,9 @@
  */
 
 const ActiveNodeIsNull = new Error("activeNode is null.")
-const ErrorInjectionKey = Symbol()
+const errorSymbol = Symbol()
 /** @type {Set<Node>} */
-const NodeQueue = new Set()
+const nodeQueue = new Set()
 let isRunning = false
 /** @type {Node | null} */
 let activeNode = null
@@ -138,15 +138,15 @@ export function onUnmount(unmountFunction) {
  * @returns {Cleanup}
  */
 /**
- * @param {UpdateFunction<*>} effectFunction
- * @param {*} [initialValue]
+ * @param {UpdateFunction<any>} effectFunction
+ * @param {any} [initialValue]
  * @returns {Cleanup}
  */
 export function createEffect(effectFunction, initialValue) {
   const node = createNode(initialValue)
   node.onupdate = effectFunction
   if (isRunning) {
-    NodeQueue.add(node)
+    nodeQueue.add(node)
   } else {
     queueMicrotask(() => updateNode(node, false))
   }
@@ -167,9 +167,9 @@ export function createEffect(effectFunction, initialValue) {
  * @returns {ReadOnlySignal<Type>}
  */
 /**
- * @param {UpdateFunction<*>} effectFunction
- * @param {*} [initialValue]
- * @returns {ReadOnlySignal<*>}
+ * @param {UpdateFunction<any>} effectFunction
+ * @param {any} [initialValue]
+ * @returns {ReadOnlySignal<any>}
  */
 export function createComputed(effectFunction, initialValue) {
   const source = createSource(initialValue)
@@ -183,7 +183,7 @@ export function createComputed(effectFunction, initialValue) {
 /**
  * @param {Node | null} node
  * @param {Injectionkey} key
- * @returns {* | undefined}
+ * @returns {any | undefined}
  */
 function lookup(node, key) {
   if (node === null) {
@@ -259,7 +259,7 @@ function setSourceValue(source, nextValue) {
     batch(() => {
       // @ts-expect-error: source.nodes will be not null
       for (const node of source.nodes) {
-        NodeQueue.add(node)
+        nodeQueue.add(node)
       }
     })
   }
@@ -278,25 +278,25 @@ function setSourceValue(source, nextValue) {
  */
 /**
  * @template Type
- * @param {*} [initialValue]
- * @returns {Signal<*>}
+ * @param {any} [initialValue]
+ * @returns {Signal<any>}
  */
 export function createSignal(initialValue) {
   const source = createSource(initialValue)
-  return function Signal(value) {
+  return function Signal() {
     if (arguments.length === 0) {
       return getSourceValue(source)
     }
-    setSourceValue(source, value)
+    setSourceValue(source, arguments[0])
   }
 }
 
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @param {Type} error
  */
 function handleError(error) {
-  const errorFunctions = lookup(activeNode, ErrorInjectionKey)
+  const errorFunctions = lookup(activeNode, errorSymbol)
   if (!errorFunctions) {
     return reportError(error)
   }
@@ -306,7 +306,7 @@ function handleError(error) {
 }
 
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @param {(error: Type) => void} errorFunction
  * @returns {void}
  */
@@ -315,9 +315,9 @@ export function catchError(errorFunction) {
     throw ActiveNodeIsNull
   }
   if (activeNode.injections === null) {
-    activeNode.injections = { [ErrorInjectionKey]: [errorFunction] }
+    activeNode.injections = { [errorSymbol]: [errorFunction] }
   } else {
-    activeNode.injections[ErrorInjectionKey].push(errorFunction)
+    activeNode.injections[errorSymbol].push(errorFunction)
   }
 }
 
@@ -367,15 +367,15 @@ function flush() {
   if (isRunning === false) {
     return
   }
-  for (const node of NodeQueue) {
-    NodeQueue.delete(node)
+  for (const node of nodeQueue) {
+    nodeQueue.delete(node)
     updateNode(node, false)
   }
   isRunning = false
 }
 
 /**
- * @param {Node<*>} node
+ * @param {Node<any>} node
  * @param {boolean} [complete]
  */
 function updateNode(node, complete) {
@@ -395,7 +395,7 @@ function updateNode(node, complete) {
 }
 
 /**
- * @param {Node} node
+ * @param {Node<any>} node
  * @param {boolean} [complete]
  */
 function cleanNode(node, complete) {

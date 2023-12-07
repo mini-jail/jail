@@ -14,11 +14,11 @@ import { createComponent } from "jail/dom"
  * @typedef {{ readonly [param: string]: string }} Params
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {() => Type} RouteHandler
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {{
  *   path: string
  *   regexp: RegExp
@@ -26,21 +26,21 @@ import { createComponent } from "jail/dom"
  * }} Route
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {{ [path: string]: RouteHandler<Type> }} RouteMap
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {{
  *   fallback?: RouteHandler<Type>
  * }} RouterOptions
  */
 /**
- * @template [Type = *]
+ * @template [Type = any]
  * @typedef {{
  *   type: RouterType
  *   routeMap: RouteMap<Type>
- *   children?: *
+ *   children?: any
  *   fallback?: RouteHandler<Type>
  * }} RouterProperties
  */
@@ -60,11 +60,8 @@ const routeTypeHandlerMap = {
   },
   pathname() {
     const url = new URL(location.toString())
-    /** @type {import("jail/dom").DOMListener & ((this: Window, event: MouseEvent) => void)} */
     const clickListener = (event) => {
-      /** @type {HTMLElement | null} */
       let elt = event.target
-      /** @type {string | undefined | null} */
       let pathname
       while (elt != null) {
         pathname = elt?.getAttribute?.("href")
@@ -128,9 +125,10 @@ function createRoutes(routeMap) {
 }
 
 /**
- * @param {RouteMap} routeMap
- * @param {RouterOptions} options
- * @returns {import("jail/signal").Getter}
+ * @template Type
+ * @param {RouteMap<Type>} routeMap
+ * @param {RouterOptions<Type>} options
+ * @returns {import("jail/signal").Getter<Type | undefined>}
  */
 function createRouter(routeMap, options) {
   const routeArray = createRoutes(routeMap)
@@ -150,11 +148,10 @@ function createRouter(routeMap, options) {
 }
 
 /**
- * @template Type
- * @param {RouterProperties<Type>} props
- * @returns {() => [children, import("jail/signal").Getter<Type | undefined>]}
+ * @param {RouterProperties} props
+ * @returns {() => [children, import("jail/signal").Getter]}
  */
-export function Router({ routeMap, type, fallback, children }) {
+export function Router({ type, routeMap, fallback, children }) {
   routeTypeHandlerMap[type]()
   const router = createRouter(routeMap, { fallback })
   return () => [children, router]
@@ -179,6 +176,5 @@ export function Router({ routeMap, type, fallback, children }) {
  * @returns {void}
  */
 export function installDOMRouter() {
-  // @ts-expect-error: honestly? no idea for now
   createComponent("Router", Router)
 }
