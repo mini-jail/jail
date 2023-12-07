@@ -1,5 +1,5 @@
 import { createEffect } from "jail/signal"
-import html, { createComponent, createDirective, mount } from "jail/dom"
+import html, { createDirective, Directive, mount } from "jail/dom"
 import { installDOMRouter, path } from "jail/dom-router"
 
 import Home from "./routes/home.ts"
@@ -56,25 +56,27 @@ const App = () => {
   `
 }
 
-mount(document.body, () => {
-  installDOMRouter()
-  createDirective<Keyframe[]>("animate", (elt, binding) => {
-    const options: KeyframeAnimationOptions = {}
-    if (binding.modifiers) {
-      const delayRegExp = /delay\((\d+)\)/
-      const fillRegExp = /fill\((\w+)\)/
-      const durationRegExp = /duration\((\d+)\)/
-      for (const key in binding.modifiers) {
-        if (delayRegExp.test(key)) {
-          options.delay = +(delayRegExp.exec(key)![1]!)
-        } else if (fillRegExp.test(key)) {
-          options.fill = fillRegExp.exec(key)![1]! as FillMode
-        } else if (durationRegExp.test(key)) {
-          options.duration = +(durationRegExp.exec(key)![1]!)
-        }
+const animate: Directive<Keyframe[]> = (elt, binding) => {
+  const options: KeyframeAnimationOptions = {}
+  if (binding.modifiers) {
+    const delayRegExp = /delay\((\d+)\)/
+    const fillRegExp = /fill\((\w+)\)/
+    const durationRegExp = /duration\((\d+)\)/
+    for (const key in binding.modifiers) {
+      if (delayRegExp.test(key)) {
+        options.delay = +(delayRegExp.exec(key)![1]!)
+      } else if (fillRegExp.test(key)) {
+        options.fill = fillRegExp.exec(key)![1]! as FillMode
+      } else if (durationRegExp.test(key)) {
+        options.duration = +(durationRegExp.exec(key)![1]!)
       }
     }
-    elt.animate(binding.value, options)
-  })
+  }
+  elt.animate(binding.value, options)
+}
+
+mount(document.body, () => {
+  installDOMRouter()
+  createDirective("animate", animate)
   return App()
 })

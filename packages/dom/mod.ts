@@ -81,13 +81,14 @@ interface Binding<Type> {
   readonly modifiers: Modifiers | null
 }
 type AttributeData = {
+  readonly name: string | null
   readonly slot: number | null
-  readonly name: string
   readonly slots: number[] | null
   readonly value: string | null
   readonly arg: string | null
   readonly modifiers: Modifiers | null
-  readonly isDirective: boolean
+  readonly directiveName: string | null
+  readonly directiveSlot: number | null
   readonly hasDynamicArg: boolean
   readonly hasDynamicModifers: boolean
 }
@@ -99,8 +100,9 @@ type DirectiveMap = Record<string, Directive<any> | undefined>
 type ComponentMap = Record<string, Component<any> | undefined>
 type AttributeMatches = [
   fullMatch: string,
-  directive: string | undefined,
-  name: string,
+  directiveName: string | undefined,
+  directiveSlot: string | undefined,
+  name: string | undefined,
   arg: string | undefined,
   modifiers: string | undefined,
   slot: string | undefined,
@@ -134,7 +136,12 @@ const validName = `[a-z][\\w\\-]*`
 const tagAttributeRegExp = RegExp(
   [
     `\\s`,
-    `(?:(${directive})?(${validName}))`,
+    `(?:`,
+    [
+      `(?:${directive}(?:(${validName})|${placeholder}))`,
+      `(${validName})`,
+    ].join("|"),
+    `)`,
     `(?:\\s*:([^.:\\s=]+))?`,
     `((?:\\s*\\.[^.:\\s=]+)*)?`,
     `(?:${validValue})?`,
@@ -242,12 +249,13 @@ function setElementData(
   attribute: AttributeData,
   slots: Slot[],
 ): void {
-  let name = attribute.name
-  if (attribute.modifiers?.kebab) {
-    name = name.replace(/([A-Z])/g, "-$1").toLowerCase()
-  }
-  if (attribute.isDirective) {
-    const directive = injectApp().directiveMap[attribute.name]
+  if (attribute.directiveName !== null || attribute.directiveSlot !== null) {
+    let directive: Directive<any> | undefined
+    if (attribute.directiveSlot !== null) {
+      directive = slots[attribute.directiveSlot] as Directive<any>
+    } else if (attribute.directiveName) {
+      directive = injectApp().directiveMap[attribute.directiveName]
+    }
     if (directive === undefined) {
       throw new Error(`Missing Directive "${attribute.name}"`)
     }
@@ -255,12 +263,16 @@ function setElementData(
       bindingAttribute = attribute
       bindingValue = value
       bindingSlots = slots
-      directive(elt, binding)
+      directive!(elt, binding)
       bindingAttribute = null
       bindingValue = null
       bindingSlots = null
     })
     return
+  }
+  let name = attribute.name as string
+  if (attribute.modifiers?.kebab) {
+    name = name.replace(/([A-Z])/g, "-$1").toLowerCase()
   }
   if (typeof value === "function") {
     createEffect<unknown>((currentValue) => {
@@ -486,23 +498,26 @@ function reconcileNodes(
 }
 
 function createAttributeData(matches: AttributeMatches): AttributeData {
-  const slot = matches[5] ?? matches[6] ?? matches[7] ?? null
-  const value = matches[8] ?? matches[9] ?? matches[10] ?? null
+  const arg = matches[4] ?? null
+  const modifiers = matches[5]?.slice(1).split(".").reduce((modifiers, key) => {
+    modifiers[key] = true
+    return modifiers
+  }, {}) ?? null
+  const slot = matches[6] ?? matches[7] ?? matches[8] ?? null
+  const value = matches[9] ?? matches[10] ?? matches[11] ?? null
   return {
+    name: matches[3] ?? null,
     slot: slot === null ? slot : +slot,
-    name: matches[2],
     slots: value
       ?.match(placeholderRegExp)
       ?.map((match) => +match.slice(3, -3)) ?? null,
-    value: value,
-    arg: matches[3] ?? null,
-    modifiers: matches[4]?.slice(1).split(".").reduce((modifiers, key) => {
-      modifiers[key] = true
-      return modifiers
-    }, {}) ?? null,
-    isDirective: matches[1] ? true : false,
-    hasDynamicArg: matches[3] ? placeholderRegExp.test(matches[3]) : false,
-    hasDynamicModifers: matches[4] ? placeholderRegExp.test(matches[4]) : false,
+    value,
+    arg,
+    modifiers,
+    directiveName: matches[1] ?? null,
+    directiveSlot: matches[2] ? +matches[2] : null,
+    hasDynamicArg: arg ? placeholderRegExp.test(arg) : false,
+    hasDynamicModifers: modifiers ? placeholderRegExp.test(matches[5]!) : false,
   }
 }
 
@@ -602,7 +617,8 @@ function createTemplate(
           .replace(tagAttributeRegExp, (...matches: AttributeMatches) => {
             const attribute = createAttributeData(matches)
             if (
-              attribute.isDirective === false &&
+              attribute.directiveSlot === null &&
+              attribute.directiveName === null &&
               attribute.slot === null &&
               attribute.slots === null
             ) {
