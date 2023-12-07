@@ -258,7 +258,7 @@ function setElementData(
       directive(elt, binding)
       bindingAttribute = null
       bindingValue = null
-      bindingValue = null
+      bindingSlots = null
     })
     return
   }
