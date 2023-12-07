@@ -121,54 +121,47 @@ const appSymbol = Symbol()
 const ifSymbol = Symbol()
 const eventsSymbol = Symbol()
 const directive = "d-"
-const placeholder = `###(\\d+)###`
-const placeholderRegExp = RegExp(placeholder, "g")
-const tagRegExp = /<[a-z\-]+(?:"[^"]*"|'[^']*'|[^'">])*>/g
+const placeholder = "_" + Math.random().toString(36).slice(2, 7) + "_"
+const placeholderSize = placeholder.length
+const validPlaceholder = `${placeholder}(\\d+)${placeholder}`
+const validName = `[a-z][\\w\\-]*`
+const validComponentName = `(?:([A-Z][\\w]+)+)`
+const validExtension = `[^.:\\s=]+`
+const validAttributes = `(?:"[^"]*"|'[^']*'|[^'">])*`
 const validValue = [
-  `(?:="${placeholder}")`,
-  `(?:='${placeholder}')`,
-  `(?:=${placeholder})`,
+  `(?:="${validPlaceholder}")`,
+  `(?:='${validPlaceholder}')`,
+  `(?:=${validPlaceholder})`,
   `(?:="([^"]*)")`,
   `(?:='([^']*)')`,
   `(?:=([^\\s=>"']+))`,
 ].join("|")
-const validName = `[a-z][\\w\\-]*`
+const placeholderRegExp = RegExp(validPlaceholder, "g")
+const tagRegExp = RegExp(`<[a-z\\-]+${validAttributes}>`, "g")
 const tagAttributeRegExp = RegExp(
   [
     `\\s`,
     `(?:`,
     [
-      `(?:${directive}(?:(${validName})|${placeholder}))`,
+      `(?:${directive}(?:(${validName})|${validPlaceholder}))`,
       `(${validName})`,
     ].join("|"),
     `)`,
-    `(?:\\s*:([^.:\\s=]+))?`,
-    `((?:\\s*\\.[^.:\\s=]+)*)?`,
+    `(?:\\s*:(${validExtension}))?`,
+    `((?:\\s*\\.${validExtension})*)?`,
     `(?:${validValue})?`,
   ].join(""),
   "gi",
 )
 const componentRegExp = RegExp(
-  [
-    `<\\s*`,
-    `(?:${placeholder}|(?:([A-Z][\\w]+)+))`,
-    `((?:"[^"]*"|'[^']*'|[^'">])*)`,
-    `>`,
-  ].join(""),
+  `<\\s*(?:${validPlaceholder}|${validComponentName})(${validAttributes})>`,
   "g",
 )
 const componentRegExp2 = RegExp(
-  [
-    `<\\s*\\/\\s*`,
-    `(?:${placeholder}|(?:([A-Z][\\w]+)+))`,
-    `\\s*>`,
-  ].join(""),
+  `<\\s*\\/\\s*(?:${validPlaceholder}|${validComponentName})\\s*>`,
   "g",
 )
-const componentPropsRegExp = RegExp(
-  `\\s(${validName})(?:${validValue})?`,
-  "gi",
-)
+const componentPropsRegExp = RegExp(`\\s(${validName})(?:${validValue})?`, "gi")
 const templateCache = new Map<TemplateStringsArray, Template>()
 const styleDirective: Directive<string | SlotObject> = (elt, binding) => {
   const value = binding.value
@@ -362,12 +355,13 @@ function render(template: Template, slots: Slot[]): RenderResult {
 }
 
 function stringArrayToString(strings: TemplateStringsArray): string {
-  let templateString = "", arg = 0
-  while (arg < strings.length - 1) {
-    templateString = templateString + strings[arg] + `###${arg++}###`
+  let data = "", arg = 0
+  const length = strings.length - 1
+  while (arg < length) {
+    data = data + strings[arg] + `${placeholder}${arg++}${placeholder}`
   }
-  templateString = templateString + strings[arg]
-  return templateString
+  data = data + strings[arg]
+  return data
 }
 
 function setPropertyOrAttribute(
@@ -516,7 +510,7 @@ function createAttributeData(matches: AttributeMatches): AttributeData {
     slot: slot === null ? slot : +slot,
     slots: value
       ?.match(placeholderRegExp)
-      ?.map((match) => +match.slice(3, -3)) ?? null,
+      ?.map((match) => +match.slice(placeholderSize, -placeholderSize)) ?? null,
     value,
     arg,
     modifiers,
