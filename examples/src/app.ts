@@ -47,7 +47,6 @@ const App = () => {
     </header>
     <main 
       d-animate
-        :anal(false)
         .delay(30)
         .fill(both)
         .duration(250)=${pathAnimation}
