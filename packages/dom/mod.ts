@@ -257,7 +257,10 @@ function setElementData(
       directive = injectApp().directiveMap[attribute.directiveName]
     }
     if (directive === undefined) {
-      throw new Error(`Missing Directive "${attribute.name}"`)
+      if (attribute.directiveName) {
+        throw new Error(`Missing Directive "${attribute.directiveName}".`)
+      }
+      throw new TypeError(`Directive is not a function.`)
     }
     createEffect(() => {
       bindingAttribute = attribute
@@ -317,8 +320,11 @@ function renderElement(
   } else if (data.slot) {
     component = slots[data.slot] as Component<any> | undefined
   }
-  if (component == null || typeof component !== "function") {
-    throw new TypeError(`Component type must me callable`)
+  if (component == null) {
+    if (data.tagName) {
+      throw new Error(`Missing Component "${data.tagName}".`)
+    }
+    throw new TypeError(`Component is not a function.`)
   }
   createRoot(() => {
     const props: Record<string, any> = {}
