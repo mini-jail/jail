@@ -7,8 +7,8 @@ import html from "jail/dom"
 
 function Counter() {
   const counter = createSignal(0)
-  const up = () => counter(value => ++value)
-  const down = () => counter(value => --value)
+  const up = (ev) => counter(value => ++value)
+  const down = (ev) => counter(value => --value)
 
   return html\`
     <button d-on:click=\${down}>-</button>
