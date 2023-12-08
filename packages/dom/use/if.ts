@@ -1,6 +1,6 @@
 import type { BooleanLike, DOMElement } from "../types.d.ts"
 
-const ifSymbol = Symbol()
+const ifSymbol = Symbol("If")
 
 export default function If(elt: DOMElement, value: BooleanLike) {
   if (elt[ifSymbol] === undefined) {
