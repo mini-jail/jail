@@ -122,6 +122,6 @@ function createComponentData(groups: ComponentGroups): ComponentData {
   return {
     slot: +groups.nameSlot,
     props,
-    selfClosing: groups.attributes.endsWith("/") === false,
+    selfClosing: groups.attributes.endsWith("/"),
   }
 }

@@ -1,5 +1,5 @@
 import { createComputed, createSignal } from "jail/signal"
-import html, { DOMEvent, Show } from "jail/dom"
+import html, { DOMEvent, For, Show } from "jail/dom"
 
 type ToDoItem = {
   id: number
@@ -13,9 +13,9 @@ const list = createSignal<ToDoItem[]>([
 ])
 
 const Item = (props: ToDoItem) => {
-  const deleteItem = (_event: Event) =>
+  const deleteItem = (_ev: Event) =>
     list(list().filter((item) => item.id !== props.id))
-  const toggleItem = (_event: Event) =>
+  const toggleItem = (_ev: Event) =>
     list((items) => (props.done = !props.done, items))
 
   return html`
@@ -52,15 +52,15 @@ export default function Component() {
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>
       <div class="todo-app-container">
-        <form on:submitPrevent=${addItem}>
+        <form on:submitPreventDelegate=${addItem}>
           <input 
             type="text" placeholder="...milk?"
             required class="todo_input" value=${textValue}
-            on:input=${onInput}
+            on:inputDelegate=${onInput}
           />
         </form>
         <div class="todo-items">
-          ${() => list().map((item) => Item(item))}
+          <${For} of=${list} do=${Item} />
         </div>
         <label>progress: ${done}/${length}</label>
         <progress max=${length} value=${done}></progress>

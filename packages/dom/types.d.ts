@@ -17,6 +17,7 @@ export interface DOMEventListener<
 > {
   (this: Target, event: Event): void
 }
+export type Resolvable<Type> = Type | (() => Type)
 export type ResolvedValue<Type> = Type extends ((...args: any[]) => any) ? Type
   : Type extends (() => any) ? ReturnType<Type>
   : Type
@@ -108,4 +109,8 @@ export interface Namespaces {
 }
 export interface AnimateValue extends KeyframeEffectOptions {
   keyframes: Keyframe[]
+}
+export interface ForProps {
+  of: Resolvable<Record<string, any>>[]
+  do: Component<Record<string, any>>
 }

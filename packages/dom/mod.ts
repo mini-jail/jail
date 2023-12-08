@@ -19,6 +19,7 @@ import If from "./use/if.ts"
 import Show from "./use/show.ts"
 import Text from "./use/text.ts"
 import Animate from "./use/animate.ts"
+import For from "./components/for.ts"
 export type {
   AnimateValue,
   Component,
@@ -29,7 +30,7 @@ export type {
   DOMNode,
   NamespaceDirective,
 }
-export { Animate, If, mount, namespaces, Show, template, Text }
+export { Animate, For, If, mount, namespaces, Show, template, Text }
 export default template
 namespaces.attr = attr
 namespaces.prop = prop
