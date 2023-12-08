@@ -7,17 +7,8 @@ import {
   provide,
   type Signal,
 } from "jail/signal"
-import html, { Directive } from "jail/dom"
+import html, { Text } from "jail/dom"
 import { getParams } from "jail/dom-router"
-
-const txtSymbol = Symbol()
-const txt: Directive<string> = (elt, binding) => {
-  if (elt[txtSymbol] === undefined) {
-    elt[txtSymbol] = new Text()
-    elt.prepend(elt[txtSymbol])
-  }
-  elt[txtSymbol].data = binding.value + ""
-}
 
 const Dot = (x: number, y: number, target: number) => {
   const counter = inject<Signal<number>>("counter")!
@@ -41,9 +32,9 @@ const Dot = (x: number, y: number, target: number) => {
 
   return html`
     <div
-      d-${txt}=${text} style=${css} d-style:background-color=${bgColor}
-      d-on:mouseover.delegate=${(_event) => hover(true)}
-      d-on:mouseout.delegate=${(_event) => hover(false)}
+      use:${Text}=${text} style=${css} style:background-color=${bgColor}
+      on:mouseoverDelegate=${(_event) => hover(true)}
+      on:mouseoutDelegate=${(_event) => hover(false)}
     ></div>
   `
 }
@@ -85,7 +76,7 @@ export default function Component() {
   onUnmount(() => clearInterval(id))
 
   return html`
-    <div style="position: absolute; left: 50%; top: 50%;" d-style:transform="scale(${scale}) translateZ(0.1px)">
+    <div style="position: absolute; left: 50%; top: 50%;" style:transform="scale(${scale}) translateZ(0.1px)">
       ${Triangle(0, 0, +target, +size)}
     </div>
   `

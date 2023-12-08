@@ -7,7 +7,6 @@ import {
   onMount,
   provide,
 } from "jail/signal"
-import { createComponent } from "jail/dom"
 
 /**
  * @typedef {"pathname" | "hash"} RouterType
@@ -148,16 +147,6 @@ function createRouter(routeMap, options) {
 }
 
 /**
- * @param {RouterProperties} props
- * @returns {() => [children, import("jail/signal").Getter]}
- */
-export function Router({ type, routeMap, fallback, children }) {
-  routeTypeHandlerMap[type]()
-  const router = createRouter(routeMap, { fallback })
-  return () => [children, router]
-}
-
-/**
  * Allows usage of the following:
  * @example
  * ```javascript
@@ -173,8 +162,11 @@ export function Router({ type, routeMap, fallback, children }) {
  *   />
  * `
  * ```
- * @returns {void}
+ * @param {RouterProperties} props
+ * @returns {() => [children, import("jail/signal").Getter]}
  */
-export function installDOMRouter() {
-  createComponent("Router", Router)
+export function Router({ type, routeMap, fallback, children }) {
+  routeTypeHandlerMap[type]()
+  const router = createRouter(routeMap, { fallback })
+  return () => [children, router]
 }

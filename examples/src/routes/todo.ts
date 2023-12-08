@@ -1,6 +1,5 @@
-import { createSignal } from "jail/signal"
-import html, { DOMEvent } from "jail/dom"
-import { createComputed } from "jail/signal"
+import { createComputed, createSignal } from "jail/signal"
+import html, { DOMEvent, Show } from "jail/dom"
 
 type ToDoItem = {
   id: number
@@ -22,12 +21,12 @@ const Item = (props: ToDoItem) => {
   return html`
     <div class="todo-item" id="item_${props.id}">
       <div 
-        class="todo-item-text" d-on:click.delegate=${toggleItem}
+        class="todo-item-text" on:clickDelegate=${toggleItem}
         style="${props.done ? "color: grey; font-style: italic;" : null}"
       >
         ${props.text}
       </div>
-      <div d-show=${props.done} class="todo-item-delete" d-on:click.delegate=${deleteItem}>
+      <div use:${Show}=${props.done} class="todo-item-delete" on:clickDelegate=${deleteItem}>
         delete
       </div>
     </div>
@@ -53,11 +52,11 @@ export default function Component() {
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>
       <div class="todo-app-container">
-        <form d-on:submit.prevent=${addItem}>
+        <form on:submitPrevent=${addItem}>
           <input 
             type="text" placeholder="...milk?"
             required class="todo_input" value=${textValue}
-            d-on:input=${onInput}
+            on:input=${onInput}
           />
         </form>
         <div class="todo-items">

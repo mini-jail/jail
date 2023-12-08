@@ -3,12 +3,12 @@ import html from "jail/dom"
 
 export default function Component() {
   const counter = createSignal(0)
-  const up = () => counter((value) => ++value)
-  const down = () => counter((value) => --value)
+  const up = (_ev: Event) => counter((value) => ++value)
+  const down = (_ev: Event) => counter((value) => --value)
 
   return html`
-    <button d-on:click.delegate=${down}>-</button>
+    <button on:clickDelegate=${down}>-</button>
     <span>current value: ${counter}</span>
-    <button d-on:click.delegate=${up}>+</button>
+    <button on:clickDelegate=${up}>+</button>
   `
 }

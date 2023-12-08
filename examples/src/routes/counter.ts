@@ -1,5 +1,5 @@
 import { createComputed, createSignal } from "jail/signal"
-import html from "jail/dom"
+import html, { Show } from "jail/dom"
 
 const code = `
 import { createSignal } from "jail/signal"
@@ -11,9 +11,9 @@ function Counter() {
   const down = (ev) => counter(value => --value)
 
   return html\`
-    <button d-on:click=\${down}>-</button>
+    <button on:click=\${down}>-</button>
     <span>current value: \${counter}</span>
-    <button d-on:click=\${up}>+</button>
+    <button on:click=\${up}>+</button>
   \`
 }`.trim()
 
@@ -32,19 +32,19 @@ export default function Component() {
       <h4>
         counter example
         <sub>(...what else?)</sub>
-        <button d-on:click.delegate=${(_ev: Event) => show((value) => !value)}>
+        <button on:clickDelegate=${(_ev: Event) => show((value) => !value)}>
           ${() => (show() ? "hide" : "show")} code
         </button>
       </h4>
-      <button d-on:click.delegate=${down}>-</button>
+      <button on:clickDelegate=${down}>-</button>
       <span>current value: ${counter}</span>
-      <button d-on:click.delegate=${up}>+</button>
+      <button on:clickDelegate=${up}>+</button>
       <div>> you have clicked ${clicked} times.</div>
       ${() => clicked() >= 10 && html`<div>... why do you do this?????</div>`}
       ${() => clicked() >= 20 && html`<div>... pls stop T_T</div>`}
       ${() => clicked() >= 30 && html`<div>... enough :(</div>`}
       ${() => clicked() >= 40 && html`<div>... it hurts @_@</div>`}
-      <code d-show="${show}">
+      <code use:${Show}="${show}">
         ${code.split("\n").map((line) => html`<pre>${line}</pre>`)}
       </code>
     </article>
