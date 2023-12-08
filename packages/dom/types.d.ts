@@ -17,9 +17,9 @@ export interface DOMEventListener<
 > {
   (this: Target, event: Event): void
 }
-export type Resolvable<Type> = Type | (() => Type)
-export type ResolvedValue<Type> = Type extends ((...args: any[]) => any) ? Type
-  : Type extends (() => any) ? ReturnType<Type>
+export type ResolvedValue<Type> = Type extends (() => unknown)
+  ? ReturnType<Type>
+  : Type extends ((...args: unknown[]) => unknown) ? ReturnType<Type>
   : Type
 export type Slot =
   | string
@@ -77,7 +77,7 @@ export interface NamespaceDirective<Type, Arg> {
 export interface Directive<Type> {
   (elt: DOMElement, value: ResolvedValue<Type>): void
 }
-export interface Component<Props extends Record<string, any>> {
+export interface Component<Props extends ComponentProps> {
   (props: Props): any
 }
 export type ComponentGroups = {
@@ -110,7 +110,8 @@ export interface Namespaces {
 export interface AnimateValue extends KeyframeEffectOptions {
   keyframes: Keyframe[]
 }
-export interface ForProps {
-  of: Resolvable<Record<string, any>>[]
-  do: Component<Record<string, any>>
+export interface ForProps<Item extends ComponentProps> {
+  of: Item[] | (() => Item[])
+  do: Component<Item>
 }
+export type ComponentProps = Record<string, any>
