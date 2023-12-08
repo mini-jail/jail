@@ -1,6 +1,6 @@
 import type { Directive, DOMElement } from "../types.d.ts"
 
-export default function (
+export default function use(
   elt: DOMElement,
   arg: Directive<unknown>,
   value: unknown,

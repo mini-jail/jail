@@ -1,8 +1,8 @@
-import { DOMElement } from "../types.d.ts"
+import type { BooleanLike, DOMElement } from "../types.d.ts"
 
 const ifSymbol = Symbol()
 
-export default function If(elt: DOMElement, value: string | boolean) {
+export default function If(elt: DOMElement, value: BooleanLike) {
   if (elt[ifSymbol] === undefined) {
     elt[ifSymbol] = new Text()
   }

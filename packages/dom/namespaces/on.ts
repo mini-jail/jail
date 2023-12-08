@@ -15,7 +15,7 @@ function delegatedEventListener(event: Event): void {
   }
 }
 
-export default function (
+export default function on(
   elt: DOMElement,
   arg: string,
   value: EventListener,

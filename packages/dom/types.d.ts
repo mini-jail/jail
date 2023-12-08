@@ -46,6 +46,7 @@ export type ComponentResult =
 export interface RootComponent {
   (): ComponentResult
 }
+export type BooleanLike = "true" | "false" | boolean
 export type SlotObject = { [key: string | number | symbol]: any }
 export type ComponentDataProps = Record<string, string | number | true>
 export type ComponentData = {
