@@ -22,37 +22,25 @@ export default function on(
 ): void {
   const options: AddEventListenerOptions = {},
     name = arg.match(nameRegExp)?.[0]!
-  let target: DOMElement | Document = elt,
-    delegate = false,
-    listener = value
+  let delegate = false
   arg.match(argRegExp)?.forEach((option) => {
     switch (option) {
       case "Once":
         return options.once = true
-      case "Caputure":
+      case "Capture":
         return options.capture = true
-      case "Passice":
+      case "Passive":
         return options.passive = true
-      case "Prevent": {
-        const originalListener = listener
-        return listener = function (event) {
-          event.preventDefault()
-          return originalListener.call(target, event)
-        }
-      }
+      case "Prevent":
+        return value = decoratePrevent(elt, value)
       case "Stop": {
-        const originalListener = listener
-        return listener = function (event) {
-          event.stopPropagation()
-          return originalListener.call(target, event)
-        }
+        return value = decorateStop(elt, value)
       }
       case "Delegate": {
         delegate = true
-        target = document
         elt[eventsSymbol] = elt[eventsSymbol] ?? {}
         elt[eventsSymbol][name] = elt[eventsSymbol][name] ?? new Set()
-        elt[eventsSymbol][name].add(listener)
+        elt[eventsSymbol][name].add(value)
       }
     }
   })
@@ -60,15 +48,27 @@ export default function on(
     const id = JSON.stringify({ name, options })
     if (delegatedEvents[id] === undefined) {
       delegatedEvents[id] = true
-      target.addEventListener(name, delegatedEventListener, options)
+      addEventListener(name, delegatedEventListener, options)
     }
-    onCleanup(() => {
-      elt[eventsSymbol][name].delete(listener)
-    })
+    onCleanup(() => elt[eventsSymbol][name].delete(value))
   } else {
-    target.addEventListener(name, listener, options)
-    onCleanup(() => {
-      target.removeEventListener(name, listener, options)
-    })
+    elt.addEventListener(name, value, options)
+    onCleanup(() => elt.removeEventListener(name, value, options))
+  }
+}
+
+function decoratePrevent(elt: DOMElement, listener: EventListener) {
+  const originalListener = listener
+  return function (event: Event) {
+    event.preventDefault()
+    return originalListener.call(elt, event)
+  }
+}
+
+function decorateStop(elt: DOMElement, listener: EventListener) {
+  const originalListener = listener
+  return function (event: Event) {
+    event.stopPropagation()
+    return originalListener.call(elt, event)
   }
 }
