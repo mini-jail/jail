@@ -110,8 +110,8 @@ function renderComponent(
       props[prop] = typeof value === "number" ? slots[value] : value
     }
     if (data.selfClosing === false) {
-      const result = createRenderResult(elt.content, template, slots)
-      props.children = props.children ? [props.children, result] : result
+      const child = createRenderResult(elt.content, template, slots)
+      props.children = props.children == null ? child : [props.children, child]
     }
     renderChild(elt, component(props))
   })
