@@ -1,6 +1,7 @@
 import { type DOMElement } from "jail/dom"
+import { onUnmount } from "jail/signal"
 
-const delegatedEventsSymbol = Symbol()
+const delegatedEventsSymbol = Symbol("DelegatedEvents")
 const delegatedEvents: Record<string, true | undefined> = {}
 const argRegExp = /[A-Z][a-z]+/g
 const nameRegExp = /[a-z]+/
@@ -43,9 +44,11 @@ export default function on(
     if (delegatedEvents[id] === undefined) {
       delegatedEvents[id] = true
       addEventListener(name, delegatedEventListener, options)
+      onUnmount(() => elt[delegatedEventsSymbol] = undefined)
     }
   } else {
     elt.addEventListener(name, value, options)
+    onUnmount(() => elt.removeEventListener(name, value, options))
   }
 }
 
