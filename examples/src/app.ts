@@ -24,7 +24,7 @@ const App = () => {
         <a href="/about">about</a>
       </nav>
     </header>
-    <main use:Animate=${pathAnimation} on:click=${(ev) => ev.target}>
+    <main use:Animate=${pathAnimation}>
       <Router type="pathname" fallback=${NotFound} routeMap=${routeMap} />
     </main>
   `

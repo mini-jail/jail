@@ -27,15 +27,13 @@ export const elementAttributeRegExp = RegExp(
 )
 export const componentRegExp = RegExp(
   [
-    `<\\s*`,
-    `(?:(?:${key}(?<slot>\\d+)${key})|(?<name>${validComponentName}))`,
-    `(?<attributes>${validAttributes})`,
-    `>`,
+    `<(?:(?:${key}(?<slot>\\d+)${key})|(?<name>${validComponentName}))`,
+    `(?<attributes>${validAttributes})>`,
   ].join(""),
   "g",
 )
 export const componentRegExp2 = RegExp(
-  `<\\s*\\/\\s*${validPlaceholder}|${validComponentName}\\s*>`,
+  `<\\/(?:${validPlaceholder}|${validComponentName})>`,
   "g",
 )
 export const componentPropsRegExp = RegExp(

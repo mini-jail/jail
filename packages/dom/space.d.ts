@@ -36,8 +36,8 @@ declare global {
       currentTarget: T & EventTarget
       target: T & EventTarget
     }
-    interface DOMEventListener<T, E> {
-      (this: T, event: E): void
+    interface DOMEventListener<T> {
+      (this: T | void, event: DOMEvent<T>): void
     }
     type Resolved<T> = T extends (() => unknown) ? ReturnType<T>
       : T extends ((...args: unknown[]) => unknown) ? T

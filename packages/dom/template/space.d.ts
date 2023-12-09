@@ -23,9 +23,6 @@ declare global {
       readonly slots: number[] | null
       readonly isStatic: boolean
     }
-    interface SlotFunction {
-      (this: any, event: DOMEvent<DOMElement>, argument: any): any
-    }
     interface SlotObject {
       [key: string | number | symbol]: any
     }
@@ -37,7 +34,7 @@ declare global {
       | undefined
       | void
       | DOMNode
-      | SlotFunction
+      | DOMEventListener<DOMElement>
       | SlotObject
       | Iterable<Slot>
     type ComponentGroups = {

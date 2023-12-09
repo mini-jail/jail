@@ -91,21 +91,22 @@ function renderElement(elt, template, slots) {
       ? components[data.name]
       : slots[data.name]
     if (typeof component !== "function") {
-      throw new TypeError(`Component is not a function.`, { cause: component })
+      throw new TypeError(`Component is not a function.`)
     }
     createRoot(() => {
-      const props = {}
-      for (const prop in data.props) {
-        const value = data.props[prop]
-        props[prop] = typeof value === "number" ? slots[value] : value
+      const props = Object.create(null)
+      if (component.length) {
+        for (const prop in data.props) {
+          const value = data.props[prop]
+          props[prop] = typeof value === "number" ? slots[value] : value
+        }
+        if (data.selfClosing === false) {
+          const child = createRenderResult(elt.content, template, slots)
+          props.children = props.children == null
+            ? child
+            : [props.children, child]
+        }
       }
-      if (data.selfClosing === false) {
-        const child = createRenderResult(elt.content, template, slots)
-        props.children = props.children == null
-          ? child
-          : [props.children, child]
-      }
-      // @ts-expect-error: pshhh its ok TS :(
       renderChild(elt, component(props))
     })
   }
@@ -184,8 +185,8 @@ function createNodeArray(nodeArray, ...elements) {
       } else if (typeof elt === "string" || typeof elt === "number") {
         nodeArray.push(new Text(elt + ""))
       } else if (typeof elt === "function") {
-        createNodeArray(nodeArray, resolve(elt))
-      } else if (typeof elt[Symbol.iterator] === "function") {
+        createNodeArray(nodeArray, elt())
+      } else if (Symbol.iterator in elt) {
         createNodeArray(nodeArray, ...elt)
       }
     }
