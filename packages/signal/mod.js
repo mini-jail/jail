@@ -267,10 +267,11 @@ export function catchError(errorFunction) {
   if (activeNode === null) {
     throw ActiveNodeIsNull
   }
-  if (activeNode.injections == null) {
-    activeNode.injections = { [errorSymbol]: [] }
+  if (activeNode.injections === null) {
+    activeNode.injections = { [errorSymbol]: [errorFunction] }
+  } else {
+    activeNode.injections[errorSymbol]?.push(errorFunction)
   }
-  activeNode.injections[errorSymbol]?.push(errorFunction)
 }
 
 /**

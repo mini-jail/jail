@@ -22,10 +22,9 @@ declare global {
     interface Injections {
       [errorSymbol]: Array<(error: any) => void>
     }
-    type Injectable = Partial<Injections>
     interface Node<T> {
       value: T | undefined | null
-      injections: Injectable | null
+      injections: Partial<Injections> | null
       parentNode: Node<any> | null
       childNodes: Node<any>[] | null
       cleanups: Cleanup[] | null
