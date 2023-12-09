@@ -118,12 +118,7 @@ function renderElement(elt, template, slots) {
  * @param {space.Slot[]} slots
  */
 function setElementData(elt, attribute, slots) {
-  const value = createValue(attribute, slots)
-  /**
-   * @type {string}
-   */
-  // @ts-expect-error: this should always be a string. maybe i need more specific AttributeData
-  const name = attribute.name
+  const value = createValue(attribute, slots), name = attribute.name
   if (attribute.namespace) {
     const directive = namespaces[attribute.namespace]
     if (directive === undefined) {
@@ -135,11 +130,13 @@ function setElementData(elt, attribute, slots) {
     createEffect((currentValue) => {
       const nextValue = value()
       if (currentValue !== nextValue) {
+        // @ts-expect-error: name can be only a string here
         setPropertyOrAttribute(elt, name, nextValue)
       }
       return nextValue
     })
   } else {
+    // @ts-expect-error: name can be only a string here... too
     setPropertyOrAttribute(elt, name, value)
   }
 }
