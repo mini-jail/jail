@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import { paramsSymbol } from "./router.js"
 
 declare global {
@@ -14,23 +15,23 @@ declare global {
       [paramsSymbol]?: Params
     }
     type RouteMap = { readonly [path: string]: RouteHandler }
-    type RouterProps = RouterOptions & {
-      type: RouterType
-      routeMap: RouteMap
-      children: RenderResult
-    }
+    type RouterProps = ComponentProps<
+      RouterOptions & {
+        type: RouterType
+        routeMap: RouteMap
+      }
+    >
     type RouterOptions = {
       fallback?: RouteHandler
     }
-    type ForProps = {
-      each: Resolvable<ComponentProps[]>
-      do: Component<ComponentProps>
-      children: RenderResult
-    }
-    type PortalProps = {
+    type ForProps = ComponentProps<{
+      each: Resolvable<Record<string, any>[]>
+      do: Component<Record<string, any>>
+    }>
+    type PortalProps = ComponentProps<{
       selector?: string
-      children: RenderResult
-    }
+      mount?: Element
+    }>
     interface Components {
       For: Component<ForProps>
       Router: Component<RouterProps>

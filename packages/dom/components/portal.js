@@ -9,6 +9,8 @@ export function Portal(props) {
   onMount(() => {
     const target = props.selector
       ? document.querySelector(props.selector)
+      : props.mount
+      ? props.mount
       : document.body
     if (target === null) {
       throw new Error(`Portal target is null (${props.selector})`)

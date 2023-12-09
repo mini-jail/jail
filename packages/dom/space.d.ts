@@ -43,8 +43,18 @@ declare global {
     type Resolved<T> = T extends (() => unknown) ? ReturnType<T>
       : T extends ((...args: unknown[]) => unknown) ? T
       : T
-    type ComponentProps = { readonly [prop: string]: any }
-    interface Component<Props extends ComponentProps> {
+    type ComponentProps<T extends Record<string, any>> = Merge<T, Children>
+    type Children = {
+      children: RenderResult
+    }
+    type Merge<Base, Extends> = {
+      [K in keyof Base | keyof Extends]: K extends keyof Base & keyof Extends
+        ? Base[K] | Extends[K]
+        : K extends keyof Extends ? Extends[K]
+        : K extends keyof Base ? Base[K]
+        : never
+    }
+    interface Component<Props extends ComponentProps<Record<string, any>>> {
       (props: Props): Slot
     }
     interface RootComponent {
