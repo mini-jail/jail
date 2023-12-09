@@ -5,13 +5,19 @@ import {
   onMount,
   onUnmount,
   provide,
-  type Signal,
-} from "jail/signal"
-import html, { Text } from "jail/dom"
-import { getParams } from "jail/dom-router"
+} from "space/signal"
+import html, { getParams, Text } from "space/dom"
+
+declare global {
+  namespace space {
+    interface Injections {
+      counter: Signal<number>
+    }
+  }
+}
 
 const Dot = (x: number, y: number, target: number) => {
-  const counter = inject<Signal<number>>("counter")!
+  const counter = inject("counter")!
   const hover = createSignal(false)
   const text = () => hover() ? "*" + counter() + "*" : counter() + ""
   const bgColor = () => hover() ? "lightpink" : "white"

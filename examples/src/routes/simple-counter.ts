@@ -1,5 +1,5 @@
-import { createSignal } from "jail/signal"
-import html from "jail/dom"
+import { createSignal } from "space/signal"
+import html from "space/dom"
 
 export default function Component() {
   const counter = createSignal(0)

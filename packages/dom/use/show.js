@@ -1,5 +1,5 @@
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {space.BooleanLike} value
  */
 export function Show(elt, value) {

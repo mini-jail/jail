@@ -1,9 +1,9 @@
-import { createComputed, createSignal } from "jail/signal"
-import html, { Show } from "jail/dom"
+import { createComputed, createSignal } from "space/signal"
+import html, { Show } from "space/dom"
 
 const code = `
-import { createSignal } from "jail/signal"
-import html from "jail/dom"
+import { createSignal } from "space/signal"
+import html from "space/dom"
 
 function Counter() {
   const counter = createSignal(0)

@@ -11,7 +11,7 @@ declare global {
       [element: number | string]: number | ComponentData | AttributeData[]
     }
     type Template = {
-      readonly fragment: DocumentFragment
+      readonly fragment: DOMDocumentFragment
       readonly templateString: string
       readonly hash: string
       readonly data: TemplateData
@@ -24,7 +24,7 @@ declare global {
       readonly isStatic: boolean
     }
     interface SlotFunction {
-      (this: any, event: Event<Element>, argument: any): any
+      (this: any, event: DOMEvent<DOMElement>, argument: any): any
     }
     interface SlotObject {
       [key: string | number | symbol]: any
@@ -36,7 +36,7 @@ declare global {
       | null
       | undefined
       | void
-      | Node
+      | DOMNode
       | SlotFunction
       | SlotObject
       | Iterable<Slot>
@@ -65,7 +65,7 @@ declare global {
       value3: string | undefined
     }
     interface HTMLTemplateElement extends globalThis.HTMLTemplateElement {
-      content: DocumentFragment
+      content: DOMDocumentFragment
     }
   }
 }

@@ -1,6 +1,5 @@
-import { createEffect } from "jail/signal"
-import html, { mount } from "jail/dom"
-import { path, Router } from "jail/dom-router"
+import { createEffect } from "space/signal"
+import html, { mount, path, Router } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
 import SimpleCounter from "./routes/simple-counter.ts"

@@ -1,5 +1,5 @@
-import html from "jail/dom"
-import { onMount, onUnmount } from "jail/signal"
+import html from "space/dom"
+import { onMount, onUnmount } from "space/signal"
 
 export default function Component() {
   const { backgroundColor } = document.body.style

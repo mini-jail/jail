@@ -1,5 +1,5 @@
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {space.AnimateValue} value
  */
 export function Animate(elt, value) {

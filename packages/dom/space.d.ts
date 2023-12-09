@@ -1,19 +1,19 @@
 // deno-lint-ignore-file no-explicit-any
 declare global {
   namespace space {
-    interface Element extends globalThis.Element {
+    interface DOMElement extends globalThis.Element {
       [unknown: string | number | symbol]: any
     }
-    interface Node extends globalThis.Node {
+    interface DOMNode extends globalThis.Node {
       [unknown: string | number | symbol]: any
     }
-    interface ChildNode extends globalThis.ChildNode {
-      parentNode: ParentNode
+    interface DOMChildNode extends globalThis.ChildNode {
+      parentNode: DOMParentNode
       childNodes: NodeListOf<ChildNode>
       [unknown: string | number | symbol]: any
     }
-    interface ParentNode extends globalThis.ParentNode {
-      parentNode: ParentNode | null
+    interface DOMParentNode extends globalThis.ParentNode {
+      parentNode: DOMParentNode | null
       childNodes: NodeListOf<ChildNode>
       [unknown: string | number | symbol]: any
     }
@@ -24,19 +24,19 @@ declare global {
       [component: string]: Component<any>
     }
     interface Directive<Type> {
-      (elt: Element, value: Resolved<Type>): void
+      (elt: DOMElement, value: Resolved<Type>): void
     }
     interface NamespaceDirective<T, A> {
-      (elt: Element, arg: A, value: T): void
+      (elt: DOMElement, arg: A, value: T): void
     }
     interface Namespaces {
       [namespace: string]: NamespaceDirective<any, any>
     }
-    interface Event<T> extends globalThis.Event {
+    interface DOMEvent<T> extends globalThis.Event {
       currentTarget: T & EventTarget
       target: T & EventTarget
     }
-    interface EventListener<T, E> {
+    interface DOMEventListener<T, E> {
       (this: T, event: E): void
     }
     type Resolved<T> = T extends (() => unknown) ? ReturnType<T>

@@ -1,62 +1,16 @@
-/**
- * @typedef {string | number | symbol} Injectionkey
- * @typedef {{ [key: Injectionkey]: * }} Injections
- * @typedef {() => void} Cleanup
- */
-/**
- * @template [Type = any]
- * @typedef {(currentValue: Type) => Type} UpdateFunction
- */
-/**
- * @template [Type = any]
- * @typedef {() => Type} Getter
- */
-/**
- * @template [Type = any]
- * @typedef {ReadOnlySignal<Type> & WritableSignal<Type>} Signal
- */
-/**
- * @template [Type = any]
- * @typedef {() => Type} ReadOnlySignal
- */
-/**
- * @template [Type = any]
- * @typedef {{
- *   (update: UpdateFunction<Type>): void
- *   (value: Type): void
- * }} WritableSignal
- */
-/**
- * @template [Type = any]
- * @typedef {object} Node
- * @property {Type | undefined | null} value
- * @property {Injections | null} injections
- * @property {Node | null} parentNode
- * @property {Node[] | null} childNodes
- * @property {Cleanup[] | null} cleanups
- * @property {UpdateFunction<Type> | null} onupdate
- * @property {Source[] | null} sources
- * @property {number[] | null} sourceSlots
- */
-/**
- * @template [Type = any]
- * @typedef {object} Source
- * @property {Type | undefined} value
- * @property {Node[] | null} nodes
- * @property {number[] | null} nodeSlots
- */
-
 const ActiveNodeIsNull = new Error("activeNode is null.")
-const errorSymbol = Symbol()
-/** @type {Set<Node>} */
+export const errorSymbol = Symbol("Error")
+/**
+ * @type {Set<space.Node>}
+ */
 const nodeQueue = new Set()
 let isRunning = false
-/** @type {Node | null} */
+/** @type {space.Node | null} */
 let activeNode = null
 
 /**
  * @template Type
- * @param {(cleanup: Cleanup) => Type} rootFunction
+ * @param {(cleanup: space.Cleanup) => Type} rootFunction
  * @returns {Type | undefined}
  */
 export function createRoot(rootFunction) {
@@ -72,12 +26,11 @@ export function createRoot(rootFunction) {
 }
 
 /**
- * @template Type
- * @param {Type} [initialValue]
- * @returns {Node<Type>}
+ * @param {any} [initialValue]
+ * @returns {space.Node}
  */
 function createNode(initialValue) {
-  /** @type {Node<Type>} */
+  /** @type {space.Node} */
   const node = {
     value: initialValue,
     parentNode: null,
@@ -110,7 +63,7 @@ export function onMount(mountFunction) {
 }
 
 /**
- * @param {Cleanup} unmountFunction
+ * @param {space.Cleanup} unmountFunction
  */
 export function onUnmount(unmountFunction) {
   if (activeNode === null) {
@@ -122,25 +75,25 @@ export function onUnmount(unmountFunction) {
 /**
  * @overload
  * @param {() => void} effectFunction
- * @returns {Cleanup}
+ * @returns {space.Cleanup}
  */
 /**
  * @template Type
  * @overload
- * @param {UpdateFunction<Type | undefined>} effectFunction
- * @returns {Cleanup}
+ * @param {space.UpdateFunction<Type | undefined>} effectFunction
+ * @returns {space.Cleanup}
  */
 /**
  * @template Type
  * @overload
- * @param {UpdateFunction<Type>} effectFunction
+ * @param {space.UpdateFunction<Type>} effectFunction
  * @param {Type} initialValue
- * @returns {Cleanup}
+ * @returns {space.Cleanup}
  */
 /**
- * @param {UpdateFunction<any>} effectFunction
+ * @param {space.UpdateFunction<any>} effectFunction
  * @param {any} [initialValue]
- * @returns {Cleanup}
+ * @returns {space.Cleanup}
  */
 export function createEffect(effectFunction, initialValue) {
   const node = createNode(initialValue)
@@ -156,20 +109,20 @@ export function createEffect(effectFunction, initialValue) {
 /**
  * @template Type
  * @overload
- * @param {UpdateFunction<Type | undefined>} effectFunction
- * @returns {ReadOnlySignal<Type | undefined>}
+ * @param {space.UpdateFunction<Type | undefined>} effectFunction
+ * @returns {space.ReadOnlySignal<Type | undefined>}
  */
 /**
  * @template Type
  * @overload
- * @param {UpdateFunction<Type>} effectFunction
+ * @param {space.UpdateFunction<Type>} effectFunction
  * @param {Type} initialValue
- * @returns {ReadOnlySignal<Type>}
+ * @returns {space.ReadOnlySignal<Type>}
  */
 /**
- * @param {UpdateFunction<any>} effectFunction
+ * @param {space.UpdateFunction<any>} effectFunction
  * @param {any} [initialValue]
- * @returns {ReadOnlySignal<any>}
+ * @returns {space.ReadOnlySignal<any>}
  */
 export function createComputed(effectFunction, initialValue) {
   const source = createSource(initialValue)
@@ -181,8 +134,8 @@ export function createComputed(effectFunction, initialValue) {
 }
 
 /**
- * @param {Node | null} node
- * @param {Injectionkey} key
+ * @param {space.Node | null} node
+ * @param {space.Injectionkey} key
  * @returns {any | undefined}
  */
 function lookup(node, key) {
@@ -198,7 +151,7 @@ function lookup(node, key) {
 /**
  * @template Type
  * @param {Type} [initialValue]
- * @returns {Source<Type>}
+ * @returns {space.Source<Type>}
  */
 function createSource(initialValue) {
   return { value: initialValue, nodes: null, nodeSlots: null }
@@ -206,7 +159,7 @@ function createSource(initialValue) {
 
 /**
  * @template Type
- * @param {Source<Type>} source
+ * @param {space.Source<Type>} source
  * @returns {Type | undefined}
  */
 function getSourceValue(source) {
@@ -236,7 +189,7 @@ function getSourceValue(source) {
 /**
  * @template Type
  * @overload
- * @param {Source<Type>} source
+ * @param {space.Source<Type>} source
  * @param {Type} nextValue
  */
 /**
@@ -247,8 +200,8 @@ function getSourceValue(source) {
  */
 /**
  * @template Type
- * @param {Source<Type>} source
- * @param {*} nextValue
+ * @param {space.Source<Type>} source
+ * @param {Type} nextValue
  */
 function setSourceValue(source, nextValue) {
   if (typeof nextValue === "function") {
@@ -268,18 +221,18 @@ function setSourceValue(source, nextValue) {
 /**
  * @template Type
  * @overload
- * @returns {Signal<Type | undefined>}
+ * @returns {space.Signal<Type | undefined>}
  */
 /**
  * @template Type
  * @overload
  * @param {Type} initialValue
- * @returns {Signal<Type>}
+ * @returns {space.Signal<Type>}
  */
 /**
  * @template Type
  * @param {any} [initialValue]
- * @returns {Signal<any>}
+ * @returns {space.Signal<any>}
  */
 export function createSignal(initialValue) {
   const source = createSource(initialValue)
@@ -314,15 +267,14 @@ export function catchError(errorFunction) {
   if (activeNode === null) {
     throw ActiveNodeIsNull
   }
-  if (activeNode.injections === null) {
-    activeNode.injections = { [errorSymbol]: [errorFunction] }
-  } else {
-    activeNode.injections[errorSymbol].push(errorFunction)
+  if (activeNode.injections == null) {
+    activeNode.injections = { [errorSymbol]: [] }
   }
+  activeNode.injections[errorSymbol]?.push(errorFunction)
 }
 
 /**
- * @param {Cleanup} cleanupFunction
+ * @param {space.Cleanup} cleanupFunction
  */
 export function onCleanup(cleanupFunction) {
   if (activeNode === null) {
@@ -337,7 +289,7 @@ export function onCleanup(cleanupFunction) {
 
 /**
  * @template Type
- * @param {Getter<Type>} getter
+ * @param {space.Getter<Type>} getter
  * @returns {Type}
  */
 export function untrack(getter) {
@@ -350,7 +302,7 @@ export function untrack(getter) {
 
 /**
  * @template Type
- * @param {Getter<Type>} getter
+ * @param {space.Getter<Type>} getter
  * @returns {Type}
  */
 function batch(getter) {
@@ -375,7 +327,7 @@ function flush() {
 }
 
 /**
- * @param {Node<any>} node
+ * @param {space.Node} node
  * @param {boolean} [complete]
  */
 function updateNode(node, complete) {
@@ -395,20 +347,20 @@ function updateNode(node, complete) {
 }
 
 /**
- * @param {Node<any>} node
+ * @param {space.Node} node
  * @param {boolean} [complete]
  */
 function cleanNode(node, complete) {
   if (node.sources?.length) {
     while (node.sources.length) {
-      /** @type {Source} */
+      /** @type {space.Source} */
       // @ts-expect-error: node.sources will be not null
       const source = node.sources.pop()
       /** @type {number} */
       // @ts-expect-error: node.sourceSlots will be not null
       const sourceSlot = node.sourceSlots.pop()
       if (source.nodes?.length) {
-        /** @type {Node} */
+        /** @type {space.Node} */
         // @ts-expect-error: source.nodes will be not null
         const sourceNode = source.nodes.pop()
         /** @type {number} */
@@ -427,7 +379,7 @@ function cleanNode(node, complete) {
   if (node.childNodes?.length) {
     const isUpdatable = node.onupdate !== null
     while (node.childNodes.length) {
-      /** @type {Node} */
+      /** @type {space.Node} */
       // @ts-expect-error: node.childNodes.pop() will return a node here
       const childNode = node.childNodes.pop()
       cleanNode(
@@ -454,22 +406,22 @@ function cleanNode(node, complete) {
 }
 
 /**
- * @template Type
+ * @template {space.Injectionkey} Key
  * @overload
- * @param {Injectionkey} key
- * @returns {Type | undefined}
+ * @param {Key} key
+ * @returns {space.Injections[Key] | undefined}
  */
 /**
- * @template Type
+ * @template T
  * @overload
- * @param {Injectionkey} key
- * @param {Type} defaultValue
- * @returns {Type}
+ * @param {string | number | symbol} key
+ * @param {T} defaultValue
+ * @returns {T}
  */
 /**
- * @param {Injectionkey} key
- * @param {*} [defaultValue]
- * @returns {* | undefined}
+ * @param {any} key
+ * @param {any} [defaultValue]
+ * @returns {any | undefined}
  */
 export function inject(key, defaultValue) {
   if (activeNode === null) {
@@ -479,9 +431,23 @@ export function inject(key, defaultValue) {
 }
 
 /**
- * @template Type
- * @param {Injectionkey} key
- * @param {Type} value
+ * @template {space.Injectionkey} Key
+ * @overload
+ * @param {Key} key
+ * @param {space.Injections[Key]} value
+ * @returns {void}
+ */
+/**
+ * @template T
+ * @overload
+ * @param {string | number | symbol} key
+ * @param {T} value
+ * @returns {void}
+ */
+/**
+ * @param {string | number | symbol} key
+ * @param {any} value
+ * @returns {void}
  */
 export function provide(key, value) {
   if (activeNode === null) {

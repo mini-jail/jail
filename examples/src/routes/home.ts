@@ -1,4 +1,4 @@
-import html from "jail/dom"
+import html from "space/dom"
 
 export default function Component() {
   return html`

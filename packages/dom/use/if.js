@@ -1,7 +1,7 @@
 export const ifSymbol = Symbol("If")
 
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {space.BooleanLike} value
  */
 export function If(elt, value) {

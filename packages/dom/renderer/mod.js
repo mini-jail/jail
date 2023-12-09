@@ -1,4 +1,4 @@
-import { createEffect, createRoot } from "jail/signal"
+import { createEffect, createRoot } from "space/signal"
 import {
   isResolvable,
   resolve,
@@ -9,9 +9,9 @@ import { createTemplate } from "../template/mod.js"
 import namespaces from "../namespaces/mod.js"
 
 /**
- * @param {space.Node} anchor
- * @param {space.Node[]} currentNodes
- * @param {space.Node[]} nextNodes
+ * @param {space.DOMNode} anchor
+ * @param {space.DOMNode[]} currentNodes
+ * @param {space.DOMNode[]} nextNodes
  */
 function reconcileNodes(anchor, currentNodes, nextNodes) {
   if (nextNodes.length > 0) {
@@ -56,7 +56,7 @@ function render(template, slots) {
 }
 
 /**
- * @param {space.DocumentFragment} fragment
+ * @param {space.DOMDocumentFragment} fragment
  * @param {space.Template} template
  * @param {space.Slot[]} slots
  * @returns {space.RenderResult}
@@ -72,7 +72,7 @@ function createRenderResult(fragment, template, slots) {
 }
 
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {space.Template} template
  * @param {space.Slot[]} slots
  */
@@ -109,7 +109,7 @@ function renderElement(elt, template, slots) {
 }
 
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {space.AttributeData} attribute
  * @param {space.Slot[]} slots
  */
@@ -169,7 +169,7 @@ function createValue(attribute, slots) {
 /**
  * @param {Node[]} nodeArray
  * @param  {...any} elements
- * @returns {space.Node[]}
+ * @returns {space.DOMNode[]}
  */
 function createNodeArray(nodeArray, ...elements) {
   if (elements.length > 0) {
@@ -198,7 +198,7 @@ function createNodeArray(nodeArray, ...elements) {
 function renderDynamicChild(targetElt, childElement, replaceElt) {
   const anchor = new Text()
   /**
-   * @type {space.Node[]}
+   * @type {space.DOMNode[]}
    */
   const currentNodes = []
   replaceElt ? targetElt.replaceWith(anchor) : targetElt.appendChild(anchor)
@@ -210,7 +210,7 @@ function renderDynamicChild(targetElt, childElement, replaceElt) {
 }
 
 /**
- * @param {space.Element} targetElt
+ * @param {space.DOMElement} targetElt
  * @param {any} child
  */
 function renderChild(targetElt, child) {

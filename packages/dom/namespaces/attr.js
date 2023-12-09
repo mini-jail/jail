@@ -1,8 +1,8 @@
-import { onCleanup } from "jail/signal"
+import { onCleanup } from "space/signal"
 import { setAttribute } from "../helpers/mod.js"
 
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {string} arg
  * @param {unknown} value
  */

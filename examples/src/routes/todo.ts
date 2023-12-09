@@ -1,5 +1,5 @@
-import { createComputed, createSignal } from "jail/signal"
-import html, { For, Show } from "jail/dom"
+import { createComputed, createSignal } from "space/signal"
+import html, { For, Show } from "space/dom"
 
 type ToDoItem = {
   id: number
@@ -39,7 +39,7 @@ export default function Component() {
     list(list().concat({ id: Date.now(), done: false, text: textValue() }))
     textValue("")
   }
-  const onInput = (ev: space.Event<HTMLInputElement>) =>
+  const onInput = (ev: space.DOMEvent<HTMLInputElement>) =>
     textValue(ev.target.value)
   const length = createComputed(() => list().length, 0)
   const done = createComputed(() => {
@@ -61,7 +61,7 @@ export default function Component() {
           />
         </form>
         <div class="todo-items">
-          <${For} of=${list} do=${Item} />
+          <${For} each=${list} do=${Item} />
         </div>
         <label>progress: ${done}/${length}</label>
         <progress max=${length} value=${done}></progress>

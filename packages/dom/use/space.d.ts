@@ -4,7 +4,7 @@ import { textSymbol } from "./text.js"
 declare global {
   namespace space {
     type BooleanLike = "true" | "false" | boolean
-    interface Element {
+    interface DOMElement {
       [ifSymbol]?: Text
       [textSymbol]?: Text
     }

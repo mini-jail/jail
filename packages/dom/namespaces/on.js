@@ -7,9 +7,9 @@ const argRegExp = /[A-Z][a-z]+/g
 const nameRegExp = /[a-z]+/
 
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {string} arg
- * @param {space.EventListener} value
+ * @param {space.DOMEventListener} value
  */
 export default function On(elt, arg, value) {
   const options = {}, name = arg.match(nameRegExp)?.[0] + ""
@@ -51,9 +51,9 @@ export default function On(elt, arg, value) {
 }
 
 /**
- * @param {space.Element} elt
- * @param {space.EventListener} listener
- * @returns {space.EventListener}
+ * @param {space.DOMElement} elt
+ * @param {space.DOMEventListener} listener
+ * @returns {space.DOMEventListener}
  */
 function decoratePrevent(elt, listener) {
   const originalListener = listener
@@ -64,9 +64,9 @@ function decoratePrevent(elt, listener) {
 }
 
 /**
- * @param {space.Element} elt
- * @param {space.EventListener} listener
- * @returns {space.EventListener}
+ * @param {space.DOMElement} elt
+ * @param {space.DOMEventListener} listener
+ * @returns {space.DOMEventListener}
  */
 function decorateStop(elt, listener) {
   const originalListener = listener
@@ -77,11 +77,11 @@ function decorateStop(elt, listener) {
 }
 
 /**
- * @param {space.Event} event
+ * @param {space.DOMEvent} event
  */
 function delegatedEventListener(event) {
   /**
-   * @type {space.ParentNode | null}
+   * @type {space.DOMParentNode | null}
    */
   let elt = event.target
   while (elt !== null) {

@@ -1,4 +1,5 @@
 import { For } from "./for.js"
+import { Router } from "./router.js"
 
 /**
  * ## For devs only!
@@ -9,3 +10,4 @@ export const components = Object.create(null)
 export default components
 
 components.For = For
+components.Router = Router

@@ -1,7 +1,7 @@
-import { onCleanup } from "jail/signal"
+import { onCleanup } from "space/signal"
 
 /**
- * @param {space.Element} elt
+ * @param {space.DOMElement} elt
  * @param {string | number | symbol} arg
  * @param {unknown} value
  */

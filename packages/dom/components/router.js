@@ -6,45 +6,9 @@ import {
   onCleanup,
   onMount,
   provide,
-} from "jail/signal"
+} from "space/signal"
 
-/**
- * @typedef {"pathname" | "hash"} RouterType
- * @typedef {{ readonly [param: string]: string }} Params
- */
-/**
- * @template [Type = any]
- * @typedef {() => Type} RouteHandler
- */
-/**
- * @template [Type = any]
- * @typedef {{
- *   path: string
- *   regexp: RegExp
- *   handler: RouteHandler<Type>
- * }} Route
- */
-/**
- * @template [Type = any]
- * @typedef {{ [path: string]: RouteHandler<Type> }} RouteMap
- */
-/**
- * @template [Type = any]
- * @typedef {{
- *   fallback?: RouteHandler<Type>
- * }} RouterOptions
- */
-/**
- * @template [Type = any]
- * @typedef {{
- *   type: RouterType
- *   routeMap: RouteMap<Type>
- *   children?: any
- *   fallback?: RouteHandler<Type>
- * }} RouterProperties
- */
-
-const ParamsInjectionKey = Symbol()
+export const paramsSymbol = Symbol("Params")
 export const path = createSignal("")
 
 const routeTypeHandlerMap = {
@@ -95,10 +59,10 @@ const routeTypeHandlerMap = {
 }
 
 /**
- * @returns {Params | undefined}
+ * @returns {space.Params | undefined}
  */
 export function getParams() {
-  return inject(ParamsInjectionKey)
+  return inject(paramsSymbol)
 }
 
 /**
@@ -112,8 +76,8 @@ function createMatcher(path) {
 }
 
 /**
- * @param {RouteMap} routeMap
- * @returns {Route[]}
+ * @param {space.RouteMap} routeMap
+ * @returns {space.Route[]}
  */
 function createRoutes(routeMap) {
   return Object.keys(routeMap).map((path) => ({
@@ -124,10 +88,9 @@ function createRoutes(routeMap) {
 }
 
 /**
- * @template Type
- * @param {RouteMap<Type>} routeMap
- * @param {RouterOptions<Type>} options
- * @returns {import("jail/signal").Getter<Type | undefined>}
+ * @param {space.RouteMap} routeMap
+ * @param {space.RouterOptions} options
+ * @returns {space.Getter}
  */
 function createRouter(routeMap, options) {
   const routeArray = createRoutes(routeMap)
@@ -136,8 +99,7 @@ function createRouter(routeMap, options) {
     return createRoot(() => {
       for (const route of routeArray) {
         if (route.regexp.test(nextPath)) {
-          const params = route.regexp.exec(nextPath)?.groups
-          provide(ParamsInjectionKey, params)
+          provide(paramsSymbol, route.regexp.exec(nextPath)?.groups)
           return route.handler()
         }
       }
@@ -155,18 +117,18 @@ function createRouter(routeMap, options) {
  * }
  * const fallbackRoute = () => { ... }
  * template`
- *   <Router
+ *   <${Router}
  *     type="hash"
  *     routeMap=${routeMap}
  *     fallback=${fallbackRoute}
  *   />
  * `
  * ```
- * @param {RouterProperties} props
- * @returns {() => [children, import("jail/signal").Getter]}
+ * @param {space.RouterProps} props
+ * @returns {() => [any, space.Getter]}
  */
-export function Router({ type, routeMap, fallback, children }) {
-  routeTypeHandlerMap[type]()
-  const router = createRouter(routeMap, { fallback })
-  return () => [children, router]
+export function Router(props) {
+  routeTypeHandlerMap[props.type]()
+  const router = createRouter(props.routeMap, { fallback: props.fallback })
+  return () => [props.children, router]
 }
