@@ -1,3 +1,4 @@
+import "./space.d.ts"
 import type {
   AnimateValue,
   Component,
