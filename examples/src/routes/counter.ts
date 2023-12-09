@@ -32,7 +32,7 @@ export default function Component() {
       <h4>
         counter example
         <sub>(...what else?)</sub>
-        <button on:clickDelegate=${(_ev: Event) => show((value) => !value)}>
+        <button on:clickDelegate=${(_ev) => show((value) => !value)}>
           ${() => (show() ? "hide" : "show")} code
         </button>
       </h4>

@@ -6,21 +6,18 @@ import {
   elementRegExp,
   key,
   placeholderRegExp,
-} from "../regexp/mod.ts"
-import type {
-  AttributeData,
-  AttributeGroups,
-  ComponentData,
-  ComponentDataProps,
-  ComponentGroups,
-  ComponentPropsGroups,
-  Data,
-  Template,
-} from "../types.d.ts"
+} from "../regexp/mod.js"
 
-const templateCache = new Map<TemplateStringsArray, Template>()
+/**
+ * @type {Map<TemplateStringsArray, space.Template>}
+ */
+const templateCache = new Map()
 
-function stringArrayToString(strings: TemplateStringsArray): string {
+/**
+ * @param {TemplateStringsArray} strings
+ * @returns {string}
+ */
+function stringArrayToString(strings) {
   let data = "", arg = 0
   const length = strings.length - 1
   while (arg < length) {
@@ -30,15 +27,24 @@ function stringArrayToString(strings: TemplateStringsArray): string {
   return data
 }
 
-export function createTemplate(
-  templateStringsArray: TemplateStringsArray,
-): Template {
+/**
+ * @param {TemplateStringsArray} templateStringsArray
+ * @returns {space.Template}
+ */
+export function createTemplate(templateStringsArray) {
   let template = templateCache.get(templateStringsArray)
   if (template === undefined) {
     let id = -1
-    const hash = "_" + Math.random().toString(36).slice(2, 7) + "_",
-      data: Data = {},
-      elt = document.createElement("template")
+    /**
+     * @type {space.TemplateData}
+     */
+    const data = {}
+    const hash = "_" + Math.random().toString(36).slice(2, 7) + "_"
+    /**
+     * @type {space.HTMLTemplateElement}
+     */
+    // @ts-expect-error: it's ok TS, it is only used internally
+    const elt = document.createElement("template")
     elt.innerHTML = stringArrayToString(templateStringsArray)
       .replace(/^[\s]+/gm, "")
       .replace(componentRegExp, function () {
@@ -49,7 +55,10 @@ export function createTemplate(
       })
       .replace(componentRegExp2, "</template>")
       .replace(elementRegExp, (match) => {
-        let attributes: AttributeData[] | null = null
+        /**
+         * @type {space.AttributeData[] | null}
+         */
+        let attributes = null
         match = match.replace(elementAttributeRegExp, function () {
           const aData = createAttributeData(arguments[arguments.length - 1])
           if (aData.isStatic) {
@@ -80,12 +89,19 @@ export function createTemplate(
   return template
 }
 
-function createAttributeData(groups: AttributeGroups): AttributeData {
+/**
+ * @param {space.AttributeGroups} groups
+ * @returns {space.AttributeData}
+ */
+function createAttributeData(groups) {
   const slot = groups.slot1 ?? groups.slot2 ?? groups.slot3 ?? null
   const value = groups.value1 ?? groups.value2 ?? groups.value3 ?? null
   const nameSlot = groups.nameSlot ? +groups.nameSlot : null
   const namespace = groups.namespace ?? null
-  let slots: number[] | null = null
+  /**
+   * @type {number[] | null}
+   */
+  let slots = null
   if (value) {
     for (const [_match, slot] of value.matchAll(placeholderRegExp)) {
       if (slots === null) {
@@ -96,7 +112,7 @@ function createAttributeData(groups: AttributeGroups): AttributeData {
     }
   }
   return {
-    name: nameSlot !== null ? nameSlot : groups.name!,
+    name: nameSlot !== null ? nameSlot : groups.name,
     namespace: namespace,
     slots: slots,
     value: slot ? +slot : value,
@@ -105,16 +121,30 @@ function createAttributeData(groups: AttributeGroups): AttributeData {
   }
 }
 
-function throwOnAttributeSyntaxError(data: string): void {
+/**
+ * @param {string} data
+ */
+function throwOnAttributeSyntaxError(data) {
   for (const _matches of data.matchAll(placeholderRegExp)) {
     throw new SyntaxError(`Unsupported Syntax\n${data}`)
   }
 }
 
-function createComponentData(groups: ComponentGroups): ComponentData {
-  const props: ComponentDataProps = {}
+/**
+ * @param {space.ComponentGroups} groups
+ * @returns {space.ComponentData}
+ */
+function createComponentData(groups) {
+  /**
+   * @type {space.ComponentDataProps}
+   */
+  const props = {}
   for (const match of groups.attributes.matchAll(componentPropsRegExp)) {
-    const data = <ComponentPropsGroups> match.groups
+    /**
+     * @type {space.ComponentPropsGroups}
+     */
+    // @ts-expect-error: if it matches, it matches. it will match
+    const data = match.groups
     const slot = data.slot1 ?? data.slot2 ?? data.slot3 ?? null,
       value = data.value1 ?? data.value2 ?? data.value3 ?? true
     props[data.name] = slot ? +slot : value

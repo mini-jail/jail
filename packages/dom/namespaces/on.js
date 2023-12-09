@@ -1,17 +1,18 @@
-import { type DOMElement } from "jail/dom"
-
-const delegatedEventsSymbol = Symbol("DelegatedEvents")
-const delegatedEvents: Record<string, true | undefined> = {}
+export const delegatedEventsSymbol = Symbol("DelegatedEvents")
+/**
+ * @type {Record<string, true | undefined>}
+ */
+const delegatedEvents = {}
 const argRegExp = /[A-Z][a-z]+/g
 const nameRegExp = /[a-z]+/
 
-export default function on(
-  elt: DOMElement,
-  arg: string,
-  value: EventListener,
-): void {
-  const options: AddEventListenerOptions = {},
-    name = arg.match(nameRegExp)?.[0]!
+/**
+ * @param {space.Element} elt
+ * @param {string} arg
+ * @param {space.EventListener} value
+ */
+export default function On(elt, arg, value) {
+  const options = {}, name = arg.match(nameRegExp)?.[0] + ""
   let delegate = false
   arg.match(argRegExp)?.forEach((option) => {
     switch (option) {
@@ -49,29 +50,46 @@ export default function on(
   }
 }
 
-function decoratePrevent(elt: DOMElement, listener: EventListener) {
+/**
+ * @param {space.Element} elt
+ * @param {space.EventListener} listener
+ * @returns {space.EventListener}
+ */
+function decoratePrevent(elt, listener) {
   const originalListener = listener
-  return function (event: Event) {
+  return function (event) {
     event.preventDefault()
     return originalListener.call(elt, event)
   }
 }
 
-function decorateStop(elt: DOMElement, listener: EventListener) {
+/**
+ * @param {space.Element} elt
+ * @param {space.EventListener} listener
+ * @returns {space.EventListener}
+ */
+function decorateStop(elt, listener) {
   const originalListener = listener
-  return function (event: Event) {
+  return function (event) {
     event.stopPropagation()
     return originalListener.call(elt, event)
   }
 }
 
-function delegatedEventListener(event: Event): void {
-  let elt = <DOMElement | null> event.target
+/**
+ * @param {space.Event} event
+ */
+function delegatedEventListener(event) {
+  /**
+   * @type {space.ParentNode | null}
+   */
+  let elt = event.target
   while (elt !== null) {
     elt
       ?.[delegatedEventsSymbol]
       ?.[event.type]
-      ?.forEach((listener: EventListener) => listener.call(elt, event))
-    elt = <DOMElement | null> elt.parentNode
+      // @ts-expect-error: elt won't be null
+      ?.forEach((listener) => listener.call(elt, event))
+    elt = elt.parentNode
   }
 }

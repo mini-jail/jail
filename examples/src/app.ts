@@ -1,5 +1,5 @@
 import { createEffect } from "jail/signal"
-import html, { Animate, mount } from "jail/dom"
+import html, { mount } from "jail/dom"
 import { path, Router } from "jail/dom-router"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
@@ -11,12 +11,12 @@ import NotFound from "./routes/notfound.ts"
 
 const App = () => {
   createEffect(() => {
-    document.title = `jail${path()}`
+    document.title = `space${path()}`
   })
 
   return html`
     <header>
-      <h3>jail${path}</h3>
+      <h3>space${path}</h3>
       <nav>
         <a href="/">home</a>
         <a href="/counter">counter</a>
@@ -25,7 +25,7 @@ const App = () => {
         <a href="/about">about</a>
       </nav>
     </header>
-    <main use:${Animate}=${pathAnimation}>
+    <main use:Animate=${pathAnimation} on:click=${(ev) => ev.target}>
       <${Router} type="pathname" fallback=${NotFound} routeMap=${routeMap} />
     </main>
   `

@@ -1,8 +1,10 @@
-import type { BooleanLike, DOMElement } from "../types.d.ts"
+export const ifSymbol = Symbol("If")
 
-const ifSymbol = Symbol("If")
-
-export default function If(elt: DOMElement, value: BooleanLike) {
+/**
+ * @param {space.Element} elt
+ * @param {space.BooleanLike} value
+ */
+export function If(elt, value) {
   if (elt[ifSymbol] === undefined) {
     elt[ifSymbol] = new Text()
   }

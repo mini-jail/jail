@@ -1,30 +1,19 @@
-// deno-lint-ignore-file no-explicit-any
-import { Cleanup, createEffect, createRoot } from "jail/signal"
-import type {
-  AttributeData,
-  Component,
-  ComponentData,
-  DOMElement,
-  DOMNode,
-  RenderResult,
-  RootComponent,
-  Slot,
-  Template,
-} from "../types.d.ts"
+import { createEffect, createRoot } from "jail/signal"
 import {
   isResolvable,
   resolve,
   setPropertyOrAttribute,
-} from "../helpers/mod.ts"
-import { placeholderRegExp } from "../regexp/mod.ts"
-import { createTemplate } from "../template/mod.ts"
-import namespaces from "../namespaces/mod.ts"
+} from "../helpers/mod.js"
+import { placeholderRegExp } from "../regexp/mod.js"
+import { createTemplate } from "../template/mod.js"
+import namespaces from "../namespaces/mod.js"
 
-function reconcileNodes(
-  anchor: DOMNode,
-  currentNodes: DOMNode[],
-  nextNodes: DOMNode[],
-): void {
+/**
+ * @param {space.Node} anchor
+ * @param {space.Node[]} currentNodes
+ * @param {space.Node[]} nextNodes
+ */
+function reconcileNodes(anchor, currentNodes, nextNodes) {
   if (nextNodes.length > 0) {
     nextNodes.forEach((nextNode, i) => {
       const child = currentNodes[i]
@@ -41,7 +30,7 @@ function reconcileNodes(
         })
       }
       if (nextNodes[i] !== child) {
-        anchor.parentNode!.insertBefore(
+        anchor.parentNode?.insertBefore(
           nextNodes[i],
           child?.nextSibling || anchor,
         )
@@ -53,19 +42,26 @@ function reconcileNodes(
   }
 }
 
-function render(template: Template, slots: Slot[]): RenderResult {
+/**
+ * @param {space.Template} template
+ * @param {space.Slot[]} slots
+ * @returns {space.RenderResult}
+ */
+function render(template, slots) {
   return createRenderResult(
-    template.fragment.cloneNode(true) as DocumentFragment,
+    template.fragment.cloneNode(true),
     template,
     slots,
   )
 }
 
-function createRenderResult(
-  fragment: DocumentFragment,
-  template: Template,
-  slots: Slot[],
-): RenderResult {
+/**
+ * @param {space.DocumentFragment} fragment
+ * @param {space.Template} template
+ * @param {space.Slot[]} slots
+ * @returns {space.RenderResult}
+ */
+function createRenderResult(fragment, template, slots) {
   fragment.querySelectorAll(`[${template.hash}]`)
     .forEach((elt) => renderElement(elt, template, slots))
   return fragment.childNodes.length === 0
@@ -75,12 +71,13 @@ function createRenderResult(
     : Array.from(fragment.childNodes)
 }
 
-function renderElement(
-  elt: DOMElement,
-  template: Template,
-  slots: Slot[],
-): void {
-  const data = template.data[+elt.getAttribute(template.hash)!]
+/**
+ * @param {space.Element} elt
+ * @param {space.Template} template
+ * @param {space.Slot[]} slots
+ */
+function renderElement(elt, template, slots) {
+  const data = template.data[elt.getAttribute(template.hash)]
   if (typeof data === "number") {
     renderChild(elt, slots[data])
   } else if (Array.isArray(data)) {
@@ -89,41 +86,40 @@ function renderElement(
       setElementData(elt, attribute, slots)
     }
   } else {
-    renderComponent(elt, template, data, slots)
+    const component = slots[data.slot]
+    if (typeof component !== "function") {
+      throw new TypeError(`Component is not a function.`, { cause: component })
+    }
+    createRoot(() => {
+      const props = {}
+      for (const prop in data.props) {
+        const value = data.props[prop]
+        props[prop] = typeof value === "number" ? slots[value] : value
+      }
+      if (data.selfClosing === false) {
+        const child = createRenderResult(elt.content, template, slots)
+        props.children = props.children == null
+          ? child
+          : [props.children, child]
+      }
+      // @ts-expect-error: pshhh its ok TS :(
+      renderChild(elt, component(props))
+    })
   }
 }
 
-function renderComponent(
-  elt: DOMElement,
-  template: Template,
-  data: ComponentData,
-  slots: Slot[],
-): void {
-  const component = slots[data.slot] as Component<any> | undefined
-  if (component === undefined) {
-    throw new TypeError(`Component is not a function.`, { cause: component })
-  }
-  createRoot(() => {
-    const props: Record<string, any> = {}
-    for (const prop in data.props) {
-      const value = data.props[prop]
-      props[prop] = typeof value === "number" ? slots[value] : value
-    }
-    if (data.selfClosing === false) {
-      const child = createRenderResult(elt.content, template, slots)
-      props.children = props.children == null ? child : [props.children, child]
-    }
-    renderChild(elt, component(props))
-  })
-}
-
-function setElementData(
-  elt: DOMElement,
-  attribute: AttributeData,
-  slots: Slot[],
-): void {
-  const value = createValue(attribute, slots),
-    name = attribute.name
+/**
+ * @param {space.Element} elt
+ * @param {space.AttributeData} attribute
+ * @param {space.Slot[]} slots
+ */
+function setElementData(elt, attribute, slots) {
+  const value = createValue(attribute, slots)
+  /**
+   * @type {string}
+   */
+  // @ts-expect-error: this should always be a string. maybe i need more specific AttributeData
+  const name = attribute.name
   if (attribute.namespace) {
     const directive = namespaces[attribute.namespace]
     if (directive === undefined) {
@@ -132,19 +128,24 @@ function setElementData(
     const arg = typeof name === "string" ? name : slots[name]
     createEffect(() => directive(elt, resolve(arg), resolve(value)))
   } else if (isResolvable(value)) {
-    createEffect<unknown>((currentValue) => {
+    createEffect((currentValue) => {
       const nextValue = value()
       if (currentValue !== nextValue) {
-        setPropertyOrAttribute(elt, <string> name, nextValue)
+        setPropertyOrAttribute(elt, name, nextValue)
       }
       return nextValue
     })
   } else {
-    setPropertyOrAttribute(elt, <string> name, value)
+    setPropertyOrAttribute(elt, name, value)
   }
 }
 
-function createValue(attribute: AttributeData, slots: Slot[]): Slot {
+/**
+ * @param {space.AttributeData} attribute
+ * @param {space.Slot[]} slots
+ * @returns {space.Slot}
+ */
+function createValue(attribute, slots) {
   if (attribute.value === null) {
     return
   } else if (typeof attribute.value === "number") {
@@ -165,40 +166,54 @@ function createValue(attribute: AttributeData, slots: Slot[]): Slot {
   )
 }
 
-function createNodeArray(nodeArray: DOMNode[], ...elements: Slot[]): DOMNode[] {
+/**
+ * @param {Node[]} nodeArray
+ * @param  {...any} elements
+ * @returns {space.Node[]}
+ */
+function createNodeArray(nodeArray, ...elements) {
   if (elements.length > 0) {
     for (const elt of elements) {
       if (elt == null || typeof elt === "boolean") {
         continue
       } else if (elt instanceof Node) {
-        nodeArray.push(<DOMNode> elt)
+        nodeArray.push(elt)
       } else if (typeof elt === "string" || typeof elt === "number") {
         nodeArray.push(new Text(elt + ""))
       } else if (typeof elt === "function") {
-        createNodeArray(nodeArray, (<() => any> elt)())
-      } else if (Symbol.iterator in elt) {
-        createNodeArray(nodeArray, ...<Iterable<Slot>> elt)
+        createNodeArray(nodeArray, resolve(elt))
+      } else if (typeof elt[Symbol.iterator] === "function") {
+        createNodeArray(nodeArray, ...elt)
       }
     }
   }
   return nodeArray
 }
 
-function renderDynamicChild(
-  targetElt: DOMElement,
-  childElement: Slot,
-  replaceElt: boolean,
-): void {
+/**
+ * @param {Element} targetElt
+ * @param {space.Slot} childElement
+ * @param {boolean} replaceElt
+ */
+function renderDynamicChild(targetElt, childElement, replaceElt) {
   const anchor = new Text()
+  /**
+   * @type {space.Node[]}
+   */
+  const currentNodes = []
   replaceElt ? targetElt.replaceWith(anchor) : targetElt.appendChild(anchor)
-  createEffect<DOMNode[]>((currentNodes) => {
+  createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
     return nextNodes
-  }, [])
+  }, currentNodes)
 }
 
-function renderChild(targetElt: DOMElement, child: Slot): void {
+/**
+ * @param {space.Element} targetElt
+ * @param {any} child
+ */
+function renderChild(targetElt, child) {
   if (child == null || typeof child === "boolean") {
     targetElt.remove()
   } else if (child instanceof Node) {
@@ -208,9 +223,7 @@ function renderChild(targetElt: DOMElement, child: Slot): void {
   } else if (typeof child === "function") {
     renderDynamicChild(targetElt, child, true)
   } else if (Symbol.iterator in child) {
-    const iterableChild = Array.isArray(child)
-      ? child
-      : Array.from(<Iterable<Slot>> child)
+    const iterableChild = Array.isArray(child) ? child : Array.from(child)
     if (iterableChild.length === 0) {
       targetElt.remove()
     } else if (iterableChild.length === 1) {
@@ -225,19 +238,22 @@ function renderChild(targetElt: DOMElement, child: Slot): void {
   }
 }
 
-export function template(
-  templateStringsArray: TemplateStringsArray,
-  ...slots: Slot[]
-): RenderResult {
+/**
+ * @param {TemplateStringsArray} templateStringsArray
+ * @param  {...space.Slot} slots
+ * @returns {space.RenderResult}
+ */
+export function template(templateStringsArray, ...slots) {
   return render(createTemplate(templateStringsArray), slots)
 }
 
-export function mount(
-  rootElement: DOMElement,
-  rootComponent: RootComponent,
-): Cleanup {
+/**
+ * @param {Element} rootElement
+ * @param {space.RootComponent} rootComponent
+ */
+export function mount(rootElement, rootComponent) {
   return createRoot((cleanup) => {
     renderDynamicChild(rootElement, rootComponent, false)
     return cleanup
-  })!
+  })
 }

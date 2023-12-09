@@ -1,5 +1,5 @@
 import { createComputed, createSignal } from "jail/signal"
-import html, { DOMEvent, For, Show } from "jail/dom"
+import html, { For, Show } from "jail/dom"
 
 type ToDoItem = {
   id: number
@@ -39,7 +39,8 @@ export default function Component() {
     list(list().concat({ id: Date.now(), done: false, text: textValue() }))
     textValue("")
   }
-  const onInput = (ev: DOMEvent<HTMLInputElement>) => textValue(ev.target.value)
+  const onInput = (ev: space.Event<HTMLInputElement>) =>
+    textValue(ev.target.value)
   const length = createComputed(() => list().length, 0)
   const done = createComputed(() => {
     return list().filter((item) => item.done).length
