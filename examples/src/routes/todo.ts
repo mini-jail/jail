@@ -1,5 +1,5 @@
 import { createComputed, createSignal } from "space/signal"
-import html, { For, Show } from "space/dom"
+import html from "space/dom"
 
 type ToDoItem = {
   id: number
@@ -26,7 +26,7 @@ const Item = (props: ToDoItem) => {
       >
         ${props.text}
       </div>
-      <div use:${Show}=${props.done} class="todo-item-delete" on:clickDelegate=${deleteItem}>
+      <div use:Show=${props.done} class="todo-item-delete" on:clickDelegate=${deleteItem}>
         delete
       </div>
     </div>
@@ -61,7 +61,7 @@ export default function Component() {
           />
         </form>
         <div class="todo-items">
-          <${For} each=${list} do=${Item} />
+          <For each=${list} do=${Item} />
         </div>
         <label>progress: ${done}/${length}</label>
         <progress max=${length} value=${done}></progress>

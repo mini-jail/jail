@@ -39,6 +39,7 @@ declare global {
     interface DOMEventListener<T> {
       (this: T | void, event: DOMEvent<T>): void
     }
+    type Resolvable<T> = T | (() => T)
     type Resolved<T> = T extends (() => unknown) ? ReturnType<T>
       : T extends ((...args: unknown[]) => unknown) ? T
       : T

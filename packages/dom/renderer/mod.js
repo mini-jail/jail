@@ -196,7 +196,7 @@ function createNodeArray(nodeArray, ...elements) {
  * @param {space.Slot} childElement
  * @param {boolean} replaceElt
  */
-function renderDynamicChild(targetElt, childElement, replaceElt) {
+export function renderDynamicChild(targetElt, childElement, replaceElt) {
   const anchor = new Text()
   /**
    * @type {space.DOMNode[]}
