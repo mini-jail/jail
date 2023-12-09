@@ -3,7 +3,7 @@ declare global {
   namespace space {
     type ComponentDataProps = Record<string, string | number | true>
     type ComponentData = {
-      readonly slot: number
+      readonly name: string | number
       readonly props: ComponentDataProps
       readonly selfClosing: boolean
     }
@@ -41,7 +41,8 @@ declare global {
       | SlotObject
       | Iterable<Slot>
     type ComponentGroups = {
-      nameSlot: string
+      name: string | undefined
+      slot: undefined
       attributes: string
     }
     type ComponentPropsGroups = {

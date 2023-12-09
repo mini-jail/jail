@@ -1,6 +1,7 @@
 export const key = "####"
 const validPlaceholder = `${key}(\\d+)${key}`
 const validName = `[a-z][\\w\\-]*`
+const validComponentName = `(?:[A-Z][a-z0-9]+)+`
 const validAttributes = `(?:"[^"]*"|'[^']*'|[^'">])*`
 const validValue = [
   `(?:="${key}(?<slot1>\\d+)${key}")`,
@@ -27,14 +28,14 @@ export const elementAttributeRegExp = RegExp(
 export const componentRegExp = RegExp(
   [
     `<\\s*`,
-    `(?:${key}(?<nameSlot>\\d+)${key})`,
+    `(?:(?:${key}(?<slot>\\d+)${key})|(?<name>${validComponentName}))`,
     `(?<attributes>${validAttributes})`,
     `>`,
   ].join(""),
   "g",
 )
 export const componentRegExp2 = RegExp(
-  `<\\s*\\/\\s*${validPlaceholder}\\s*>`,
+  `<\\s*\\/\\s*${validPlaceholder}|${validComponentName}\\s*>`,
   "g",
 )
 export const componentPropsRegExp = RegExp(

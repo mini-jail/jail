@@ -7,6 +7,7 @@ import {
 import { placeholderRegExp } from "../regexp/mod.js"
 import { createTemplate } from "../template/mod.js"
 import namespaces from "../namespaces/mod.js"
+import components from "../components/mod.js"
 
 /**
  * @param {space.DOMNode} anchor
@@ -86,7 +87,9 @@ function renderElement(elt, template, slots) {
       setElementData(elt, attribute, slots)
     }
   } else {
-    const component = slots[data.slot]
+    const component = typeof data.name === "string"
+      ? components[data.name]
+      : slots[data.name]
     if (typeof component !== "function") {
       throw new TypeError(`Component is not a function.`, { cause: component })
     }

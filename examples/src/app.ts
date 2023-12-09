@@ -1,5 +1,5 @@
 import { createEffect } from "space/signal"
-import html, { mount, path, Router } from "space/dom"
+import html, { mount, path } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
 import SimpleCounter from "./routes/simple-counter.ts"
@@ -25,7 +25,7 @@ const App = () => {
       </nav>
     </header>
     <main use:Animate=${pathAnimation} on:click=${(ev) => ev.target}>
-      <${Router} type="pathname" fallback=${NotFound} routeMap=${routeMap} />
+      <Router type="pathname" fallback=${NotFound} routeMap=${routeMap} />
     </main>
   `
 }

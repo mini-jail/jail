@@ -150,7 +150,8 @@ function createComponentData(groups) {
     props[data.name] = slot ? +slot : value
   }
   return {
-    slot: +groups.nameSlot,
+    // @ts-expect-error: one of both must be true
+    name: groups.name ? groups.name : +groups.slot,
     props,
     selfClosing: groups.attributes.endsWith("/"),
   }
