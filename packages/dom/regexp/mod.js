@@ -32,7 +32,7 @@ export const componentRegExp = RegExp(
   ].join(""),
   "g",
 )
-export const componentRegExp2 = RegExp(
+export const closingComponentRegExp = RegExp(
   `<\\/(?:${validPlaceholder}|${validComponentName})>`,
   "g",
 )
