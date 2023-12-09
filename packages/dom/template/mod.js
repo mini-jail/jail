@@ -1,7 +1,7 @@
 import {
+  closingComponentRegExp,
   componentPropsRegExp,
   componentRegExp,
-  componentRegExp2,
   elementAttributeRegExp,
   elementRegExp,
   key,
@@ -28,6 +28,15 @@ function stringArrayToString(strings) {
 }
 
 /**
+ * @param {string} hash
+ * @param {number} id
+ * @param {boolean} close
+ */
+function createPlaceholder(hash, id, close) {
+  return `<template ${hash}="${id}">${close ? "</template>" : ""}`
+}
+
+/**
  * @param {TemplateStringsArray} templateStringsArray
  * @returns {space.Template}
  */
@@ -48,12 +57,11 @@ export function createTemplate(templateStringsArray) {
     elt.innerHTML = stringArrayToString(templateStringsArray)
       .replace(/^[\s]+/gm, "")
       .replace(componentRegExp, function () {
-        const cData = createComponentData(arguments[arguments.length - 1]),
-          sClosing = cData.selfClosing
+        const cData = createComponentData(arguments[arguments.length - 1])
         data[++id] = cData
-        return `<template ${hash}="${id}">${sClosing ? "</template>" : ""}`
+        return createPlaceholder(hash, id, cData.selfClosing)
       })
-      .replace(componentRegExp2, "</template>")
+      .replace(closingComponentRegExp, "</template>")
       .replace(elementRegExp, (match) => {
         /**
          * @type {space.AttributeData[] | null}
@@ -75,7 +83,7 @@ export function createTemplate(templateStringsArray) {
       })
       .replace(placeholderRegExp, (_match, key) => {
         data[++id] = +key
-        return `<template ${hash}="${id}"></template>`
+        return createPlaceholder(hash, id, true)
       })
       .replace(/^\r\n|\n|\r(>)\s+(<)$/gm, "$1$2")
     template = {
