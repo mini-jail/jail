@@ -40,10 +40,17 @@ export default function Component() {
       <span>current value: ${counter}</span>
       <button on:clickDelegate=${up}>+</button>
       <div>you have clicked ${clicked} times.</div>
-      <div use:when=${() => clicked() >= 10}>... why do you do this?????</div>
-      <div use:when=${() => clicked() >= 20}>... pls stop T_T</div>
-      <div use:when=${() => clicked() >= 30}>... enough :(</div>
-      <div use:when=${() => clicked() >= 50}>... it hurts @_@</div>
+      <div use:when=${() => clicked() >= 10}>
+        ... why do you do this?????
+      </div>
+      <div use:when=${() => clicked() >= 20}>
+        ... pls stop T_T</div>
+      <div use:when=${() => clicked() >= 30}>
+        ... enough :(
+      </div>
+      <div use:when=${() => clicked() >= 50}>
+        ... it hurts @_@
+      </div>
       <code use:when=${show}>
         ${code.split("\n").map((line) => html`<pre>${line}</pre>`)}
       </code>
