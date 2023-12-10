@@ -1,5 +1,5 @@
 import { createComputed, createSignal } from "space/signal"
-import html, { Show } from "space/dom"
+import html from "space/dom"
 
 const code = `
 import { createSignal } from "space/signal"
@@ -39,12 +39,12 @@ export default function Component() {
       <button on:clickDelegate=${down}>-</button>
       <span>current value: ${counter}</span>
       <button on:clickDelegate=${up}>+</button>
-      <div>> you have clicked ${clicked} times.</div>
-      ${() => clicked() >= 10 && html`<div>... why do you do this?????</div>`}
-      ${() => clicked() >= 20 && html`<div>... pls stop T_T</div>`}
-      ${() => clicked() >= 30 && html`<div>... enough :(</div>`}
-      ${() => clicked() >= 40 && html`<div>... it hurts @_@</div>`}
-      <code use:${Show}="${show}">
+      <div>you have clicked ${clicked} times.</div>
+      <div use:when=${() => clicked() >= 10}>... why do you do this?????</div>
+      <div use:when=${() => clicked() >= 20}>... pls stop T_T</div>
+      <div use:when=${() => clicked() >= 30}>... enough :(</div>
+      <div use:when=${() => clicked() >= 50}>... it hurts @_@</div>
+      <code use:when=${show}>
         ${code.split("\n").map((line) => html`<pre>${line}</pre>`)}
       </code>
     </article>

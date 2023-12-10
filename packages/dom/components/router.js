@@ -1,5 +1,4 @@
 import {
-  createComputed,
   createRoot,
   createSignal,
   inject,
@@ -88,27 +87,6 @@ function createRoutes(routeMap) {
 }
 
 /**
- * @param {space.RouteMap} routeMap
- * @param {space.RouterOptions} options
- * @returns {space.Getter}
- */
-function createRouter(routeMap, options) {
-  const routeArray = createRoutes(routeMap)
-  return createComputed(() => {
-    const nextPath = path()
-    return createRoot(() => {
-      for (const route of routeArray) {
-        if (route.regexp.test(nextPath)) {
-          provide(paramsSymbol, route.regexp.exec(nextPath)?.groups)
-          return route.handler()
-        }
-      }
-      return options?.fallback?.()
-    })
-  })
-}
-
-/**
  * Allows usage of the following:
  * @example
  * ```javascript
@@ -125,10 +103,22 @@ function createRouter(routeMap, options) {
  * `
  * ```
  * @param {space.RouterProps} props
- * @returns {() => [any, space.Getter]}
+ * @returns {space.Slot}
  */
 export function Router(props) {
   routeTypeHandlerMap[props.type]()
-  const router = createRouter(props.routeMap, { fallback: props.fallback })
-  return () => [props.children, router]
+  const routeArray = createRoutes(props.routeMap)
+  return function* () {
+    const nextPath = path()
+    yield props.children
+    yield createRoot(() => {
+      for (const route of routeArray) {
+        if (route.regexp.test(nextPath)) {
+          provide(paramsSymbol, route.regexp.exec(nextPath)?.groups)
+          return route.handler()
+        }
+      }
+      return props.fallback
+    })
+  }
 }

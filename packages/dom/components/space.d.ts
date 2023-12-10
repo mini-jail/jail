@@ -15,27 +15,28 @@ declare global {
       [paramsSymbol]?: Params
     }
     type RouteMap = { readonly [path: string]: RouteHandler }
-    type RouterProps = ComponentProps<
-      RouterOptions & {
-        type: RouterType
-        routeMap: RouteMap
-      }
-    >
-    type RouterOptions = {
+    type RouterProps = ComponentProps<{
+      type: RouterType
+      routeMap: RouteMap
       fallback?: RouteHandler
-    }
+    }>
     type ForProps = ComponentProps<{
-      each: Resolvable<Record<string, any>[]>
+      each: Record<string, any>[]
       do: Component<Record<string, any>>
     }>
     type PortalProps = ComponentProps<{
       selector?: string
       mount?: Element
     }>
+    type ShowProps = ComponentProps<{
+      when: BooleanLike
+      fallback?: Slot
+    }>
     interface Components {
       For: Component<ForProps>
       Router: Component<RouterProps>
       Portal: Component<PortalProps>
+      Show: Component<ShowProps>
     }
   }
 }

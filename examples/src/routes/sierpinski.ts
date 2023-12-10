@@ -6,7 +6,7 @@ import {
   onUnmount,
   provide,
 } from "space/signal"
-import html, { getParams, Text } from "space/dom"
+import html, { getParams } from "space/dom"
 
 declare global {
   namespace space {
@@ -38,7 +38,7 @@ const Dot = (x: number, y: number, target: number) => {
 
   return html`
     <div
-      use:${Text}=${text} style=${css} style:background-color=${bgColor}
+      use:text=${text} style=${css} style:background-color=${bgColor}
       on:mouseoverDelegate=${(_event) => hover(true)}
       on:mouseoutDelegate=${(_event) => hover(false)}
     ></div>

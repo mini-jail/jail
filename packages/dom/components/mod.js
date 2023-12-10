@@ -1,6 +1,7 @@
 import { For } from "./for.js"
 import { Router } from "./router.js"
 import { Portal } from "./portal.js"
+import { Show } from "./show.js"
 
 /**
  * ## For devs only!
@@ -13,3 +14,4 @@ export default components
 components.For = For
 components.Router = Router
 components.Portal = Portal
+components.Show = Show

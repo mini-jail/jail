@@ -63,6 +63,9 @@ function render(template, slots) {
  * @returns {space.RenderResult}
  */
 function createRenderResult(fragment, template, slots) {
+  if (fragment.childNodes.length === 0) {
+    return undefined
+  }
   fragment.querySelectorAll(`[${template.hash}]`)
     .forEach((elt) => renderElement(elt, template, slots))
   return fragment.childNodes.length === 0
@@ -94,22 +97,52 @@ function renderElement(elt, template, slots) {
       throw new TypeError(`Component is not a function.`)
     }
     createRoot(() => {
-      const props = Object.create(null)
-      if (component.length) {
-        for (const prop in data.props) {
-          const value = data.props[prop]
-          props[prop] = typeof value === "number" ? slots[value] : value
-        }
-        if (data.selfClosing === false) {
-          const child = createRenderResult(elt.content, template, slots)
-          props.children = props.children == null
-            ? child
-            : [props.children, child]
-        }
-      }
+      const props = createProps(elt, data, template, slots)
       renderChild(elt, component(props))
     })
   }
+}
+
+/**
+ * @param {space.DOMElement} elt
+ * @param {space.ComponentData} data
+ * @param {space.Template} template
+ * @param {space.Slot[]} slots
+ * @returns {object}
+ */
+function createProps(elt, data, template, slots) {
+  const props = {}
+  /**
+   * @type {space.Slot}
+   */
+  let children = data.selfClosing
+    ? undefined
+    : createRenderResult(elt.content, template, slots)
+  for (const prop in data.props) {
+    const type = data.props[prop],
+      value = typeof type === "number" ? slots[type] : type
+    if (prop === "children") {
+      children = [children, value]
+      continue
+    }
+    if (isResolvable(value)) {
+      Object.defineProperty(props, prop, {
+        get() {
+          return resolve(value)
+        },
+      })
+    } else {
+      props[prop] = value
+    }
+  }
+  if (children) {
+    Object.defineProperty(props, "children", {
+      get() {
+        return resolve(children)
+      },
+    })
+  }
+  return props
 }
 
 /**

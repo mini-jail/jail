@@ -26,7 +26,7 @@ const Item = (props: ToDoItem) => {
       >
         ${props.text}
       </div>
-      <div use:Show=${props.done} class="todo-item-delete" on:clickDelegate=${deleteItem}>
+      <div use:show=${props.done} class="todo-item-delete" on:clickDelegate=${deleteItem}>
         delete
       </div>
     </div>

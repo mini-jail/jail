@@ -2,7 +2,7 @@
  * @param {space.DOMElement} elt
  * @param {space.AnimateValue} value
  */
-export function Animate(elt, value) {
+export function animate(elt, value) {
   const { keyframes, ...options } = value
   elt.animate(keyframes, options)
 }

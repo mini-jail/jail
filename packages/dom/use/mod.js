@@ -1,7 +1,7 @@
-import { Animate } from "./animate.js"
-import { If } from "./if.js"
-import { Show } from "./show.js"
-import { Text } from "./text.js"
+import { animate } from "./animate.js"
+import { when } from "./when.js"
+import { show } from "./show.js"
+import { text } from "./text.js"
 
 /**
  * ## For devs only!
@@ -11,7 +11,7 @@ import { Text } from "./text.js"
 export const directives = Object.create(null)
 export default directives
 
-directives.Animate = Animate
-directives.If = If
-directives.Show = Show
-directives.Text = Text
+directives.animate = animate
+directives.when = when
+directives.show = show
+directives.text = text

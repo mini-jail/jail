@@ -1,6 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 declare global {
   namespace space {
+    type BooleanLike = "true" | "false" | boolean
     interface DOMElement extends globalThis.Element {
       [unknown: string | number | symbol]: any
     }
@@ -43,16 +44,17 @@ declare global {
     type Resolved<T> = T extends (() => unknown) ? ReturnType<T>
       : T extends ((...args: unknown[]) => unknown) ? T
       : T
-    type ComponentProps<T extends Record<string, any>> = Merge<T, Children>
+    type ComponentProps<T extends Record<string, any>> = Props<T, Children>
     type Children = {
       children: RenderResult
     }
-    type Merge<Base, Extends> = {
-      [K in keyof Base | keyof Extends]: K extends keyof Base & keyof Extends
-        ? Base[K] | Extends[K]
-        : K extends keyof Extends ? Extends[K]
-        : K extends keyof Base ? Base[K]
-        : never
+    type Props<Base, Extends> = {
+      readonly [K in keyof Base | keyof Extends]: Resolved<
+        K extends keyof Base & keyof Extends ? Base[K] | Extends[K]
+          : K extends keyof Extends ? Extends[K]
+          : K extends keyof Base ? Base[K]
+          : never
+      >
     }
     interface Component<Props extends ComponentProps<Record<string, any>>> {
       (props: Props): Slot
