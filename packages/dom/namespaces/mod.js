@@ -1,8 +1,8 @@
-import On from "./on.js"
-import Prop from "./prop.js"
-import Use from "./use.js"
-import Attr from "./attr.js"
-import Style from "./style.js"
+import { on } from "./on.js"
+import { prop } from "./prop.js"
+import { use } from "./use.js"
+import { attr } from "./attr.js"
+import { style } from "./style.js"
 
 /**
  * ## For devs only!
@@ -12,8 +12,10 @@ import Style from "./style.js"
 export const namespaces = Object.create(null)
 export default namespaces
 
-namespaces.attr = Attr
-namespaces.prop = Prop
-namespaces.use = Use
-namespaces.on = On
-namespaces.style = Style
+namespaces.attr = attr
+namespaces.prop = prop
+namespaces.use = use
+namespaces.on = on
+namespaces.style = style
+
+export { attr, on, prop, style, use }

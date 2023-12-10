@@ -3,6 +3,6 @@
  * @param {string} arg
  * @param {unknown} value
  */
-export default function Style(elt, arg, value) {
+export function style(elt, arg, value) {
   elt.style[arg] = value || null
 }

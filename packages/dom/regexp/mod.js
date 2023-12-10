@@ -16,7 +16,7 @@ export const elementRegExp = RegExp(`<[a-z\\-]+${validAttributes}>`, "g")
 export const elementAttributeRegExp = RegExp(
   [
     `\\s`,
-    `(?:(?<namespace>${validName}):)?`,
+    `(?:(?:(?<namespace>${validName})|(?:${key}(?<namespaceSlot>\\d+)${key})):)?`,
     [
       `(?:(?<name>${validName})`,
       `(?:${key}(?<nameSlot>\\d+)${key}))`,

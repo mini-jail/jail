@@ -6,7 +6,7 @@ import { setAttribute } from "../helpers/mod.js"
  * @param {string} arg
  * @param {unknown} value
  */
-export default function Attr(elt, arg, value) {
+export function attr(elt, arg, value) {
   if (setAttribute(elt, arg, value)) {
     onCleanup(() => setAttribute(elt, arg, null))
   }

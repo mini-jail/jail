@@ -15,3 +15,5 @@ components.For = For
 components.Router = Router
 components.Portal = Portal
 components.Show = Show
+
+export { For, Portal, Router, Show }

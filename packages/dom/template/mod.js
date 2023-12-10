@@ -102,15 +102,19 @@ export function createTemplate(templateStringsArray) {
  * @returns {space.AttributeData}
  */
 function createAttributeData(groups) {
+  const name = groups.nameSlot ? +groups.nameSlot : groups.name
+  const namespace = groups.namespaceSlot
+    ? +groups.namespaceSlot
+    : groups.namespace ?? null
   const slot = groups.slot1 ?? groups.slot2 ?? groups.slot3 ?? null
-  const value = groups.value1 ?? groups.value2 ?? groups.value3 ?? null
-  const nameSlot = groups.nameSlot ? +groups.nameSlot : null
-  const namespace = groups.namespace ?? null
+  const value = slot !== null
+    ? +slot
+    : groups.value1 ?? groups.value2 ?? groups.value3 ?? null
   /**
    * @type {number[] | null}
    */
   let slots = null
-  if (value) {
+  if (typeof value === "string") {
     for (const [_match, slot] of value.matchAll(placeholderRegExp)) {
       if (slots === null) {
         slots = [+slot]
@@ -120,12 +124,12 @@ function createAttributeData(groups) {
     }
   }
   return {
-    name: nameSlot !== null ? nameSlot : groups.name,
-    namespace: namespace,
-    slots: slots,
-    value: slot ? +slot : value,
-    isStatic: slots === null &&
-      slot === null && nameSlot === null && namespace === null,
+    name,
+    namespace,
+    slots,
+    value,
+    isStatic: slots === null && slot === null &&
+      name === null && namespace === null,
   }
 }
 

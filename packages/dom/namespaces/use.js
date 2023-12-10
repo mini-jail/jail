@@ -5,7 +5,7 @@ import directives from "../use/mod.js"
  * @param {space.Directive<T> | string} arg
  * @param {space.Resolved<T>} value
  */
-export default function Use(elt, arg, value) {
+export function use(elt, arg, value) {
   if (typeof arg === "string") {
     return directives[arg](elt, value)
   }

@@ -15,3 +15,5 @@ directives.animate = animate
 directives.when = when
 directives.show = show
 directives.text = text
+
+export { animate, show, text, when }

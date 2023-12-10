@@ -17,7 +17,7 @@ declare global {
       readonly data: TemplateData
     }
     type AttributeData = {
-      readonly namespace: string | null
+      readonly namespace: string | number | null
       readonly name: string | number
       readonly value: string | number | null
       readonly slots: number[] | null
@@ -52,8 +52,9 @@ declare global {
       value3: string | undefined
     }
     type AttributeGroups = {
-      namespace: string | undefined
       name: string
+      namespace: string | undefined
+      namespaceSlot: string | undefined
       nameSlot: string | undefined
       slot1: string | undefined
       slot2: string | undefined

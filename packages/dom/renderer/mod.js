@@ -94,7 +94,7 @@ function renderElement(elt, template, slots) {
       ? components[data.name]
       : slots[data.name]
     if (typeof component !== "function") {
-      throw new TypeError(`Component is not a function.`)
+      throw new TypeError(`Component is not a function!`)
     }
     createRoot(() => {
       const props = createProps(elt, data, template, slots)
@@ -152,13 +152,19 @@ function createProps(elt, data, template, slots) {
  */
 function setElementData(elt, attribute, slots) {
   const value = createValue(attribute, slots), name = attribute.name
-  if (attribute.namespace) {
-    const directive = namespaces[attribute.namespace]
-    if (directive === undefined) {
-      throw new TypeError(`Missing Attribute Namespace "${attribute.namespace}`)
+  if (attribute.namespace !== null) {
+    /**
+     * @type {space.NamespaceDirective | undefined}
+     */
+    // @ts-expect-error: hi ts, i'm sorry
+    const namespace = typeof attribute.namespace === "string"
+      ? namespaces[attribute.namespace]
+      : slots[attribute.namespace]
+    if (typeof namespace !== "function") {
+      throw new TypeError(`Namespace is not a function!`)
     }
     const arg = typeof name === "string" ? name : slots[name]
-    createEffect(() => directive(elt, resolve(arg), resolve(value)))
+    createEffect(() => namespace(elt, resolve(arg), resolve(value)))
   } else if (isResolvable(value)) {
     createEffect((currentValue) => {
       const nextValue = value()

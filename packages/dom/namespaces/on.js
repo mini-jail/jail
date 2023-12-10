@@ -11,7 +11,7 @@ const nameRegExp = /[a-z]+/
  * @param {string} arg
  * @param {space.DOMEventListener} value
  */
-export default function On(elt, arg, value) {
+export function on(elt, arg, value) {
   const options = {}, name = arg.match(nameRegExp)?.[0] + ""
   let delegate = false
   arg.match(argRegExp)?.forEach((option) => {
