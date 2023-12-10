@@ -91,15 +91,13 @@ function createRoutes(routeMap) {
  * @example
  * ```javascript
  * const routeMap = {
- *   "/": () => { ... }
+ *   "/": () => {}
  * }
- * const fallbackRoute = () => { ... }
+ * const fallbackRoute = () => {}
  * template`
- *   <${Router}
- *     type="hash"
- *     routeMap=${routeMap}
- *     fallback=${fallbackRoute}
- *   />
+ *   <Router type="hash" routeMap=${routeMap} fallback=${fallbackRoute}>
+ *     Static Child
+ *   </Router>
  * `
  * ```
  * @param {space.RouterProps} props
