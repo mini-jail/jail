@@ -45,9 +45,7 @@ declare global {
       : T extends ((...args: unknown[]) => unknown) ? T
       : T
     type ComponentProps<T extends Record<string, any>> = Props<T, Children>
-    type Children = {
-      children: RenderResult
-    }
+    type Children = { children: Slot }
     type Props<Base, Extends> = {
       readonly [K in keyof Base | keyof Extends]: Resolved<
         K extends keyof Base & keyof Extends ? Base[K] | Extends[K]

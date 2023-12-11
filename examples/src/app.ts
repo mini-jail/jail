@@ -25,7 +25,17 @@ const App = () => {
       </nav>
     </header>
     <main use:animate=${pathAnimation}>
-      <Router type="pathname" fallback=${NotFound} routeMap=${routeMap} />
+      <Router type="pathname">
+        <Route path="/" children=${Home} />
+        <Route path="/counter" children=${Counter} />
+        <Route path="/counter/simple" children=${SimpleCounter} />
+        <Route path="/sierpinski" children=${Sierpinski} />
+        <Route path="/sierpinski/:target" children=${Sierpinski} />
+        <Route path="/sierpinski/:target/:size" children=${Sierpinski} />
+        <Route path="/about" children=${About} />
+        <Route path="/todo" children=${ToDo} />
+        <Route path="/.+" children=${NotFound} />
+      </Router>
     </main>
   `
 }
@@ -41,17 +51,6 @@ const pathAnimation = () => {
     duration: 250,
     fill: "both",
   }
-}
-
-const routeMap = {
-  "/": Home,
-  "/counter": Counter,
-  "/counter/simple": SimpleCounter,
-  "/sierpinski": Sierpinski,
-  "/sierpinski/:target": Sierpinski,
-  "/sierpinski/:target/:size": Sierpinski,
-  "/about": About,
-  "/todo": ToDo,
 }
 
 mount(document.body, App)

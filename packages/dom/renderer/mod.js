@@ -38,8 +38,8 @@ function reconcileNodes(anchor, currentNodes, nextNodes) {
       }
     })
   }
-  if (currentNodes.length > 0) {
-    currentNodes.forEach((node) => node.remove())
+  while (currentNodes.length) {
+    currentNodes.pop()?.remove()
   }
 }
 
@@ -64,7 +64,7 @@ function render(template, slots) {
  */
 function createRenderResult(fragment, template, slots) {
   if (fragment.childNodes.length === 0) {
-    return undefined
+    return
   }
   fragment.querySelectorAll(`[${template.hash}]`)
     .forEach((elt) => renderElement(elt, template, slots))
@@ -97,7 +97,9 @@ function renderElement(elt, template, slots) {
       throw new TypeError(`Component is not a function!`)
     }
     createRoot(() => {
-      const props = createProps(elt, data, template, slots)
+      const props = component.length
+        ? createProps(elt, data, template, slots)
+        : undefined
       renderChild(elt, component(props))
     })
   }
@@ -111,34 +113,20 @@ function renderElement(elt, template, slots) {
  * @returns {object}
  */
 function createProps(elt, data, template, slots) {
-  const props = {}
-  /**
-   * @type {space.Slot}
-   */
-  let children = data.selfClosing
-    ? undefined
-    : createRenderResult(elt.content, template, slots)
-  for (const prop in data.props) {
-    const type = data.props[prop],
-      value = typeof type === "number" ? slots[type] : type
-    if (prop === "children") {
-      children = [children, value]
-      continue
-    }
-    if (isResolvable(value)) {
-      Object.defineProperty(props, prop, {
-        get() {
-          return resolve(value)
-        },
-      })
-    } else {
-      props[prop] = value
-    }
+  const props = {
+    children: data.selfClosing
+      ? undefined
+      : createRoot(() => createRenderResult(elt.content, template, slots)),
   }
-  if (children) {
-    Object.defineProperty(props, "children", {
+  for (const prop in data.props) {
+    const type = data.props[prop]
+    let value = typeof type === "number" ? slots[type] : type
+    if (prop === "children" && props.children) {
+      value = [props.children, value]
+    }
+    Object.defineProperty(props, prop, {
       get() {
-        return resolve(children)
+        return resolve(value)
       },
     })
   }
@@ -220,7 +208,7 @@ function createNodeArray(nodeArray, ...elements) {
         nodeArray.push(elt)
       } else if (typeof elt === "string" || typeof elt === "number") {
         nodeArray.push(new Text(elt + ""))
-      } else if (typeof elt === "function") {
+      } else if (isResolvable(elt)) {
         createNodeArray(nodeArray, elt())
       } else if (Symbol.iterator in elt) {
         createNodeArray(nodeArray, ...elt)
@@ -230,23 +218,22 @@ function createNodeArray(nodeArray, ...elements) {
   return nodeArray
 }
 
+let dynChildCounter = -1
+
 /**
  * @param {Element} targetElt
  * @param {space.Slot} childElement
  * @param {boolean} replaceElt
  */
 export function renderDynamicChild(targetElt, childElement, replaceElt) {
-  const anchor = new Text()
-  /**
-   * @type {space.DOMNode[]}
-   */
-  const currentNodes = []
+  const anchor = new Comment(`debug: ${++dynChildCounter}`)
   replaceElt ? targetElt.replaceWith(anchor) : targetElt.appendChild(anchor)
+  // @ts-expect-error: ok ts
   createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(childElement))
     reconcileNodes(anchor, currentNodes, nextNodes)
     return nextNodes
-  }, currentNodes)
+  }, [])
 }
 
 /**
@@ -260,7 +247,7 @@ function renderChild(targetElt, child) {
     targetElt.replaceWith(child)
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
-  } else if (typeof child === "function") {
+  } else if (isResolvable(child)) {
     renderDynamicChild(targetElt, child, true)
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
@@ -268,7 +255,7 @@ function renderChild(targetElt, child) {
       targetElt.remove()
     } else if (iterableChild.length === 1) {
       renderChild(targetElt, iterableChild[0])
-    } else if (iterableChild.some((child) => typeof child === "function")) {
+    } else if (iterableChild.some(isResolvable)) {
       renderDynamicChild(targetElt, iterableChild, true)
     } else {
       targetElt.replaceWith(...createNodeArray([], ...iterableChild))

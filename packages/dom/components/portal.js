@@ -13,7 +13,7 @@ export function Portal(props) {
       ? props.mount
       : document.body
     if (target === null) {
-      throw new Error(`Portal target is null (${props.selector})`)
+      throw new Error(`Portal target is null!`)
     }
     renderDynamicChild(target, () => live() && props.children, false)
   })

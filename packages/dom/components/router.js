@@ -1,4 +1,5 @@
 import {
+  createEffect,
   createRoot,
   createSignal,
   inject,
@@ -6,8 +7,8 @@ import {
   onMount,
   provide,
 } from "space/signal"
-
 export const paramsSymbol = Symbol("Params")
+export const routesSymbol = Symbol("Routes")
 export const path = createSignal("")
 
 const routeTypeHandlerMap = {
@@ -69,34 +70,33 @@ export function getParams() {
  * @returns {RegExp}
  */
 function createMatcher(path) {
-  return RegExp(
-    "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
-  )
+  let regexp = regexpCache[path]
+  if (regexp === undefined) {
+    regexp = RegExp(
+      "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
+    )
+    regexpCache[path] = regexp
+  }
+  return regexp
 }
 
 /**
- * @param {space.RouteMap} routeMap
- * @returns {space.Route[]}
+ * @type {Record<string, RegExp | undefined>}
  */
-function createRoutes(routeMap) {
-  return Object.keys(routeMap).map((path) => ({
-    path,
-    regexp: createMatcher(path),
-    handler: routeMap[path],
-  }))
-}
+const regexpCache = {}
 
 /**
  * Allows usage of the following:
  * @example
  * ```javascript
- * const routeMap = {
- *   "/": () => {}
- * }
- * const fallbackRoute = () => {}
  * template`
- *   <Router type="hash" routeMap=${routeMap} fallback=${fallbackRoute}>
+ *   <Router type="hash">
  *     Static Child
+ *     <Route path="/" children="home" />
+ *     <Route path="/about">
+ *       about
+ *     </Route>
+ *     <Route path="/etc" children=${Component} />
  *   </Router>
  * `
  * ```
@@ -105,18 +105,45 @@ function createRoutes(routeMap) {
  */
 export function Router(props) {
   routeTypeHandlerMap[props.type]()
-  const routeArray = createRoutes(props.routeMap)
+  /**
+   * @type {Set<space.Route>}
+   */
+  const routes = new Set()
+  provide(routesSymbol, routes)
   return function* () {
     const nextPath = path()
     yield props.children
-    yield createRoot(() => {
-      for (const route of routeArray) {
-        if (route.regexp.test(nextPath)) {
+    for (const route of routes) {
+      if (route.regexp.test(nextPath)) {
+        yield createRoot(() => {
           provide(paramsSymbol, route.regexp.exec(nextPath)?.groups)
-          return route.handler()
+          return route.children
+        })
+        if (!route.fallthrough) {
+          return
         }
       }
-      return props.fallback
-    })
+    }
+    yield props.fallback
   }
+}
+
+/**
+ * @param {space.RouteProps} props
+ * @returns {space.Slot}
+ */
+export function Route(props) {
+  createEffect(() => {
+    const routes = inject(routesSymbol)
+    const route = {
+      path: props.path,
+      regexp: createMatcher(props.path),
+      fallthrough: props.fallthrough + "" === "true",
+      get children() {
+        return props.children
+      },
+    }
+    routes?.add(route)
+    onCleanup(() => routes?.delete(route))
+  })
 }

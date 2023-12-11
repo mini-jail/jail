@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import { paramsSymbol } from "./router.js"
+import { paramsSymbol, routesSymbol } from "./router.js"
 
 declare global {
   namespace space {
@@ -9,16 +9,22 @@ declare global {
     type Route = {
       path: string
       regexp: RegExp
-      handler: RouteHandler
+      children: Slot
+      fallthrough: boolean
     }
     interface Injections {
-      [paramsSymbol]?: Params
+      [paramsSymbol]: Params
+      [routesSymbol]: Set<Route>
     }
     type RouteMap = { readonly [path: string]: RouteHandler }
     type RouterProps = ComponentProps<{
       type: RouterType
-      routeMap: RouteMap
-      fallback?: RouteHandler
+      fallback?: Slot
+    }>
+    type RouteProps = ComponentProps<{
+      path: string
+      component: Component<Record<string, any>>
+      fallthrough?: BooleanLike
     }>
     type ForProps = ComponentProps<{
       each: Record<string, any>[]
@@ -35,6 +41,7 @@ declare global {
     interface Components {
       For: Component<ForProps>
       Router: Component<RouterProps>
+      Route: Component<RouteProps>
       Portal: Component<PortalProps>
       Show: Component<ShowProps>
     }
