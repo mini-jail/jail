@@ -17,10 +17,9 @@ const templateCache = new Map()
  * @param {TemplateStringsArray} strings
  * @returns {string}
  */
-function stringArrayToString(strings) {
+function templateStringArrayToString(strings) {
   let data = "", arg = 0
-  const length = strings.length - 1
-  while (arg < length) {
+  while (arg < strings.length - 1) {
     data = data + strings[arg] + `${key}${arg++}${key}`
   }
   data = data + strings[arg]
@@ -54,7 +53,7 @@ export function createTemplate(templateStringsArray) {
      */
     // @ts-expect-error: it's ok TS, it is only used internally
     const elt = document.createElement("template")
-    elt.innerHTML = stringArrayToString(templateStringsArray)
+    elt.innerHTML = templateStringArrayToString(templateStringsArray)
       .replace(/^[\s]+/gm, "")
       .replace(componentRegExp, function () {
         const cData = createComponentData(arguments[arguments.length - 1])

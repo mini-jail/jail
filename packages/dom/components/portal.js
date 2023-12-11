@@ -1,5 +1,5 @@
 import { createSignal, onMount, onUnmount } from "space/signal"
-import { renderDynamicChild } from "../renderer/mod.js"
+import { mount } from "../renderer/mod.js"
 
 /**
  * @param {space.PortalProps} props
@@ -15,7 +15,7 @@ export function Portal(props) {
     if (target === null) {
       throw new Error(`Portal target is null!`)
     }
-    renderDynamicChild(target, () => live() && props.children, false)
+    mount(target, () => live() && props.children)
   })
   onUnmount(() => live(false))
 }

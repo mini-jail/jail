@@ -10,53 +10,6 @@ import namespaces from "../namespaces/mod.js"
 import components from "../components/mod.js"
 
 /**
- * @param {space.DOMNode} anchor
- * @param {space.DOMNode[]} currentNodes
- * @param {space.DOMNode[]} nextNodes
- */
-function reconcileNodes(anchor, currentNodes, nextNodes) {
-  if (nextNodes.length > 0) {
-    nextNodes.forEach((nextNode, i) => {
-      const child = currentNodes[i]
-      if (currentNodes.length > 0) {
-        currentNodes.some((currentNode, j) => {
-          if (nextNode.nodeType === 3 && currentNode.nodeType === 3) {
-            currentNode.data = nextNode.data
-          }
-          if (nextNode.isEqualNode(currentNode)) {
-            nextNodes[i] = currentNode
-            currentNodes.splice(j, 1)
-            return true
-          }
-        })
-      }
-      if (nextNodes[i] !== child) {
-        anchor.parentNode?.insertBefore(
-          nextNodes[i],
-          child?.nextSibling || anchor,
-        )
-      }
-    })
-  }
-  while (currentNodes.length) {
-    currentNodes.pop()?.remove()
-  }
-}
-
-/**
- * @param {space.Template} template
- * @param {space.Slot[]} slots
- * @returns {space.RenderResult}
- */
-function render(template, slots) {
-  return createRenderResult(
-    template.fragment.cloneNode(true),
-    template,
-    slots,
-  )
-}
-
-/**
  * @param {space.DOMDocumentFragment} fragment
  * @param {space.Template} template
  * @param {space.Slot[]} slots
@@ -68,11 +21,13 @@ function createRenderResult(fragment, template, slots) {
   }
   fragment.querySelectorAll(`[${template.hash}]`)
     .forEach((elt) => renderElement(elt, template, slots))
-  return fragment.childNodes.length === 0
-    ? undefined
-    : fragment.childNodes.length === 1
-    ? fragment.childNodes[0]
-    : Array.from(fragment.childNodes)
+  if (fragment.childNodes.length === 0) {
+    return
+  } else if (fragment.childNodes.length === 1) {
+    return fragment.childNodes[0]
+  } else {
+    return Array.from(fragment.childNodes)
+  }
 }
 
 /**
@@ -197,9 +152,9 @@ function createValue(attribute, slots) {
 /**
  * @param {Node[]} nodeArray
  * @param  {...any} elements
- * @returns {space.DOMNode[]}
+ * @returns {Node[]}
  */
-function createNodeArray(nodeArray, ...elements) {
+export function createNodeArray(nodeArray, ...elements) {
   if (elements.length > 0) {
     for (const elt of elements) {
       if (elt == null || typeof elt === "boolean") {
@@ -218,24 +173,6 @@ function createNodeArray(nodeArray, ...elements) {
   return nodeArray
 }
 
-let dynChildCounter = -1
-
-/**
- * @param {Element} targetElt
- * @param {space.Slot} childElement
- * @param {boolean} replaceElt
- */
-export function renderDynamicChild(targetElt, childElement, replaceElt) {
-  const anchor = new Comment(`debug: ${++dynChildCounter}`)
-  replaceElt ? targetElt.replaceWith(anchor) : targetElt.appendChild(anchor)
-  // @ts-expect-error: ok ts
-  createEffect((currentNodes) => {
-    const nextNodes = createNodeArray([], resolve(childElement))
-    reconcileNodes(anchor, currentNodes, nextNodes)
-    return nextNodes
-  }, [])
-}
-
 /**
  * @param {space.DOMElement} targetElt
  * @param {any} child
@@ -248,7 +185,7 @@ function renderChild(targetElt, child) {
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
   } else if (isResolvable(child)) {
-    renderDynamicChild(targetElt, child, true)
+    mount(targetElt, child)
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
     if (iterableChild.length === 0) {
@@ -256,7 +193,7 @@ function renderChild(targetElt, child) {
     } else if (iterableChild.length === 1) {
       renderChild(targetElt, iterableChild[0])
     } else if (iterableChild.some(isResolvable)) {
-      renderDynamicChild(targetElt, iterableChild, true)
+      mount(targetElt, () => iterableChild)
     } else {
       targetElt.replaceWith(...createNodeArray([], ...iterableChild))
     }
@@ -271,7 +208,12 @@ function renderChild(targetElt, child) {
  * @returns {space.RenderResult}
  */
 export function template(templateStringsArray, ...slots) {
-  return render(createTemplate(templateStringsArray), slots)
+  const template = createTemplate(templateStringsArray)
+  return createRenderResult(
+    template.fragment.cloneNode(true),
+    template,
+    slots,
+  )
 }
 
 /**
@@ -279,8 +221,104 @@ export function template(templateStringsArray, ...slots) {
  * @param {space.RootComponent} rootComponent
  */
 export function mount(rootElement, rootComponent) {
-  return createRoot((cleanup) => {
-    renderDynamicChild(rootElement, rootComponent, false)
-    return cleanup
+  createRoot(() => {
+    const isPlaceholder = rootElement.tagName === "TEMPLATE"
+    /**
+     * @type {Node}
+     */
+    const anchor = isPlaceholder ? rootElement : new Comment()
+    /**
+     * @type {Element}
+     */
+    // @ts-expect-error: yes i know
+    const target = isPlaceholder ? rootElement.parentElement : rootElement
+    createEffect((currentNodes) => {
+      const nextNodes = createNodeArray([], resolve(rootComponent))
+      reconcileNodeArrays(target, currentNodes, nextNodes)
+      return nextNodes
+    }, [anchor])
   })
+}
+
+/**
+ * Modified version of: https://github.com/WebReflection/udomdiff/blob/master/index.js
+ * @param {Element} rootElement
+ * @param {space.DOMNode[]} current
+ * @param {space.DOMNode[]} next
+ */
+export function reconcileNodeArrays(rootElement, current, next) {
+  const anchor = current.at(-1)?.nextSibling ?? null
+  let cEnd = current.length,
+    nEnd = next.length,
+    cStart = 0,
+    nStart = 0,
+    /**
+     * @type {Map<space.DOMNode, number> | null}
+     */
+    map = null
+  while (cStart < cEnd || nStart < nEnd) {
+    if (current[cStart] === next[nStart]) {
+      cStart++
+      nStart++
+      continue
+    }
+    while (current[cEnd - 1] === next[nEnd - 1]) {
+      cEnd--
+      nEnd--
+    }
+    if (cEnd === cStart) {
+      const childNode = nEnd < next.length
+        ? nStart ? next[nStart - 1].nextSibling : next[nEnd - nStart]
+        : anchor
+      while (nStart < nEnd) {
+        rootElement.insertBefore(next[nStart++], childNode)
+      }
+    } else if (nEnd === nStart) {
+      while (cStart < cEnd) {
+        if (map === null || map.has(current[cStart]) === false) {
+          current[cStart].remove()
+        }
+        cStart++
+      }
+    } else if (
+      current[cStart] === next[nEnd - 1] &&
+      next[nStart] === current[cEnd - 1]
+    ) {
+      const node = current[--cEnd].nextSibling
+      rootElement.insertBefore(next[nStart++], current[cStart++].nextSibling)
+      rootElement.insertBefore(next[--nEnd], node)
+      current[cEnd] = next[nEnd]
+    } else {
+      if (map === null) {
+        map = new Map()
+        let i = nStart
+        while (i < nEnd) {
+          map.set(next[i], i++)
+        }
+      }
+      const index = map.get(current[cStart])
+      if (index !== undefined) {
+        if (nStart < index && index < nEnd) {
+          let i = cStart, seq = 1
+          while (++i < cEnd && i < nEnd) {
+            if (map.get(current[i]) !== index + seq) {
+              break
+            }
+            seq++
+          }
+          if (seq > index - nStart) {
+            while (nStart < index) {
+              rootElement.insertBefore(next[nStart++], current[cStart])
+            }
+          } else {
+            rootElement.replaceChild(next[nStart++], current[cStart++])
+          }
+        } else {
+          cStart++
+        }
+      } else {
+        current[cStart++].remove()
+      }
+    }
+  }
 }

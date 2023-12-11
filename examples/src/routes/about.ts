@@ -2,6 +2,9 @@ import html from "space/dom"
 
 export default function Component() {
   return html`
+    <Portal selector="header nav">
+      <a href="/error">[click here for something hot!]</a>
+    </Portal>
     <article>
       <h4>
         about

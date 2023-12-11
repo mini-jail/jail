@@ -2,5 +2,10 @@
  * @param {space.ShowProps} props
  */
 export function Show(props) {
-  return () => props.when + "" === "true" ? props.children : props.fallback
+  return function () {
+    if (props.when + "" === "true") {
+      return props.children
+    }
+    return props.fallback
+  }
 }

@@ -2,18 +2,20 @@
 declare global {
   namespace space {
     type BooleanLike = "true" | "false" | boolean
-    interface DOMElement extends globalThis.Element {
+    interface DOMElement extends globalThis.HTMLElement {
       [unknown: string | number | symbol]: any
     }
     interface DOMNode extends globalThis.Node {
       [unknown: string | number | symbol]: any
     }
     interface DOMChildNode extends globalThis.ChildNode {
+      parentElement: DOMElement
       parentNode: DOMParentNode
       childNodes: NodeListOf<ChildNode>
       [unknown: string | number | symbol]: any
     }
     interface DOMParentNode extends globalThis.ParentNode {
+      parentElement: DOMElement
       parentNode: DOMParentNode | null
       childNodes: NodeListOf<ChildNode>
       [unknown: string | number | symbol]: any

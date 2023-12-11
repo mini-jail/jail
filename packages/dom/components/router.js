@@ -119,9 +119,7 @@ export function Router(props) {
           provide(paramsSymbol, route.regexp.exec(nextPath)?.groups)
           return route.children
         })
-        if (!route.fallthrough) {
-          return
-        }
+        return
       }
     }
     yield props.fallback
@@ -134,16 +132,16 @@ export function Router(props) {
  */
 export function Route(props) {
   createEffect(() => {
-    const routes = inject(routesSymbol)
+    /**
+     * @type {space.Route}
+     */
     const route = {
       path: props.path,
       regexp: createMatcher(props.path),
-      fallthrough: props.fallthrough + "" === "true",
       get children() {
         return props.children
       },
     }
-    routes?.add(route)
-    onCleanup(() => routes?.delete(route))
+    inject(routesSymbol)?.add(route)
   })
 }

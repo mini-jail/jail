@@ -5,18 +5,15 @@ declare global {
   namespace space {
     type RouterType = "pathname" | "hash"
     type Params = { readonly [param: string]: string | undefined }
-    type RouteHandler = () => Slot
     type Route = {
       path: string
       regexp: RegExp
       children: Slot
-      fallthrough: boolean
     }
     interface Injections {
       [paramsSymbol]: Params
       [routesSymbol]: Set<Route>
     }
-    type RouteMap = { readonly [path: string]: RouteHandler }
     type RouterProps = ComponentProps<{
       type: RouterType
       fallback?: Slot
@@ -24,7 +21,6 @@ declare global {
     type RouteProps = ComponentProps<{
       path: string
       component: Component<Record<string, any>>
-      fallthrough?: BooleanLike
     }>
     type ForProps = ComponentProps<{
       each: Record<string, any>[]
