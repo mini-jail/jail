@@ -414,10 +414,11 @@ function cleanNode(node, complete) {
  */
 /**
  * @template T
+ * @template {space.Injectionkey | string | number | symbol} K
  * @overload
- * @param {string | number | symbol} key
+ * @param {K} key
  * @param {T} defaultValue
- * @returns {T}
+ * @returns {space.Injections[K] | T}
  */
 /**
  * @param {any} key

@@ -8,6 +8,7 @@ import {
   provide,
 } from "space/signal"
 export const paramsSymbol = Symbol("Params")
+export const routeSymbol = Symbol("Route")
 export const routesSymbol = Symbol("Routes")
 export const path = createSignal("")
 
@@ -141,7 +142,9 @@ export function Route(props) {
       get children() {
         return props.children
       },
+      childRoutes: [],
     }
+    provide(routeSymbol, route)
     inject(routesSymbol)?.add(route)
   })
 }

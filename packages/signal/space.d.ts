@@ -21,6 +21,7 @@ declare global {
     interface Signal<T> extends ReadOnlySignal<T>, WritableSignal<T> {}
     interface Injections {
       [errorSymbol]: Array<(error: any) => void>
+      [key: string | number | symbol]: any
     }
     interface Node<T> {
       value: T | undefined | null

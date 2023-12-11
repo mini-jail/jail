@@ -221,23 +221,21 @@ export function template(templateStringsArray, ...slots) {
  * @param {space.RootComponent} rootComponent
  */
 export function mount(rootElement, rootComponent) {
-  createRoot(() => {
-    const isPlaceholder = rootElement.tagName === "TEMPLATE"
-    /**
-     * @type {Node}
-     */
-    const anchor = isPlaceholder ? rootElement : new Comment()
-    /**
-     * @type {Element}
-     */
-    // @ts-expect-error: yes i know
-    const target = isPlaceholder ? rootElement.parentElement : rootElement
-    createEffect((currentNodes) => {
-      const nextNodes = createNodeArray([], resolve(rootComponent))
-      reconcileNodeArrays(target, currentNodes, nextNodes)
-      return nextNodes
-    }, [anchor])
-  })
+  const isPlaceholder = rootElement.tagName === "TEMPLATE"
+  /**
+   * @type {Node}
+   */
+  const anchor = isPlaceholder ? rootElement : new Comment()
+  /**
+   * @type {Element}
+   */
+  // @ts-expect-error: yes i know
+  const target = isPlaceholder ? rootElement.parentElement : rootElement
+  createEffect((currentNodes) => {
+    const nextNodes = createNodeArray([], resolve(rootComponent))
+    reconcileNodeArrays(target, currentNodes, nextNodes)
+    return nextNodes
+  }, [anchor])
 }
 
 /**
