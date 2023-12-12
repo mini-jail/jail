@@ -3,6 +3,7 @@ import { animate } from "./animate.js"
 import { when } from "./when.js"
 import { show } from "./show.js"
 import { text } from "./text.js"
+import { ref } from "./ref.js"
 
 /**
  * ## For devs only!
@@ -16,5 +17,6 @@ directives.animate = animate
 directives.when = when
 directives.show = show
 directives.text = text
+directives.ref = ref
 
-export { animate, show, text, when }
+export { animate, ref, show, text, when }

@@ -12,11 +12,12 @@ declare global {
       [delegatedEventsSymbol]?: DelegatedEvents
     }
     interface Namespaces {
-      attr: NamespaceDirective<unknown, string>
-      on: NamespaceDirective<DOMEventListener<DOMElement>, string>
-      prop: NamespaceDirective<unknown, string | number | symbol>
-      style: NamespaceDirective<unknown, string>
-      use: NamespaceDirective<unknown, Directive<unknown> | string>
+      attr: Namespace<string, unknown>
+      on: Namespace<string, DOMEventListener<DOMElement>>
+      prop: Namespace<string | number | symbol, unknown>
+      style: Namespace<string, unknown>
+      classList: Namespace<string, BooleanLike>
+      use: Namespace<Directive<unknown> | string, unknown>
     }
   }
 }

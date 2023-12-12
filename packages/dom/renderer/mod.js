@@ -98,7 +98,7 @@ function setElementData(elt, attribute, slots) {
   const value = createValue(attribute, slots), name = attribute.name
   if (attribute.namespace !== null) {
     /**
-     * @type {space.NamespaceDirective | undefined}
+     * @type {space.Namespace | undefined}
      */
     // @ts-expect-error: hi ts, i'm sorry
     const namespace = typeof attribute.namespace === "string"
@@ -218,106 +218,71 @@ export function template(templateStringsArray, ...slots) {
 }
 
 /**
+ * @overload
  * @param {Element} rootElement
  * @param {space.RootComponent} rootComponent
+ * @returns {space.Cleanup}
  */
-export function mount(rootElement, rootComponent) {
+/**
+ * @overload
+ * @param {Element} rootElement
+ * @param {space.Slot[]} slots
+ * @returns {space.Cleanup}
+ */
+/**
+ * @param {Element} rootElement
+ * @param {space.RootComponent | space.Slot[]} children
+ * @returns {space.Cleanup}
+ */
+export function mount(rootElement, children) {
   const isPlaceholder = rootElement.tagName === "TEMPLATE"
+  /**
+   * @type {Element}
+   */
+  // @ts-expect-error: oof
+  let target = isPlaceholder ? rootElement.parentElement : rootElement
+  if (target === null) {
+    const fragment = new DocumentFragment()
+    rootElement.replaceWith(fragment)
+    // @ts-expect-error: double oof
+    target = fragment
+  }
   /**
    * @type {Node}
    */
   const anchor = isPlaceholder ? rootElement : new Comment()
-  /**
-   * @type {Element}
-   */
-  // @ts-expect-error: yes i know
-  const target = isPlaceholder ? rootElement.parentElement : rootElement
-  createEffect((currentNodes) => {
-    const nextNodes = createNodeArray([], resolve(rootComponent))
-    reconcileNodeArrays(target, currentNodes, nextNodes)
+  return createEffect((currentNodes) => {
+    const nextNodes = createNodeArray([], resolve(children))
+    console.log(target)
+    reconcile(target, currentNodes, nextNodes)
     return nextNodes
   }, [anchor])
 }
 
 /**
- * Modified version of: https://github.com/WebReflection/udomdiff/blob/master/index.js
  * @param {Element} rootElement
- * @param {space.DOMNode[]} current
- * @param {space.DOMNode[]} next
+ * @param {space.DOMNode[]} currentNodes
+ * @param {space.DOMNode[]} nextNodes
  */
-export function reconcileNodeArrays(rootElement, current, next) {
-  const anchor = current.at(-1)?.nextSibling ?? null
-  let cEnd = current.length,
-    nEnd = next.length,
-    cStart = 0,
-    nStart = 0,
-    /**
-     * @type {Map<space.DOMNode, number> | null}
-     */
-    map = null
-  while (cStart < cEnd || nStart < nEnd) {
-    if (current[cStart] === next[nStart]) {
-      cStart++
-      nStart++
-      continue
+export function reconcile(rootElement, currentNodes, nextNodes) {
+  const anchor = currentNodes.at(-1)?.nextSibling ?? null
+  nextNodes.forEach((nextNode, i) => {
+    const child = currentNodes[i]
+    currentNodes.some((currentNode, j) => {
+      if (nextNode.nodeType === 3 && currentNode.nodeType === 3) {
+        currentNode.data = nextNode.data
+      }
+      if (nextNode.isEqualNode(currentNode)) {
+        nextNodes[i] = currentNode
+        currentNodes.splice(j, 1)
+        return true
+      }
+    })
+    if (nextNodes[i] !== child) {
+      rootElement.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
     }
-    while (current[cEnd - 1] === next[nEnd - 1]) {
-      cEnd--
-      nEnd--
-    }
-    if (cEnd === cStart) {
-      const childNode = nEnd < next.length
-        ? nStart ? next[nStart - 1].nextSibling : next[nEnd - nStart]
-        : anchor
-      while (nStart < nEnd) {
-        rootElement.insertBefore(next[nStart++], childNode)
-      }
-    } else if (nEnd === nStart) {
-      while (cStart < cEnd) {
-        if (map === null || map.has(current[cStart]) === false) {
-          current[cStart].remove()
-        }
-        cStart++
-      }
-    } else if (
-      current[cStart] === next[nEnd - 1] &&
-      next[nStart] === current[cEnd - 1]
-    ) {
-      const node = current[--cEnd].nextSibling
-      rootElement.insertBefore(next[nStart++], current[cStart++].nextSibling)
-      rootElement.insertBefore(next[--nEnd], node)
-      current[cEnd] = next[nEnd]
-    } else {
-      if (map === null) {
-        map = new Map()
-        let i = nStart
-        while (i < nEnd) {
-          map.set(next[i], i++)
-        }
-      }
-      const index = map.get(current[cStart])
-      if (index !== undefined) {
-        if (nStart < index && index < nEnd) {
-          let i = cStart, seq = 1
-          while (++i < cEnd && i < nEnd) {
-            if (map.get(current[i]) !== index + seq) {
-              break
-            }
-            seq++
-          }
-          if (seq > index - nStart) {
-            while (nStart < index) {
-              rootElement.insertBefore(next[nStart++], current[cStart])
-            }
-          } else {
-            rootElement.replaceChild(next[nStart++], current[cStart++])
-          }
-        } else {
-          cStart++
-        }
-      } else {
-        current[cStart++].remove()
-      }
-    }
+  })
+  while (currentNodes.length) {
+    currentNodes.pop()?.remove?.()
   }
 }

@@ -1,5 +1,4 @@
 /// <reference path="./types.d.ts" />
-const ActiveNodeIsNull = new Error("activeNode is null.")
 export const errorSymbol = Symbol("Error")
 /**
  * @type {Set<space.Node>}
@@ -58,7 +57,7 @@ function createNode(initialValue) {
  */
 export function onMount(mountFunction) {
   if (activeNode === null) {
-    throw ActiveNodeIsNull
+    throw new Error(`onMount(): activeNode is null!`)
   }
   createEffect(() => untrack(mountFunction))
 }
@@ -68,7 +67,7 @@ export function onMount(mountFunction) {
  */
 export function onUnmount(unmountFunction) {
   if (activeNode === null) {
-    throw ActiveNodeIsNull
+    throw new Error(`onUnmount(): activeNode is null!`)
   }
   onCleanup(() => untrack(unmountFunction))
 }
@@ -266,7 +265,7 @@ function handleError(error) {
  */
 export function catchError(errorFunction) {
   if (activeNode === null) {
-    throw ActiveNodeIsNull
+    throw new Error(`catchError(errorFunction): activeNode is null!`)
   }
   if (activeNode.injections === null) {
     activeNode.injections = { [errorSymbol]: [errorFunction] }
@@ -280,7 +279,7 @@ export function catchError(errorFunction) {
  */
 export function onCleanup(cleanupFunction) {
   if (activeNode === null) {
-    throw ActiveNodeIsNull
+    throw new Error(`onCleanup(cleanupFunction): activeNode is null!`)
   }
   if (activeNode.cleanups === null) {
     activeNode.cleanups = [cleanupFunction]
@@ -428,7 +427,9 @@ function cleanNode(node, complete) {
  */
 export function inject(key, defaultValue) {
   if (activeNode === null) {
-    throw ActiveNodeIsNull
+    throw new Error(
+      `inject(${String(key)}, ${String(defaultValue)}): activeNode is null!`,
+    )
   }
   return lookup(activeNode, key) ?? defaultValue
 }
@@ -454,7 +455,9 @@ export function inject(key, defaultValue) {
  */
 export function provide(key, value) {
   if (activeNode === null) {
-    throw ActiveNodeIsNull
+    throw new Error(
+      `provide(${String(key)}, ${String(value)}): activeNode is null!`,
+    )
   }
   if (activeNode.injections === null) {
     activeNode.injections = { [key]: value }

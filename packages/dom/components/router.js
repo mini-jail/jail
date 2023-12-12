@@ -122,16 +122,12 @@ export function Router(props) {
  */
 export function Route(props) {
   createEffect(() => {
-    /**
-     * @type {space.Route}
-     */
-    const route = {
+    inject(routesSymbol)?.add({
       path: props.path,
       regexp: createMatcher(props.path),
       get children() {
         return props.children
       },
-    }
-    inject(routesSymbol)?.add(route)
+    })
   })
 }

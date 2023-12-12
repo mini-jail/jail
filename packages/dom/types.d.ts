@@ -26,14 +26,14 @@ declare global {
     interface Components {
       [component: string]: Component<any>
     }
-    interface Directive<Type> {
-      (elt: DOMElement, value: Resolved<Type>): void
+    interface Directive<T> {
+      (elt: DOMElement, value: Resolved<T>): void
     }
-    interface NamespaceDirective<T, A> {
+    interface Namespace<A, T> {
       (elt: DOMElement, arg: A, value: T): void
     }
     interface Namespaces {
-      [namespace: string]: NamespaceDirective<any, any>
+      [namespace: string]: Namespace<any, any>
     }
     interface DOMEvent<T> extends globalThis.Event {
       currentTarget: T & EventTarget

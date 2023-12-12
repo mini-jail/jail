@@ -28,12 +28,13 @@ export default function Component() {
   }, -1)
 
   return html`
+    ${counter}
     <article data-user="user has clicked ${clicked} times (counter equals ${counter})">
       <h4>
         counter example
         <sub>(...what else?)</sub>
         <button on:clickDelegate=${(_ev) => show((value) => !value)}>
-          ${() => (show() ? "hide" : "show")} code
+          <Show when=${show} fallback="show code" children="hide code" />
         </button>
       </h4>
       <button on:clickDelegate=${down}>-</button>
