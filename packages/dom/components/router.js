@@ -8,7 +8,6 @@ import {
   provide,
 } from "space/signal"
 export const paramsSymbol = Symbol("Params")
-export const routeSymbol = Symbol("Route")
 export const routesSymbol = Symbol("Routes")
 export const path = createSignal("")
 
@@ -71,20 +70,10 @@ export function getParams() {
  * @returns {RegExp}
  */
 function createMatcher(path) {
-  let regexp = regexpCache[path]
-  if (regexp === undefined) {
-    regexp = RegExp(
-      "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
-    )
-    regexpCache[path] = regexp
-  }
-  return regexp
+  return RegExp(
+    "^" + path.replace(/:([^/:]+)/g, (_, name) => `(?<${name}>[^/]+)`) + "$",
+  )
 }
-
-/**
- * @type {Record<string, RegExp | undefined>}
- */
-const regexpCache = {}
 
 /**
  * Allows usage of the following:
@@ -142,9 +131,7 @@ export function Route(props) {
       get children() {
         return props.children
       },
-      childRoutes: [],
     }
-    provide(routeSymbol, route)
     inject(routesSymbol)?.add(route)
   })
 }

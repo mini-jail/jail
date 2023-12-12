@@ -9,7 +9,6 @@ declare global {
       path: string
       regexp: RegExp
       children: Slot
-      childRoutes: Route[]
     }
     interface Injections {
       [paramsSymbol]: Params

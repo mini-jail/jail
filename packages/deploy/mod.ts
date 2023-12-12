@@ -13,6 +13,7 @@ let build = await createBundle()
 
 export const app = new Application()
 export const router = new Router()
+const fsArray = ["./packages", SOURCE_ROOT, SOURCE]
 
 router.get(TARGET, (ctx) => {
   ctx.response.type = "js"
@@ -48,14 +49,20 @@ async function createBundle(): Promise<string> {
       inlineSourceMap: DEV,
     },
   })
-  const duration = performance.now() - timeStart
-  console.info("app built in", duration, "ms")
+  const duration = (performance.now() - timeStart).toFixed()
+  const units = ["B", "KB", "MB"]
+  let size = code.length, i = 0
+  for (i; size > 1000; i++) {
+    size /= 1000
+  }
+  const bytes = size.toFixed()
+  console.info(`app built (${duration}ms, ${bytes}${units[i]})`)
   return code
 }
 
 async function runDev() {
   let built = false
-  for await (const _event of Deno.watchFs([SOURCE_ROOT, SOURCE])) {
+  for await (const _event of Deno.watchFs(fsArray)) {
     if (built) {
       continue
     }
