@@ -1,3 +1,4 @@
+/// <reference path="./types.d.ts" />
 import { on } from "./on.js"
 import { prop } from "./prop.js"
 import { use } from "./use.js"

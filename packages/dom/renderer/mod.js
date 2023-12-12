@@ -1,3 +1,4 @@
+/// <reference path="./types.d.ts" />
 import { createEffect, createRoot } from "space/signal"
 import {
   isResolvable,

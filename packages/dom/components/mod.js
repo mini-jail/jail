@@ -1,3 +1,4 @@
+/// <reference path="./types.d.ts" />
 import { For } from "./for.js"
 import { Route, Router } from "./router.js"
 import { Portal } from "./portal.js"

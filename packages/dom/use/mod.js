@@ -1,3 +1,4 @@
+/// <reference path="./types.d.ts" />
 import { animate } from "./animate.js"
 import { when } from "./when.js"
 import { show } from "./show.js"
