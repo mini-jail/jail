@@ -253,7 +253,6 @@ export function mount(rootElement, children) {
   const anchor = isPlaceholder ? rootElement : new Comment()
   return createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(children))
-    console.log(target)
     reconcile(target, currentNodes, nextNodes)
     return nextNodes
   }, [anchor])
