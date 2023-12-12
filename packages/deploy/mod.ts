@@ -13,8 +13,7 @@ let build = await createBundle()
 
 export const app = new Application()
 export const router = new Router()
-const fsArray = ["./packages", SOURCE_ROOT, SOURCE]
-
+const fsArray = [SOURCE_ROOT, SOURCE]
 router.get(TARGET, (ctx) => {
   ctx.response.type = "js"
   ctx.response.body = build
