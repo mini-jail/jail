@@ -4,7 +4,6 @@ import { prop } from "./prop.js"
 import { use } from "./use.js"
 import { attr } from "./attr.js"
 import { style } from "./style.js"
-import { classList } from "./class-list.js"
 
 /**
  * ## For devs only!
@@ -19,6 +18,5 @@ namespaces.prop = prop
 namespaces.use = use
 namespaces.on = on
 namespaces.style = style
-namespaces.classList = classList
 
-export { attr, classList, on, prop, style, use }
+export { attr, on, prop, style, use }
