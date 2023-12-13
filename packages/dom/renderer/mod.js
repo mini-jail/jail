@@ -19,14 +19,13 @@ import components from "../components/mod.js"
 function createRenderResult(fragment, template, slots) {
   fragment.querySelectorAll(`[${template.hash}]`)
     .forEach((elt) => renderElement(elt, template, slots))
-  const children = fragment.childNodes
-  switch (children.length) {
+  switch (fragment.childNodes.length) {
     case 0:
       return
     case 1:
-      return children[0]
+      return fragment.childNodes[0]
     default:
-      return Array.from(children)
+      return Array.from(fragment.childNodes)
   }
 }
 
@@ -152,7 +151,7 @@ function createValue(attribute, slots) {
 /**
  * @param {Node[]} nodeArray
  * @param  {...any} elements
- * @returns {Node[]}
+ * @returns {(Node & { [key: string]: any })[]}
  */
 export function createNodeArray(nodeArray, ...elements) {
   if (elements.length > 0) {
@@ -185,17 +184,30 @@ function renderChild(targetElt, child) {
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
   } else if (isResolvable(child)) {
-    mount(targetElt, child)
+    if (targetElt.parentElement) {
+      mount(targetElt.parentElement, child, targetElt)
+    } else {
+      console.info(`Child "${child}" needs to be wrapped.`)
+      targetElt.remove()
+    }
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
-    if (iterableChild.length === 0) {
-      targetElt.remove()
-    } else if (iterableChild.length === 1) {
-      renderChild(targetElt, iterableChild[0])
-    } else if (iterableChild.some(isResolvable)) {
-      mount(targetElt, () => iterableChild)
-    } else {
-      targetElt.replaceWith(...createNodeArray([], ...iterableChild))
+    switch (iterableChild.length) {
+      case 0:
+        return targetElt.remove()
+      case 1:
+        return renderChild(targetElt, iterableChild[0])
+      default:
+        if (iterableChild.some(isResolvable)) {
+          if (targetElt.parentElement) {
+            console.info(`Child "${child}" needs to be wrapped.`)
+            mount(targetElt.parentElement, iterableChild, targetElt)
+          } else {
+            targetElt.remove()
+          }
+        } else {
+          targetElt.replaceWith(...createNodeArray([], ...iterableChild))
+        }
     }
   } else {
     targetElt.replaceWith(String(child))
@@ -219,28 +231,21 @@ export function template(templateStringsArray, ...slots) {
 /**
  * @overload
  * @param {Element} rootElement
- * @param {space.RootComponent} rootComponent
- * @returns {space.Cleanup}
- */
-/**
- * @overload
- * @param {Element} rootElement
- * @param {space.Slot[]} slots
- * @returns {space.Cleanup}
+ * @param {space.Slot} slot
+ * @param {Node | undefined | null} [anchor]
+ * @returns {void}
  */
 /**
  * @param {any} rootElement
- * @param {any} children
- * @returns {space.Cleanup}
+ * @param {space.Slot} slot
+ * @param {any} anchor
  */
-export function mount(rootElement, children) {
-  const isTemplate = rootElement.tagName === "TEMPLATE"
-  const target = isTemplate ? rootElement.parentElement : rootElement
-  return createEffect((currentNodes) => {
-    const nextNodes = createNodeArray([], resolve(children))
-    reconcile(target, currentNodes, nextNodes)
+export function mount(rootElement, slot, anchor) {
+  createEffect((currentNodes) => {
+    const nextNodes = createNodeArray([], resolve(slot))
+    reconcile(rootElement, currentNodes, nextNodes)
     return nextNodes
-  }, [isTemplate ? rootElement : new Comment()])
+  }, anchor ? [anchor] : [])
 }
 
 /**
