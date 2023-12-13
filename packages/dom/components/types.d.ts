@@ -28,7 +28,7 @@ declare global {
     }>
     type PortalProps = ComponentProps<{
       selector?: string
-      mount?: Element
+      mount?: Element | null
     }>
     type ShowProps = ComponentProps<{
       when: BooleanLike
