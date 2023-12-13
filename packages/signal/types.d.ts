@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import { errorSymbol } from "space/signal"
+import type { errorSymbol } from "./mod.js"
 
 declare global {
   namespace space {
@@ -21,7 +21,7 @@ declare global {
     interface Signal<T> extends ReadOnlySignal<T>, WritableSignal<T> {}
     interface Injections {
       [errorSymbol]: Array<(error: any) => void>
-      [key: string | number | symbol]: any
+      [key: string | number | symbol]: unknown
     }
     interface Node<T> {
       value: T | undefined | null

@@ -1,4 +1,3 @@
-import { onCleanup } from "space/signal"
 import { setAttribute } from "../helpers/mod.js"
 
 /**
@@ -7,7 +6,5 @@ import { setAttribute } from "../helpers/mod.js"
  * @param {unknown} value
  */
 export function attr(elt, arg, value) {
-  if (setAttribute(elt, arg, value)) {
-    onCleanup(() => setAttribute(elt, arg, null))
-  }
+  setAttribute(elt, arg, value)
 }

@@ -118,8 +118,7 @@ function createAttributeData(groups) {
     namespace,
     slots,
     value,
-    isStatic: slots === null && slot === null &&
-      name === null && namespace === null,
+    isStatic: slot === null && slots === null && namespace === null,
   }
 }
 
