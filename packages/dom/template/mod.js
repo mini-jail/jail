@@ -15,19 +15,6 @@ import {
 const templateCache = new Map()
 
 /**
- * @param {TemplateStringsArray} strings
- * @returns {string}
- */
-function templateStringArrayToString(strings) {
-  let data = "", arg = 0
-  while (arg < strings.length - 1) {
-    data = data + strings[arg] + `${key}${arg++}${key}`
-  }
-  data = data + strings[arg]
-  return data
-}
-
-/**
  * @param {string} hash
  * @param {number} id
  * @param {boolean} close
@@ -43,18 +30,21 @@ function createPlaceholder(hash, id, close) {
 export function createTemplate(templateStringsArray) {
   let template = templateCache.get(templateStringsArray)
   if (template === undefined) {
-    let id = -1
     /**
      * @type {space.TemplateData}
      */
-    const data = {}
-    const hash = "_" + Math.random().toString(36).slice(2, 7) + "_"
+    const data = {}, hash = "_" + Math.random().toString(36).slice(2, 7) + "_"
+    let string = "", arg = 0, id = -1
+    while (arg < templateStringsArray.length - 1) {
+      string = string + templateStringsArray[arg] + `${key}${arg++}${key}`
+    }
+    string = string + templateStringsArray[arg]
     /**
      * @type {space.HTMLTemplateElement}
      */
     // @ts-expect-error: it's ok TS, it is only used internally
     const elt = document.createElement("template")
-    elt.innerHTML = templateStringArrayToString(templateStringsArray)
+    elt.innerHTML = string
       .replace(/^[\s]+/gm, "")
       .replace(componentRegExp, function () {
         const cData = createComponentData(arguments[arguments.length - 1])

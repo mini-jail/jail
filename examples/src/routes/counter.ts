@@ -28,7 +28,6 @@ export default function Component() {
   }, -1)
 
   return html`
-    ${counter}
     <article data-user="user has clicked ${clicked} times (counter equals ${counter})">
       <h4>
         counter example

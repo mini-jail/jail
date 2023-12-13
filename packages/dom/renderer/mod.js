@@ -17,17 +17,16 @@ import components from "../components/mod.js"
  * @returns {space.RenderResult}
  */
 function createRenderResult(fragment, template, slots) {
-  if (fragment.childNodes.length === 0) {
-    return
-  }
   fragment.querySelectorAll(`[${template.hash}]`)
     .forEach((elt) => renderElement(elt, template, slots))
-  if (fragment.childNodes.length === 0) {
-    return
-  } else if (fragment.childNodes.length === 1) {
-    return fragment.childNodes[0]
-  } else {
-    return Array.from(fragment.childNodes)
+  const children = fragment.childNodes
+  switch (children.length) {
+    case 0:
+      return
+    case 1:
+      return children[0]
+    default:
+      return Array.from(children)
   }
 }
 
@@ -230,38 +229,24 @@ export function template(templateStringsArray, ...slots) {
  * @returns {space.Cleanup}
  */
 /**
- * @param {Element} rootElement
- * @param {space.RootComponent | space.Slot[]} children
+ * @param {any} rootElement
+ * @param {any} children
  * @returns {space.Cleanup}
  */
 export function mount(rootElement, children) {
-  const isPlaceholder = rootElement.tagName === "TEMPLATE"
-  /**
-   * @type {Element}
-   */
-  // @ts-expect-error: oof
-  let target = isPlaceholder ? rootElement.parentElement : rootElement
-  if (target === null) {
-    const fragment = new DocumentFragment()
-    rootElement.replaceWith(fragment)
-    // @ts-expect-error: double oof
-    target = fragment
-  }
-  /**
-   * @type {Node}
-   */
-  const anchor = isPlaceholder ? rootElement : new Comment()
+  const isTemplate = rootElement.tagName === "TEMPLATE"
+  const target = isTemplate ? rootElement.parentElement : rootElement
   return createEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(children))
     reconcile(target, currentNodes, nextNodes)
     return nextNodes
-  }, [anchor])
+  }, [isTemplate ? rootElement : new Comment()])
 }
 
 /**
  * @param {Element} rootElement
- * @param {space.DOMNode[]} currentNodes
- * @param {space.DOMNode[]} nextNodes
+ * @param {(ChildNode & { data?: string })[]} currentNodes
+ * @param {(Node & { data?: string })[]} nextNodes
  */
 export function reconcile(rootElement, currentNodes, nextNodes) {
   const anchor = currentNodes.at(-1)?.nextSibling ?? null
@@ -282,6 +267,6 @@ export function reconcile(rootElement, currentNodes, nextNodes) {
     }
   })
   while (currentNodes.length) {
-    currentNodes.pop()?.remove?.()
+    currentNodes.pop()?.remove()
   }
 }
