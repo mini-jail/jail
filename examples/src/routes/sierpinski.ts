@@ -57,7 +57,7 @@ const Triangle = (x: number, y: number, target: number, size: number) => {
   ]
 }
 
-export default function Component() {
+export default function Sierpinski() {
   const { target = "750", size = "25" } = getParams() || {}
   let id: number
   const elapsed = createSignal(0)

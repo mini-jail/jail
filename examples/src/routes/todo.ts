@@ -17,7 +17,6 @@ const Item = (props: ToDoItem) => {
     list(list().filter((item) => item.id !== props.id))
   const toggleItem = (_ev: Event) =>
     list((items) => (props.done = !props.done, items))
-
   return html`
     <div class="todo-item" id="item_${props.id}">
       <div 
@@ -33,7 +32,7 @@ const Item = (props: ToDoItem) => {
   `
 }
 
-export default function Component() {
+export default function ToDo() {
   const textValue = createSignal("")
   const addItem = (_event: Event) => {
     list(list().concat({ id: Date.now(), done: false, text: textValue() }))

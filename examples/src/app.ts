@@ -8,7 +8,7 @@ import About from "./routes/about.ts"
 import ToDo from "./routes/todo.ts"
 import NotFound from "./routes/notfound.ts"
 
-const App = () => {
+function App() {
   createEffect(() => {
     document.title = `space${path()}`
   })

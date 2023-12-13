@@ -16,10 +16,7 @@ export const elementAttributeRegExp = RegExp(
   [
     `\\s`,
     `(?:(?:(?<namespace>${validName})|(?:${key}(?<namespaceSlot>\\d+)${key})):)?`,
-    [
-      `(?:(?<name>${validName})`,
-      `(?:${key}(?<nameSlot>\\d+)${key}))`,
-    ].join("|"),
+    `(?:(?<name>${validName})|(?:${key}(?<nameSlot>\\d+)${key}))`,
     `(?:${validValue})?`,
   ].join(""),
   "gi",

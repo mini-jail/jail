@@ -5,7 +5,7 @@ const code = `
 import { createSignal } from "space/signal"
 import html from "space/dom"
 
-function Counter() {
+function SimpleCounter() {
   const counter = createSignal(0)
   const up = (ev) => counter(value => ++value)
   const down = (ev) => counter(value => --value)
@@ -17,7 +17,7 @@ function Counter() {
   \`
 }`.trim()
 
-export default function Component() {
+export default function Counter() {
   const counter = createSignal(0)
   const show = createSignal(false)
   const up = (_event: Event) => counter((value) => ++value)

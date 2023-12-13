@@ -1,6 +1,6 @@
 import html from "space/dom"
 
-export default function Component() {
+export default function Home() {
   return html`
     <article>
       <h4>

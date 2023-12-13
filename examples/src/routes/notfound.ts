@@ -1,7 +1,7 @@
 import html from "space/dom"
 import { onMount, onUnmount } from "space/signal"
 
-export default function Component() {
+export default function NotFound() {
   const { backgroundColor } = document.body.style
   onMount(() => document.body.style.backgroundColor = "indianred")
   onUnmount(() => document.body.style.backgroundColor = backgroundColor)
