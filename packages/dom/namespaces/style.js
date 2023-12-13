@@ -1,5 +1,5 @@
 /**
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {string} arg
  * @param {unknown} value
  */

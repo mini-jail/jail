@@ -38,7 +38,7 @@ export default function ToDo() {
     list(list().concat({ id: Date.now(), done: false, text: textValue() }))
     textValue("")
   }
-  const onInput = (ev: space.DOMEvent<HTMLInputElement>) =>
+  const onInput = (ev: space.Event<HTMLInputElement>) =>
     textValue(ev.target.value)
   const length = createComputed(() => list().length, 0)
   const done = createComputed(() => {

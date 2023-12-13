@@ -1,7 +1,7 @@
 export const whenSymbol = Symbol("When")
 
 /**
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {space.BooleanLike} value
  */
 export function when(elt, value) {

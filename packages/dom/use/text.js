@@ -1,7 +1,7 @@
 export const textSymbol = Symbol("Text")
 
 /**
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {unknown} value
  */
 export function text(elt, value) {

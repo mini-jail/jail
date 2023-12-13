@@ -1,5 +1,5 @@
 /**
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {string} name
  * @param {unknown} value
  * @returns {boolean}
@@ -15,7 +15,7 @@ export function setAttribute(elt, name, value) {
 }
 
 /**
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {string} name
  * @param {unknown} value
  */

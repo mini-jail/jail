@@ -11,7 +11,7 @@ import namespaces from "../namespaces/mod.js"
 import components from "../components/mod.js"
 
 /**
- * @param {space.DOMDocumentFragment} fragment
+ * @param {space.DocumentFragment} fragment
  * @param {space.Template} template
  * @param {space.Slot[]} slots
  * @returns {space.RenderResult}
@@ -30,7 +30,7 @@ function createRenderResult(fragment, template, slots) {
 }
 
 /**
- * @param {space.DOMElement} elt
+ * @param {space.TemplateElement} elt
  * @param {space.Template} template
  * @param {space.Slot[]} slots
  */
@@ -60,7 +60,7 @@ function renderElement(elt, template, slots) {
 }
 
 /**
- * @param {space.DOMElement} elt
+ * @param {space.TemplateElement} elt
  * @param {space.ComponentData} data
  * @param {space.Template} template
  * @param {space.Slot[]} slots
@@ -88,7 +88,7 @@ function createProps(elt, data, template, slots) {
 }
 
 /**
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {space.AttributeData} attribute
  * @param {space.Slot[]} slots
  */
@@ -173,7 +173,7 @@ export function createNodeArray(nodeArray, ...elements) {
 }
 
 /**
- * @param {space.DOMElement} targetElt
+ * @param {space.Element} targetElt
  * @param {any} child
  */
 function renderChild(targetElt, child) {

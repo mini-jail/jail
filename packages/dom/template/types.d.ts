@@ -11,7 +11,7 @@ declare global {
       [element: number | string]: number | ComponentData | AttributeData[]
     }
     type Template = {
-      readonly fragment: DOMDocumentFragment
+      readonly fragment: DocumentFragment
       readonly templateString: string
       readonly hash: string
       readonly data: TemplateData
@@ -33,8 +33,8 @@ declare global {
       | null
       | undefined
       | void
-      | DOMNode
-      | DOMEventListener<DOMElement>
+      | Element
+      | EventListener<Element>
       | SlotObject
       | Iterable<Slot>
     type ComponentGroups = {
@@ -63,8 +63,8 @@ declare global {
       value2: string | undefined
       value3: string | undefined
     }
-    interface HTMLTemplateElement extends globalThis.HTMLTemplateElement {
-      content: DOMDocumentFragment
+    interface TemplateElement extends Element {
+      content: DocumentFragment
     }
   }
 }

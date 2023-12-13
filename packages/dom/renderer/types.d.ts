@@ -1,12 +1,12 @@
 declare global {
   namespace space {
-    type RenderResult = DOMChildNode | DOMChildNode[] | undefined
-    interface DOMDocumentFragment extends globalThis.DocumentFragment {
-      childNodes: NodeListOf<DOMChildNode>
-      cloneNode(deep?: boolean): DOMDocumentFragment
-      querySelectorAll(selectors: string): NodeListOf<DOMElement>
+    type RenderResult = globalThis.Node | globalThis.Node[] | undefined
+    interface DocumentFragment extends globalThis.DocumentFragment {
+      childNodes: NodeListOf<Element>
+      cloneNode(deep?: boolean): DocumentFragment
+      querySelectorAll(selectors: string): NodeListOf<TemplateElement>
     }
-    interface DOMElement {
+    interface Element {
       getAttribute(name: Template["hash"]): string
     }
   }

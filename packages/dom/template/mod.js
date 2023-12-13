@@ -40,7 +40,7 @@ export function createTemplate(templateStringsArray) {
     }
     string = string + templateStringsArray[arg]
     /**
-     * @type {space.HTMLTemplateElement}
+     * @type {space.TemplateElement}
      */
     // @ts-expect-error: it's ok TS, it is only used internally
     const elt = document.createElement("template")

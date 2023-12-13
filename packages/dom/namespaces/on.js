@@ -7,9 +7,9 @@ const argRegExp = /[A-Z][a-z]+/g
 const nameRegExp = /[a-z]+/
 
 /**
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {string} arg
- * @param {space.DOMEventListener} value
+ * @param {space.EventListener} value
  */
 export function on(elt, arg, value) {
   const options = {}, name = arg.match(nameRegExp)?.[0] + ""
@@ -51,9 +51,9 @@ export function on(elt, arg, value) {
 }
 
 /**
- * @param {space.DOMElement} elt
- * @param {space.DOMEventListener} listener
- * @returns {space.DOMEventListener}
+ * @param {space.Element} elt
+ * @param {space.EventListener} listener
+ * @returns {space.EventListener}
  */
 function decoratePrevent(elt, listener) {
   const originalListener = listener
@@ -64,9 +64,9 @@ function decoratePrevent(elt, listener) {
 }
 
 /**
- * @param {space.DOMElement} elt
- * @param {space.DOMEventListener} listener
- * @returns {space.DOMEventListener}
+ * @param {space.Element} elt
+ * @param {space.EventListener} listener
+ * @returns {space.EventListener}
  */
 function decorateStop(elt, listener) {
   const originalListener = listener
@@ -77,18 +77,18 @@ function decorateStop(elt, listener) {
 }
 
 /**
- * @param {space.DOMEvent} event
+ * @param {space.Event} event
  */
 function delegatedEventListener(event) {
   /**
-   * @type {space.DOMParentNode | null}
+   * @type {space.Element | null}
    */
   let elt = event.target
   while (elt !== null) {
     elt
       ?.[delegatedEventsSymbol]
       ?.[event.type]
-      // @ts-expect-error: elt won't be null
+      // @ts-expect-error: elt is not null here, duh
       ?.forEach((listener) => listener.call(elt, event))
     elt = elt.parentNode
   }

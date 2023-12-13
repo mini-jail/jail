@@ -3,7 +3,7 @@ import { textSymbol } from "./text.js"
 
 declare global {
   namespace space {
-    interface DOMElement {
+    interface Element {
       [whenSymbol]?: Text
       [textSymbol]?: Text
     }
@@ -11,7 +11,7 @@ declare global {
       keyframes: Keyframe[]
     }
     interface RefValue {
-      (elt: DOMElement): void
+      (elt: Element): void
     }
     interface Directives {
       animate: Directive<AnimateValue>

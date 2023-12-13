@@ -1,7 +1,7 @@
 import directives from "../use/mod.js"
 /**
  * @template T
- * @param {space.DOMElement} elt
+ * @param {space.Element} elt
  * @param {space.Directive<T> | string} arg
  * @param {space.Resolved<T>} value
  */
