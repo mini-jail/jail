@@ -19,7 +19,7 @@ declare global {
     type AttributeData = {
       readonly namespace: string | number | null
       readonly name: string | number
-      readonly value: string | number | null
+      readonly value: string | number | true
       readonly slots: number[] | null
       readonly isStatic: boolean
     }

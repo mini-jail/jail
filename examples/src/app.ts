@@ -27,13 +27,11 @@ const App = () => {
     <main use:animate=${pathAnimation}>
       <Router type="pathname">
         <Route path="/" children=${Home} />
-        <Route path="/counter" children=${Counter}>
-          <Route path="/counter/simple" children=${SimpleCounter} />
-        </Route>
-        <Route path="/sierpinski" children=${Sierpinski}>
-          <Route path="/sierpinski/:target" children=${Sierpinski} />
-          <Route path="/sierpinski/:target/:size" children=${Sierpinski} />
-        </Route>
+        <Route path="/counter" children=${Counter} />
+        <Route path="/counter/simple" children=${SimpleCounter} />
+        <Route path="/sierpinski" children=${Sierpinski} />
+        <Route path="/sierpinski/:target" children=${Sierpinski} />
+        <Route path="/sierpinski/:target/:size" children=${Sierpinski} />
         <Route path="/about" children=${About} />
         <Route path="/todo" children=${ToDo} />
         <Route path="/.+" children=${NotFound} />

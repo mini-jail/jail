@@ -99,7 +99,7 @@ function createAttributeData(groups) {
   const slot = groups.slot1 ?? groups.slot2 ?? groups.slot3 ?? null
   const value = slot !== null
     ? +slot
-    : groups.value1 ?? groups.value2 ?? groups.value3 ?? null
+    : groups.value1 ?? groups.value2 ?? groups.value3 ?? true
   /**
    * @type {number[] | null}
    */
