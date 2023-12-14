@@ -1,5 +1,5 @@
 /// <reference path="./types.d.ts" />
-import { createEffect, createRenderEffect, createRoot } from "space/signal"
+import { createRenderEffect, createRoot } from "space/signal"
 import {
   isResolvable,
   resolve,
@@ -181,11 +181,10 @@ function renderChild(targetElt, child) {
     targetElt.replaceWith(child)
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
-  } else if (isResolvable(child)) {
-    const anchor = new Text()
-    targetElt.parentElement?.insertBefore(anchor, targetElt)
-    mount(targetElt.parentNode, child, anchor)
-    targetElt.remove()
+  } else if (targetElt.parentNode && isResolvable(child)) {
+    const parentNode = targetElt.parentNode, anchor = new Text()
+    parentNode.replaceChild(anchor, targetElt)
+    mount(parentNode, child, anchor)
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
     switch (iterableChild.length) {
@@ -194,11 +193,10 @@ function renderChild(targetElt, child) {
       case 1:
         return renderChild(targetElt, iterableChild[0])
       default:
-        if (iterableChild.some(isResolvable)) {
-          const anchor = new Text()
-          targetElt.parentElement?.insertBefore(anchor, targetElt)
-          mount(targetElt.parentNode, child, anchor)
-          targetElt.remove()
+        if (targetElt.parentNode && iterableChild.some(isResolvable)) {
+          const parentNode = targetElt.parentNode, anchor = new Text()
+          parentNode.replaceChild(anchor, targetElt)
+          mount(parentNode, iterableChild, anchor)
         } else {
           targetElt.replaceWith(...createNodeArray([], ...iterableChild))
         }
