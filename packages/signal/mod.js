@@ -9,9 +9,9 @@ let isRunning = false
 let activeNode = null
 
 /**
- * @template Type
- * @param {(cleanup: space.Cleanup) => Type} rootFunction
- * @returns {Type | undefined}
+ * @template T
+ * @param {(cleanup: space.Cleanup) => T} rootFunction
+ * @returns {T | undefined}
  */
 export function createRoot(rootFunction) {
   const node = createNode()
@@ -75,25 +75,25 @@ export function onUnmount(unmountFunction) {
 /**
  * @overload
  * @param {() => void} effectFunction
- * @returns {space.Cleanup}
+ * @returns {void}
  */
 /**
- * @template Type
+ * @template T
  * @overload
- * @param {space.UpdateFunction<Type | undefined>} effectFunction
- * @returns {space.Cleanup}
+ * @param {space.UpdateFunction<T | undefined>} effectFunction
+ * @returns {void}
  */
 /**
- * @template Type
+ * @template T
  * @overload
- * @param {space.UpdateFunction<Type>} effectFunction
- * @param {Type} initialValue
- * @returns {space.Cleanup}
+ * @param {space.UpdateFunction<T>} effectFunction
+ * @param {T} initialValue
+ * @returns {void}
  */
 /**
  * @param {space.UpdateFunction<any>} effectFunction
  * @param {any} [initialValue]
- * @returns {space.Cleanup}
+ * @returns {void}
  */
 export function createEffect(effectFunction, initialValue) {
   const node = createNode(initialValue)
@@ -103,21 +103,71 @@ export function createEffect(effectFunction, initialValue) {
   } else {
     queueMicrotask(() => updateNode(node, false))
   }
-  return () => cleanNode(node, true)
 }
 
 /**
- * @template Type
  * @overload
- * @param {space.UpdateFunction<Type | undefined>} effectFunction
- * @returns {space.ReadOnlySignal<Type | undefined>}
+ * @param {() => void} effectFunction
+ * @returns {void}
  */
 /**
- * @template Type
+ * @template T
  * @overload
- * @param {space.UpdateFunction<Type>} effectFunction
- * @param {Type} initialValue
- * @returns {space.ReadOnlySignal<Type>}
+ * @param {space.UpdateFunction<T | undefined>} effectFunction
+ * @returns {void}
+ */
+/**
+ * @template T
+ * @overload
+ * @param {space.UpdateFunction<T>} effectFunction
+ * @param {T} initialValue
+ * @returns {void}
+ */
+/**
+ * @param {space.UpdateFunction<any>} effectFunction
+ * @param {any} [initialValue]
+ * @returns {void}
+ */
+export function createRenderEffect(effectFunction, initialValue) {
+  const node = createNode(initialValue)
+  node.onupdate = effectFunction
+  if (isRunning) {
+    nodeQueue.add(node)
+  } else {
+    updateNode(node, false)
+  }
+}
+
+/**
+ * @template T
+ * @param {space.Getter<T>} sourceFunction
+ * @param {number} [timeout]
+ * @returns {space.ReadOnlySignal<T>}
+ */
+export function createDeferred(sourceFunction, timeout) {
+  const source = createSource()
+  createEffect((handle) => {
+    const nextValue = sourceFunction()
+    cancelIdleCallback(handle)
+    return requestIdleCallback(() => setSourceValue(source, nextValue), {
+      timeout,
+    })
+  })
+  return () => getSourceValue(source)
+}
+
+/**
+ * @template T
+ * @overload
+ * @param {space.UpdateFunction<T | undefined>} effectFunction
+ * @returns {space.ReadOnlySignal<T | undefined>}
+ */
+/**
+ * @template T
+ * @overload
+ * @param {space.UpdateFunction<T>} effectFunction
+ * @param {T} initialValue
+ * @returns {space.ReadOnlySignal<T>}
  */
 /**
  * @param {space.UpdateFunction<any>} effectFunction
@@ -149,18 +199,18 @@ function lookup(node, key) {
 }
 
 /**
- * @template Type
- * @param {Type} [initialValue]
- * @returns {space.Source<Type>}
+ * @template T
+ * @param {T} [initialValue]
+ * @returns {space.Source<T>}
  */
 function createSource(initialValue) {
   return { value: initialValue, nodes: null, nodeSlots: null }
 }
 
 /**
- * @template Type
- * @param {space.Source<Type>} source
- * @returns {Type | undefined}
+ * @template T
+ * @param {space.Source<T>} source
+ * @returns {T | undefined}
  */
 function getSourceValue(source) {
   if (activeNode !== null && activeNode.onupdate !== null) {
@@ -187,21 +237,21 @@ function getSourceValue(source) {
 }
 
 /**
- * @template Type
+ * @template T
  * @overload
- * @param {space.Source<Type>} source
- * @param {Type} nextValue
+ * @param {space.Source<T>} source
+ * @param {T} nextValue
  */
 /**
- * @template Type
+ * @template T
  * @overload
- * @param {Source<Type>} source
- * @param {UpdateFunction<Type>} nextValue
+ * @param {Source<T>} source
+ * @param {UpdateFunction<T>} nextValue
  */
 /**
- * @template Type
- * @param {space.Source<Type>} source
- * @param {Type} nextValue
+ * @template T
+ * @param {space.Source<T>} source
+ * @param {T} nextValue
  */
 function setSourceValue(source, nextValue) {
   if (typeof nextValue === "function") {
@@ -219,18 +269,18 @@ function setSourceValue(source, nextValue) {
 }
 
 /**
- * @template Type
+ * @template T
  * @overload
- * @returns {space.Signal<Type | undefined>}
+ * @returns {space.Signal<T | undefined>}
  */
 /**
- * @template Type
+ * @template T
  * @overload
- * @param {Type} initialValue
- * @returns {space.Signal<Type>}
+ * @param {T} initialValue
+ * @returns {space.Signal<T>}
  */
 /**
- * @template Type
+ * @template T
  * @param {any} [initialValue]
  * @returns {space.Signal<any>}
  */
@@ -245,8 +295,8 @@ export function createSignal(initialValue) {
 }
 
 /**
- * @template [Type = any]
- * @param {Type} error
+ * @template [T = any]
+ * @param {T} error
  */
 function handleError(error) {
   const errorFunctions = lookup(activeNode, errorSymbol)
@@ -259,8 +309,8 @@ function handleError(error) {
 }
 
 /**
- * @template [Type = any]
- * @param {(error: Type) => void} errorFunction
+ * @template [T = any]
+ * @param {(error: T) => void} errorFunction
  * @returns {void}
  */
 export function catchError(errorFunction) {
@@ -289,9 +339,9 @@ export function onCleanup(cleanupFunction) {
 }
 
 /**
- * @template Type
- * @param {space.Getter<Type>} getter
- * @returns {Type}
+ * @template T
+ * @param {space.Getter<T>} getter
+ * @returns {T}
  */
 export function untrack(getter) {
   const previousNode = activeNode
@@ -302,9 +352,9 @@ export function untrack(getter) {
 }
 
 /**
- * @template Type
- * @param {space.Getter<Type>} getter
- * @returns {Type}
+ * @template T
+ * @param {space.Getter<T>} getter
+ * @returns {T}
  */
 function batch(getter) {
   if (isRunning) {
@@ -333,7 +383,7 @@ function flush() {
  */
 function updateNode(node, complete) {
   cleanNode(node, complete)
-  if (node.onupdate === null) {
+  if (node.onupdate == null) {
     return
   }
   const previousNode = activeNode

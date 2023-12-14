@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { paramsSymbol, routesSymbol } from "./router.js"
+import { switchSymbol } from "./switch.js"
 
 declare global {
   namespace space {
@@ -13,6 +14,7 @@ declare global {
     interface Injections {
       [paramsSymbol]: Params
       [routesSymbol]: Set<Route>
+      [switchSymbol]: Set<Match>
     }
     type RouterProps = ComponentProps<{
       type: RouterType
@@ -34,12 +36,28 @@ declare global {
       when: BooleanLike
       fallback?: Slot
     }>
+    type SwitchProps = ComponentProps<{
+      fallback?: Slot
+    }>
+    type MatchProps = ComponentProps<{
+      when: BooleanLike
+    }>
+    type Match = {
+      when: boolean
+      children: Slot
+    }
+    type ErrorBoundaryProps = ComponentProps<{
+      fallback?: Slot
+    }>
     interface Components {
       For: Component<ForProps>
       Router: Component<RouterProps>
       Route: Component<RouteProps>
       Portal: Component<PortalProps>
       Show: Component<ShowProps>
+      Switch: Component<SwitchProps>
+      Match: Component<MatchProps>
+      ErrorBoundary: Component<ErrorBoundaryProps>
     }
   }
 }

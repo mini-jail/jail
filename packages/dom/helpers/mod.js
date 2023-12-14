@@ -32,7 +32,7 @@ export function setPropertyOrAttribute(elt, name, value) {
  * @returns {data is () => any}
  */
 export function isResolvable(data) {
-  return typeof data === "function" ? data.length > 0 ? false : true : false
+  return typeof data === "function" && data.length === 0
 }
 
 /**

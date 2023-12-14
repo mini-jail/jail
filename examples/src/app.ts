@@ -1,4 +1,4 @@
-import { createEffect } from "space/signal"
+import { createDeferred, createEffect } from "space/signal"
 import html, { mount, path } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
@@ -13,9 +13,11 @@ function App() {
     document.title = `space${path()}`
   })
 
+  const lazyPath = createDeferred(() => path())
+
   return html`
     <header>
-      <h3>space${path}</h3>
+      <h3>space${path} (${lazyPath})</h3>
       <nav>
         <a href="/">home</a>
         <a href="/counter">counter</a>
@@ -25,6 +27,14 @@ function App() {
       </nav>
     </header>
     <main use:animate=${pathAnimation}>
+      <Switch>
+        <Match when=${() => path() === "/"}>
+          <div>home :3</div>
+        </Match>
+        <Match when=${() => path() === "/about"}>
+          <div>about :3</div>
+        </Match>
+      </Switch>
       <Router type="pathname">
         <Route path="/" children=${Home} />
         <Route path="/counter" children=${Counter} />

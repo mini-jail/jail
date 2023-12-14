@@ -1,5 +1,5 @@
 /// <reference path="./types.d.ts" />
-import { createEffect, createRoot } from "space/signal"
+import { createEffect, createRenderEffect, createRoot } from "space/signal"
 import {
   isResolvable,
   resolve,
@@ -106,9 +106,9 @@ function setElementData(elt, attribute, slots) {
       throw new TypeError(`Namespace is not a function!`)
     }
     const arg = typeof name === "string" ? name : slots[name]
-    createEffect(() => namespace(elt, resolve(arg), resolve(value)))
+    createRenderEffect(() => namespace(elt, resolve(arg), resolve(value)))
   } else if (isResolvable(value)) {
-    createEffect((currentValue) => {
+    createRenderEffect((currentValue) => {
       const nextValue = value()
       if (currentValue !== nextValue) {
         // @ts-expect-error: name can be only a string here
@@ -128,8 +128,8 @@ function setElementData(elt, attribute, slots) {
  * @returns {space.Slot}
  */
 function createValue(attribute, slots) {
-  if (attribute.value === null) {
-    return
+  if (typeof attribute.value === "boolean") {
+    return attribute.value
   } else if (typeof attribute.value === "number") {
     return slots[attribute.value]
   } else if (attribute.slots === null) {
@@ -154,19 +154,17 @@ function createValue(attribute, slots) {
  * @returns {(Node & { [key: string]: any })[]}
  */
 export function createNodeArray(nodeArray, ...elements) {
-  if (elements.length > 0) {
-    for (const elt of elements) {
-      if (elt == null || typeof elt === "boolean") {
-        continue
-      } else if (elt instanceof Node) {
-        nodeArray.push(elt)
-      } else if (typeof elt === "string" || typeof elt === "number") {
-        nodeArray.push(new Text(elt + ""))
-      } else if (isResolvable(elt)) {
-        createNodeArray(nodeArray, elt())
-      } else if (Symbol.iterator in elt) {
-        createNodeArray(nodeArray, ...elt)
-      }
+  for (const elt of elements) {
+    if (elt == null || typeof elt === "boolean") {
+      continue
+    } else if (elt instanceof Node) {
+      nodeArray.push(elt)
+    } else if (typeof elt === "string" || typeof elt === "number") {
+      nodeArray.push(new Text(elt + ""))
+    } else if (isResolvable(elt)) {
+      createNodeArray(nodeArray, elt())
+    } else if (Symbol.iterator in elt) {
+      createNodeArray(nodeArray, ...elt)
     }
   }
   return nodeArray
@@ -184,12 +182,10 @@ function renderChild(targetElt, child) {
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
   } else if (isResolvable(child)) {
-    if (targetElt.parentElement) {
-      mount(targetElt.parentElement, child, targetElt)
-    } else {
-      console.info(`Child "${child}" needs to be wrapped.`)
-      targetElt.remove()
-    }
+    const anchor = new Text()
+    targetElt.parentElement?.insertBefore(anchor, targetElt)
+    mount(targetElt.parentNode, child, anchor)
+    targetElt.remove()
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
     switch (iterableChild.length) {
@@ -199,12 +195,10 @@ function renderChild(targetElt, child) {
         return renderChild(targetElt, iterableChild[0])
       default:
         if (iterableChild.some(isResolvable)) {
-          if (targetElt.parentElement) {
-            console.info(`Child "${child}" needs to be wrapped.`)
-            mount(targetElt.parentElement, iterableChild, targetElt)
-          } else {
-            targetElt.remove()
-          }
+          const anchor = new Text()
+          targetElt.parentElement?.insertBefore(anchor, targetElt)
+          mount(targetElt.parentNode, child, anchor)
+          targetElt.remove()
         } else {
           targetElt.replaceWith(...createNodeArray([], ...iterableChild))
         }
@@ -241,20 +235,22 @@ export function template(templateStringsArray, ...slots) {
  * @param {any} anchor
  */
 export function mount(rootElement, slot, anchor) {
-  createEffect((currentNodes) => {
+  // @ts-expect-error: eh
+  createRenderEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(slot))
-    reconcile(rootElement, currentNodes, nextNodes)
+    reconcile(rootElement, anchor, currentNodes, nextNodes)
     return nextNodes
-  }, anchor ? [anchor] : [])
+  }, [])
 }
 
 /**
  * @param {Element} rootElement
+ * @param {(ChildNode & { data?: string })} anchor
  * @param {(ChildNode & { data?: string })[]} currentNodes
  * @param {(Node & { data?: string })[]} nextNodes
  */
-export function reconcile(rootElement, currentNodes, nextNodes) {
-  const anchor = currentNodes.at(-1)?.nextSibling ?? null
+export function reconcile(rootElement, anchor, currentNodes, nextNodes) {
+  //const anchor = currentNodes.at(-1)?.nextSibling ?? null
   nextNodes.forEach((nextNode, i) => {
     const child = currentNodes[i]
     currentNodes.some((currentNode, j) => {
