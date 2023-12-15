@@ -67,11 +67,7 @@ function renderElement(elt, template, slots) {
  * @returns {object}
  */
 function createProps(elt, data, template, slots) {
-  const props = {
-    children: data.selfClosing
-      ? undefined
-      : createRoot(() => createRenderResult(elt.content, template, slots)),
-  }
+  const props = { children: createRenderResult(elt.content, template, slots) }
   for (const prop in data.props) {
     const type = data.props[prop]
     let value = typeof type === "number" ? slots[type] : type
@@ -151,7 +147,7 @@ function createValue(attribute, slots) {
 /**
  * @param {Node[]} nodeArray
  * @param  {...any} elements
- * @returns {(Node & { [key: string]: any })[]}
+ * @returns {Node[]}
  */
 export function createNodeArray(nodeArray, ...elements) {
   for (const elt of elements) {
@@ -182,10 +178,14 @@ function renderChild(targetElt, child) {
     targetElt.replaceWith(child)
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
-  } else if (parentNode && isResolvable(child)) {
-    const anchor = new Text()
-    parentNode.replaceChild(anchor, targetElt)
-    mount(parentNode, child, anchor)
+  } else if (isResolvable(child)) {
+    if (parentNode) {
+      const anchor = new Text()
+      parentNode.replaceChild(anchor, targetElt)
+      mount(parentNode, child, anchor)
+    } else {
+      targetElt.replaceWith(...createNodeArray([], child))
+    }
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
     switch (iterableChild.length) {
@@ -222,22 +222,15 @@ export function template(templateStringsArray, ...slots) {
 }
 
 /**
- * @overload
  * @param {Element} rootElement
  * @param {space.Slot} slot
- * @param {Node | undefined | null} [anchor]
- * @returns {void}
- */
-/**
- * @param {any} rootElement
- * @param {space.Slot} slot
- * @param {any} anchor
+ * @param {ChildNode | null} [anchor]
  */
 export function mount(rootElement, slot, anchor) {
   // @ts-expect-error: eh
   createRenderEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(slot))
-    reconcile(rootElement, anchor, currentNodes, nextNodes)
+    reconcile(rootElement, anchor ?? null, currentNodes, nextNodes)
     return nextNodes
   }, [])
 }
@@ -245,11 +238,11 @@ export function mount(rootElement, slot, anchor) {
 /**
  * Modified version of: [udomdiff](https://github.com/WebReflection/udomdiff/blob/master/index.js)
  * @param {Element} parentElement
- * @param {ChildNode} anchor
+ * @param {ChildNode | null} before
  * @param {ChildNode[]} current
  * @param {Node[]} next
  */
-export function reconcile(parentElement, anchor, current, next) {
+export function reconcile(parentElement, before, current, next) {
   const nextLength = next.length
   let currentEnd = current.length,
     nextEnd = nextLength,
@@ -272,7 +265,7 @@ export function reconcile(parentElement, anchor, current, next) {
     if (currentEnd === cStart) {
       const node = nextEnd < nextLength
         ? nStart ? next[nStart - 1].nextSibling : next[nextEnd - nStart]
-        : anchor
+        : before
       while (nStart < nextEnd) {
         parentElement.insertBefore(next[nStart++], node)
       }

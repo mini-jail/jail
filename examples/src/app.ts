@@ -1,4 +1,4 @@
-import { createDeferred, createEffect } from "space/signal"
+import { createEffect } from "space/signal"
 import html, { mount, path } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
