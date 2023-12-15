@@ -48,6 +48,7 @@ declare global {
     }
     type ErrorBoundaryProps = ComponentProps<{
       fallback?: Slot
+      onError?: (error: any) => void
     }>
     interface Components {
       For: Component<ForProps>

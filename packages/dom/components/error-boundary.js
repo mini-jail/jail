@@ -5,7 +5,8 @@ export function ErrorBoundary(props) {
   return function () {
     try {
       return props.children
-    } catch {
+    } catch (error) {
+      props.onError?.(error)
       return props.fallback
     }
   }
