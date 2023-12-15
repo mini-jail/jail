@@ -1,6 +1,6 @@
 /// <reference path="./types.d.ts" />
 import { For } from "./for.js"
-import { Route, Router } from "./router.js"
+import { getParams, path, Route, Router } from "./router.js"
 import { Portal } from "./portal.js"
 import { Show } from "./show.js"
 import { Match, Switch } from "./switch.js"
@@ -23,4 +23,15 @@ components.Switch = Switch
 components.Match = Match
 components.ErrorBoundary = ErrorBoundary
 
-export { ErrorBoundary, For, Match, Portal, Route, Router, Show, Switch }
+export {
+  ErrorBoundary,
+  For,
+  getParams,
+  Match,
+  path,
+  Portal,
+  Route,
+  Router,
+  Show,
+  Switch,
+}

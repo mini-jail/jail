@@ -11,13 +11,15 @@ export function Switch(props) {
    */
   const matches = new Set()
   provide(switchSymbol, matches)
-  return function () {
+  return function* () {
+    yield props.children
     for (const match of matches) {
       if (match.when) {
-        return match.children
+        yield match.children
+        return
       }
     }
-    return props.fallback
+    yield props.fallback
   }
 }
 
