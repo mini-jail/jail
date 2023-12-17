@@ -217,7 +217,30 @@ export function template(templateStringsArray, ...slots) {
 }
 
 /**
- * @param {ParentNode | null} rootElement
+ * @access public
+ * @overload
+ * @param {Element} rootElement
+ * @param {space.Slot} slot
+ * @returns {void}
+ */
+/**
+ * @access public
+ * @overload
+ * @param {Element} rootElement
+ * @param {space.Slot} slot
+ * @param {ChildNode} anchor
+ * @returns {void}
+ */
+/**
+ * @access private
+ * @overload
+ * @param {Element | null} rootElement
+ * @param {space.Slot} slot
+ * @param {ChildNode | null} [anchor]
+ * @returns {void}
+ */
+/**
+ * @param {Element | null} rootElement
  * @param {space.Slot} slot
  * @param {ChildNode | null} [anchor]
  */
@@ -226,10 +249,8 @@ export function mount(rootElement, slot, anchor) {
   createRenderEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(slot))
     reconcile(
-      // @ts-expect-error: :(
-      (currentNodes[0] ?? anchor)?.parentElement ?? rootElement,
-      // @ts-expect-error: ...uh
-      currentNodes[0]?.nextSibling ?? anchor ?? null,
+      rootElement ?? (anchor ?? currentNodes.at(-1))?.parentElement ?? null,
+      anchor ?? null,
       currentNodes,
       nextNodes,
     )
@@ -248,10 +269,10 @@ function reconcile(rootElement, anchor, currentNodes, nextNodes) {
     const child = currentNodes?.[i]
     currentNodes?.some((currentNode, j) => {
       if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
-        // @ts-expect-error: CharData.data exists here
+        // @ts-expect-error: Text.data exists here
         currentNode.data = nextNode.data
       } else if (currentNode.nodeType === 8 && nextNode.nodeType === 8) {
-        // @ts-expect-error: CharData.data exists here
+        // @ts-expect-error: Comment.data exists here
         currentNode.data = nextNode.data
       }
       if (currentNode.isEqualNode(nextNode)) {
