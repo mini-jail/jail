@@ -20,10 +20,10 @@ export function setAttribute(elt, name, value) {
  * @param {unknown} value
  */
 export function setPropertyOrAttribute(elt, name, value) {
-  if (name in elt) {
-    elt[name] = value
-  } else {
+  if (isReadOnly(elt, name)) {
     setAttribute(elt, name, value)
+  } else {
+    elt[name] = value
   }
 }
 
@@ -42,4 +42,12 @@ export function isResolvable(data) {
  */
 export function resolve(data) {
   return isResolvable(data) ? data() : data
+}
+
+/**
+ * @param {object} obj
+ * @param {string | symbol | number} prop
+ */
+export function isReadOnly(obj, prop) {
+  return Object.getOwnPropertyDescriptor(obj, prop)?.writable === false
 }
