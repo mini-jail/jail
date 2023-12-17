@@ -180,7 +180,7 @@ function renderChild(targetElt, child) {
   } else if (isResolvable(child)) {
     const anchor = new Text()
     targetElt.replaceWith(anchor)
-    mount(null, child, anchor)
+    mount(anchor.parentElement, child, anchor)
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
     switch (iterableChild.length) {
@@ -192,7 +192,7 @@ function renderChild(targetElt, child) {
         if (iterableChild.some(isResolvable)) {
           const anchor = new Text()
           targetElt.replaceWith(anchor)
-          mount(null, child, anchor)
+          mount(anchor.parentElement, child, anchor)
         } else {
           targetElt.replaceWith(...createNodeArray([], ...iterableChild))
         }
@@ -217,18 +217,6 @@ export function template(templateStringsArray, ...slots) {
 }
 
 /**
- * @overload
- * @param {ParentNode} rootElement
- * @param {space.Slot} slot
- * @param {ChildNode | null} [anchor]
- */
-/**
- * @overload
- * @param {null} rootElement
- * @param {space.Slot} slot
- * @param {ChildNode} [anchor]
- */
-/**
  * @param {ParentNode | null} rootElement
  * @param {space.Slot} slot
  * @param {ChildNode | null} [anchor]
@@ -238,8 +226,10 @@ export function mount(rootElement, slot, anchor) {
   createRenderEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(slot))
     reconcile(
-      anchor?.parentElement || rootElement,
-      anchor ?? null,
+      // @ts-expect-error: :(
+      (currentNodes[0] ?? anchor)?.parentElement ?? rootElement,
+      // @ts-expect-error: ...uh
+      currentNodes[0]?.nextSibling ?? anchor ?? null,
       currentNodes,
       nextNodes,
     )
@@ -254,7 +244,6 @@ export function mount(rootElement, slot, anchor) {
  * @param {Node[] | undefined} nextNodes
  */
 function reconcile(rootElement, anchor, currentNodes, nextNodes) {
-  rootElement = rootElement ?? anchor?.parentElement ?? null
   nextNodes?.forEach((nextNode, i) => {
     const child = currentNodes?.[i]
     currentNodes?.some((currentNode, j) => {
