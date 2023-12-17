@@ -171,7 +171,6 @@ export function createNodeArray(nodeArray, ...elements) {
  * @param {any} child
  */
 function renderChild(targetElt, child) {
-  const parentNode = targetElt.parentNode
   if (child == null || typeof child === "boolean") {
     targetElt.remove()
   } else if (child instanceof Node) {
@@ -179,13 +178,9 @@ function renderChild(targetElt, child) {
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
   } else if (isResolvable(child)) {
-    if (parentNode) {
-      const anchor = new Text()
-      parentNode.replaceChild(anchor, targetElt)
-      mount(parentNode, child, anchor)
-    } else {
-      targetElt.replaceWith(...createNodeArray([], child))
-    }
+    const anchor = new Text()
+    targetElt.replaceWith(anchor)
+    mount(null, child, anchor)
   } else if (Symbol.iterator in child) {
     const iterableChild = Array.isArray(child) ? child : Array.from(child)
     switch (iterableChild.length) {
@@ -194,10 +189,10 @@ function renderChild(targetElt, child) {
       case 1:
         return renderChild(targetElt, iterableChild[0])
       default:
-        if (parentNode && iterableChild.some(isResolvable)) {
+        if (iterableChild.some(isResolvable)) {
           const anchor = new Text()
-          parentNode.replaceChild(anchor, targetElt)
-          mount(parentNode, iterableChild, anchor)
+          targetElt.replaceWith(anchor)
+          mount(null, child, anchor)
         } else {
           targetElt.replaceWith(...createNodeArray([], ...iterableChild))
         }
@@ -222,7 +217,19 @@ export function template(templateStringsArray, ...slots) {
 }
 
 /**
- * @param {Element} rootElement
+ * @overload
+ * @param {ParentNode} rootElement
+ * @param {space.Slot} slot
+ * @param {ChildNode | null} [anchor]
+ */
+/**
+ * @overload
+ * @param {null} rootElement
+ * @param {space.Slot} slot
+ * @param {ChildNode} [anchor]
+ */
+/**
+ * @param {ParentNode | null} rootElement
  * @param {space.Slot} slot
  * @param {ChildNode | null} [anchor]
  */
@@ -230,93 +237,46 @@ export function mount(rootElement, slot, anchor) {
   // @ts-expect-error: eh
   createRenderEffect((currentNodes) => {
     const nextNodes = createNodeArray([], resolve(slot))
-    reconcile(rootElement, anchor ?? null, currentNodes, nextNodes)
+    reconcile(
+      anchor?.parentElement || rootElement,
+      anchor ?? null,
+      currentNodes,
+      nextNodes,
+    )
     return nextNodes
   }, [])
 }
 
 /**
- * Modified version of: [udomdiff](https://github.com/WebReflection/udomdiff/blob/master/index.js)
- * @param {Element} parentElement
- * @param {ChildNode | null} before
- * @param {ChildNode[]} current
- * @param {Node[]} next
+ * @param {ParentNode | null} rootElement
+ * @param {ChildNode | null} anchor
+ * @param {ChildNode[] | undefined} currentNodes
+ * @param {Node[] | undefined} nextNodes
  */
-export function reconcile(parentElement, before, current, next) {
-  const nextLength = next.length
-  let currentEnd = current.length,
-    nextEnd = nextLength,
-    cStart = 0,
-    nStart = 0,
-    /**
-     * @type {Map<ChildNode | Node, number> | null}
-     */
-    map = null
-  while (cStart < currentEnd || nStart < nextEnd) {
-    if (current[cStart] === next[nStart]) {
-      cStart++
-      nStart++
-      continue
+function reconcile(rootElement, anchor, currentNodes, nextNodes) {
+  rootElement = rootElement ?? anchor?.parentElement ?? null
+  nextNodes?.forEach((nextNode, i) => {
+    const child = currentNodes?.[i]
+    currentNodes?.some((currentNode, j) => {
+      if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
+        // @ts-expect-error: CharData.data exists here
+        currentNode.data = nextNode.data
+      } else if (currentNode.nodeType === 8 && nextNode.nodeType === 8) {
+        // @ts-expect-error: CharData.data exists here
+        currentNode.data = nextNode.data
+      }
+      if (currentNode.isEqualNode(nextNode)) {
+        nextNodes[i] = currentNode
+        currentNodes.splice(j, 1)
+        return true
+      }
+      return false
+    })
+    if (nextNodes[i] !== child) {
+      rootElement?.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
     }
-    while (current[currentEnd - 1] === next[nextEnd - 1]) {
-      currentEnd--
-      nextEnd--
-    }
-    if (currentEnd === cStart) {
-      const node = nextEnd < nextLength
-        ? nStart ? next[nStart - 1].nextSibling : next[nextEnd - nStart]
-        : before
-      while (nStart < nextEnd) {
-        parentElement.insertBefore(next[nStart++], node)
-      }
-    } else if (nextEnd === nStart) {
-      while (cStart < currentEnd) {
-        if (!map || !map.has(current[cStart])) {
-          current[cStart].remove()
-        }
-        cStart++
-      }
-    } else if (
-      current[cStart] === next[nextEnd - 1] &&
-      next[nStart] === current[currentEnd - 1]
-    ) {
-      const node = current[--currentEnd].nextSibling
-      parentElement.insertBefore(next[nStart++], current[cStart++].nextSibling)
-      parentElement.insertBefore(next[--nextEnd], node)
-      // @ts-expect-error: its okay :)
-      current[currentEnd] = next[nextEnd]
-    } else {
-      if (!map) {
-        map = new Map()
-        let i = nStart
-        while (i < nextEnd) {
-          map.set(next[i], i++)
-        }
-      }
-      const index = map.get(current[cStart])
-      if (index != null) {
-        if (nStart < index && index < nextEnd) {
-          let i = cStart, sequence = 1
-          while (++i < currentEnd && i < nextEnd) {
-            if (map.get(current[i]) !== index + sequence) {
-              break
-            }
-            sequence++
-          }
-          if (sequence > index - nStart) {
-            const node = current[cStart]
-            while (nStart < index) {
-              parentElement.insertBefore(next[nStart++], node)
-            }
-          } else {
-            parentElement.replaceChild(next[nStart++], current[cStart++])
-          }
-        } else {
-          cStart++
-        }
-      } else {
-        current[cStart++].remove()
-      }
-    }
+  })
+  while (currentNodes?.length) {
+    currentNodes.pop()?.remove()
   }
 }

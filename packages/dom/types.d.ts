@@ -3,7 +3,6 @@ declare global {
   namespace space {
     interface Element extends Or<SVGElement, HTMLElement> {
       parentElement: Element | null
-      parentNode: Element | null
       [prop: string | number | symbol]: unknown
     }
     type BooleanLike = "true" | "false" | boolean
