@@ -137,11 +137,11 @@ function lookup(node, key) {
 export function signal(value) {
   return {
     get value() {
-      subscribe(this)
+      sub(this)
       return value
     },
     set value(newValue) {
-      commit(this)
+      pub(this)
       value = newValue
     },
   }
@@ -402,7 +402,7 @@ function handleError(error) {
 /**
  * @param {Signal} signal
  */
-function subscribe(signal) {
+export function sub(signal) {
   if (currentNode?.function) {
     let effects = effectMap.get(signal)
     if (effects === undefined) {
@@ -421,7 +421,7 @@ function subscribe(signal) {
 /**
  * @param {Signal} signal
  */
-function commit(signal) {
+export function pub(signal) {
   effectMap.get(signal)?.forEach(queue)
 }
 
@@ -444,4 +444,8 @@ function batch() {
     effectQueue.clear()
     isRunning = false
   }
+}
+
+export function probablySignal(signal) {
+  return
 }
