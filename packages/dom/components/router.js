@@ -1,25 +1,25 @@
 import {
-  createEffect,
-  createRoot,
-  createSignal,
+  cleanup,
+  effect,
   inject,
-  onCleanup,
-  onMount,
   provide,
+  root,
+  signal,
+  untrack,
 } from "space/signal"
 export const paramsSymbol = Symbol("Params")
 export const routesSymbol = Symbol("Routes")
-export const path = createSignal("")
+export const path = signal("")
 
 const routeTypeHandlerMap = {
   hash() {
     const hash = () => location.hash.slice(1) || "/"
-    const hashChangeListener = () => path(hash())
-    onMount(() => {
-      path(hash())
+    const hashChangeListener = () => path.value = hash()
+    effect(() => {
+      untrack(() => path.value = hash())
       addEventListener("hashchange", hashChangeListener)
     })
-    onCleanup(() => removeEventListener("hashchange", hashChangeListener))
+    cleanup(() => removeEventListener("hashchange", hashChangeListener))
   },
   pathname() {
     const url = new URL(location.toString())
@@ -31,7 +31,7 @@ const routeTypeHandlerMap = {
         if (pathname?.startsWith("/")) {
           event.preventDefault()
           if (pathname !== url.pathname) {
-            path(pathname)
+            path.value = pathname
             url.pathname = pathname
             return history.pushState(null, "", url)
           }
@@ -44,14 +44,16 @@ const routeTypeHandlerMap = {
      */
     const popStateListener = (event) => {
       event.preventDefault()
-      path(location.pathname)
+      path.value = location.pathname
     }
-    onMount(() => {
-      path(location.pathname)
+    effect(() => {
+      untrack(() => {
+        path.value = location.pathname
+      })
       addEventListener("click", clickListener)
       addEventListener("popstate", popStateListener)
     })
-    onCleanup(() => {
+    cleanup(() => {
       removeEventListener("click", clickListener)
       removeEventListener("popstate", popStateListener)
     })
@@ -101,11 +103,11 @@ export function Router(props) {
   const routes = new Set()
   provide(routesSymbol, routes)
   return function* () {
-    const nextPath = path()
+    const nextPath = path.value
     yield props.children
     for (const route of routes) {
       if (route.regexp.test(nextPath)) {
-        yield createRoot(() => {
+        yield root(() => {
           provide(paramsSymbol, route.regexp.exec(nextPath)?.groups)
           return route.children
         })
@@ -121,7 +123,7 @@ export function Router(props) {
  * @returns {space.Slot}
  */
 export function Route(props) {
-  createEffect(() => {
+  effect(() => {
     inject(routesSymbol)?.add({
       path: props.path,
       regexp: createMatcher(props.path),

@@ -1,4 +1,4 @@
-import { createEffect, inject, provide } from "space/signal"
+import { effect, inject, provide } from "space/signal"
 
 export const switchSymbol = Symbol("Switch")
 
@@ -27,7 +27,7 @@ export function Switch(props) {
  * @param {space.MatchProps} props
  */
 export function Match(props) {
-  createEffect(() => {
+  effect(() => {
     inject(switchSymbol)?.add({
       get when() {
         return props.when + "" === "true"

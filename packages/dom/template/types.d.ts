@@ -21,7 +21,6 @@ declare global {
       readonly name: string | number
       readonly value: string | number | true
       readonly slots: number[] | null
-      readonly isStatic: boolean
     }
     interface SlotObject {
       [key: string | number | symbol]: any

@@ -1,4 +1,4 @@
-import { createEffect } from "space/signal"
+import { effect, memo } from "space/signal"
 import html, { mount, path } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
@@ -9,8 +9,8 @@ import ToDo from "./routes/todo.ts"
 import NotFound from "./routes/notfound.ts"
 
 function App() {
-  createEffect(() => {
-    document.title = `space${path()}`
+  effect(() => {
+    document.title = `space${path.value}`
   })
 
   return html`
@@ -40,8 +40,8 @@ function App() {
   `
 }
 
-const pathAnimation = () => {
-  path()
+const pathAnimation = memo(() => {
+  path.value
   return {
     keyframes: [
       { opacity: 0, transform: "translateY(-10px)" },
@@ -51,6 +51,6 @@ const pathAnimation = () => {
     duration: 250,
     fill: "both",
   }
-}
+})
 
 mount(document.body, App)

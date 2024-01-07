@@ -28,11 +28,12 @@ export function setPropertyOrAttribute(elt, name, value) {
 }
 
 /**
- * @param {unknown} data
- * @returns {data is () => any}
+ * @param {any} data
+ * @returns {data is { value: any }}
  */
 export function isResolvable(data) {
-  return typeof data === "function" && data.length === 0
+  return data && typeof data === "object" &&
+    !!Object.getOwnPropertyDescriptor(data, "value")?.get
 }
 
 /**
@@ -41,7 +42,7 @@ export function isResolvable(data) {
  * @returns {space.Resolved<T>}
  */
 export function resolve(data) {
-  return isResolvable(data) ? data() : data
+  return data?.["value"] ?? data
 }
 
 /**

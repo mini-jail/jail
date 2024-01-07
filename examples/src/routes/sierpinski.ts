@@ -1,26 +1,21 @@
 import {
-  createComputed,
-  createSignal,
+  cleanup,
+  effect,
   inject,
-  onMount,
-  onUnmount,
+  memo,
   provide,
+  signal,
+  untrack,
 } from "space/signal"
 import html, { getParams } from "space/dom"
 
-declare global {
-  namespace space {
-    interface Injections {
-      counter: Signal<number>
-    }
-  }
-}
-
 const Dot = (x: number, y: number, target: number) => {
-  const counter = inject("counter")!
-  const hover = createSignal(false)
-  const text = () => hover() ? "*" + counter() + "*" : counter() + ""
-  const bgColor = () => hover() ? "lightpink" : "white"
+  const counter = inject<{ value: number }>("counter")!
+  const hover = signal(false)
+  const text = memo(() => {
+    return hover.value ? "*" + counter.value + "*" : counter.value + ""
+  })
+  const bgColor = memo(() => hover.value ? "lightpink" : "white")
 
   const css = `
     width: ${target}px;
@@ -39,8 +34,8 @@ const Dot = (x: number, y: number, target: number) => {
   return html`
     <div
       use:text=${text} style=${css} style:background-color=${bgColor}
-      on:mouseoverDelegate=${(_event) => hover(true)}
-      on:mouseoutDelegate=${(_event) => hover(false)}
+      on:mouseoverDelegate=${(_event) => hover.value = true}
+      on:mouseoutDelegate=${(_event) => hover.value = false}
     ></div>
   `
 }
@@ -60,29 +55,37 @@ const Triangle = (x: number, y: number, target: number, size: number) => {
 export default function Sierpinski() {
   const { target = "750", size = "25" } = getParams() || {}
   let id: number
-  const elapsed = createSignal(0)
-  const count = createSignal(0)
-  const scale = createComputed(() => {
-    const e = (elapsed() / 1000) % 10
+  const elapsed = signal(0)
+  const count = signal(0)
+  const scale = memo(() => {
+    const e = (elapsed.value / 1000) % 10
     return (1 + (e > 5 ? 10 - e : e) / 10) / 2
-  }, 0)
+  }, 1)
 
   provide("counter", count)
 
-  onMount(() => {
-    id = setInterval(() => count((count() % 10) + 1), 1000)
-    const start = Date.now()
-    const frame = () => {
-      elapsed(Date.now() - start)
+  effect(() => {
+    untrack(() => {
+      id = setInterval(() => count.value = (count.value % 10) + 1, 1000)
+      const start = Date.now()
+      const frame = () => {
+        elapsed.value = Date.now() - start
+        requestAnimationFrame(frame)
+      }
       requestAnimationFrame(frame)
-    }
-    requestAnimationFrame(frame)
+    })
   })
 
-  onUnmount(() => clearInterval(id))
+  cleanup(() => {
+    clearInterval(id)
+    console.log("Sierpinski is dead")
+  })
 
   return html`
-    <div style="position: absolute; left: 50%; top: 50%;" style:transform="scale(${scale}) translateZ(0.1px)">
+    <div 
+      style="position: absolute; left: 50%; top: 50%;" 
+      style:transform="scale(${scale}) translateZ(0.1px)"
+    >
       ${Triangle(0, 0, +target, +size)}
     </div>
   `

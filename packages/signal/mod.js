@@ -1,305 +1,375 @@
-/// <reference path="./types.d.ts" />
-export const errorSymbol = Symbol("Error")
 /**
- * @type {Set<space.Node>}
+ * @template [Type = any]
+ * @typedef {{
+ *   function?: (value: Type) =>  Type
+ *   value?: Type
+ *   parent?: Node
+ *   children?: Node[]
+ *   signals?: Signal[]
+ *   context?: Record<string | symbol, any>
+ *   cleanups?: Cleanup[]
+ * }} Node
  */
-const nodeQueue = new Set()
+/**
+ * @typedef {() => void} Cleanup
+ */
+/**
+ * @template [Type = any]
+ * @typedef {{ value: Type }} Signal
+ */
+/**
+ * @template [Type = any]
+ * @typedef {{ readonly value: Type }} ReadonlySignal
+ */
+/**
+ * @type {WeakMap<Signal, Set<Node>>}
+ */
+const effectMap = new WeakMap()
+/**
+ * @type {Set<Node>}
+ */
+const effectQueue = new Set()
+const errorKey = Symbol("Error")
 let isRunning = false
-/** @type {space.Node | null} */
-let activeNode = null
+/**
+ * @type {Node | undefined}
+ */
+let currentNode
+
+export function getNode() {
+  if (currentNode === undefined) {
+    throw new Error("getNode() called without parent.")
+  }
+  return currentNode
+}
 
 /**
- * @template T
- * @param {(cleanup: space.Cleanup) => T} rootFunction
- * @returns {T | undefined}
+ * @template Type
+ * @param {(cleanup: Cleanup) => Type} fn
  */
-export function createRoot(rootFunction) {
-  const node = createNode()
+export function root(fn) {
+  /** @type {Node} */
+  const node = Object.create(null),
+    prevNode = currentNode
+  if (currentNode) {
+    node.parent = currentNode
+    if (currentNode.children === undefined) {
+      currentNode.children = [node]
+    } else {
+      currentNode.children.push(node)
+    }
+  }
   try {
-    activeNode = node
-    return batch(() => rootFunction(() => cleanNode(node, true)))
+    currentNode = node
+    return fn(() => clean(node, true))
   } catch (error) {
     handleError(error)
   } finally {
-    activeNode = node.parentNode
+    currentNode = prevNode
   }
 }
 
 /**
- * @param {any} [initialValue]
- * @returns {space.Node}
+ * @template Type
+ * @param {string | symbol} key
+ * @param {Type} value
  */
-function createNode(initialValue) {
-  /** @type {space.Node} */
-  const node = {
-    value: initialValue,
-    parentNode: null,
-    childNodes: null,
-    injections: null,
-    cleanups: null,
-    onupdate: null,
-    sources: null,
-    sourceSlots: null,
+export function provide(key, value) {
+  if (currentNode === undefined) {
+    throw new Error("provide(key, value) called without parent.")
   }
-  if (activeNode !== null) {
-    node.parentNode = activeNode
-    if (activeNode.childNodes === null) {
-      activeNode.childNodes = [node]
-    } else {
-      activeNode.childNodes.push(node)
-    }
+  if (currentNode.context === undefined) {
+    currentNode.context = {}
   }
-  return node
+  currentNode.context[key] = value
 }
 
 /**
- * @param {() => void} mountFunction
+ * @template Type
+ * @overload
+ * @param {string | symbol} key
+ * @returns {Type | undefined}
  */
-export function onMount(mountFunction) {
-  if (activeNode === null) {
-    throw new Error(`onMount(): activeNode is null!`)
-  }
-  createEffect(() => untrack(mountFunction))
+/**
+ * @template Type
+ * @overload
+ * @param {string | symbol} key
+ * @param {Type} value
+ * @returns {Type}
+ */
+/**
+ * @template Type
+ * @param {string | symbol} key
+ * @param {Type} [value]
+ */
+export function inject(key, value) {
+  return lookup(currentNode, key) ?? value
 }
 
 /**
- * @param {space.Cleanup} unmountFunction
+ * @param {Node | undefined | null} node
+ * @param {string | symbol} key
  */
-export function onUnmount(unmountFunction) {
-  if (activeNode === null) {
-    throw new Error(`onUnmount(): activeNode is null!`)
-  }
-  onCleanup(() => untrack(unmountFunction))
+function lookup(node, key) {
+  return node == null
+    ? undefined
+    : node.context !== undefined && key in node.context
+    ? node.context[key]
+    : lookup(node.parent, key)
 }
 
 /**
+ * @template Type
  * @overload
- * @param {() => void} effectFunction
- * @returns {void}
+ * @returns {Signal<Type | undefined>}
  */
 /**
- * @template T
+ * @template Type
  * @overload
- * @param {space.UpdateFunction<T | undefined>} effectFunction
- * @returns {void}
+ * @param {Type} value
+ * @returns {Signal<Type>}
  */
 /**
- * @template T
- * @overload
- * @param {space.UpdateFunction<T>} effectFunction
- * @param {T} initialValue
- * @returns {void}
+ * @template Type
+ * @param {Type} [value]
+ * @returns {Signal<Type | undefined>}
  */
-/**
- * @param {space.UpdateFunction<any>} effectFunction
- * @param {any} [initialValue]
- * @returns {void}
- */
-export function createEffect(effectFunction, initialValue) {
-  const node = createNode(initialValue)
-  node.onupdate = effectFunction
-  if (isRunning) {
-    nodeQueue.add(node)
-  } else {
-    queueMicrotask(() => updateNode(node, false))
-  }
-}
-
-/**
- * @overload
- * @param {() => void} effectFunction
- * @returns {void}
- */
-/**
- * @template T
- * @overload
- * @param {space.UpdateFunction<T | undefined>} effectFunction
- * @returns {void}
- */
-/**
- * @template T
- * @overload
- * @param {space.UpdateFunction<T>} effectFunction
- * @param {T} initialValue
- * @returns {void}
- */
-/**
- * @param {space.UpdateFunction<any>} effectFunction
- * @param {any} [initialValue]
- * @returns {void}
- */
-export function createRenderEffect(effectFunction, initialValue) {
-  const node = createNode(initialValue)
-  node.onupdate = effectFunction
-  if (isRunning) {
-    nodeQueue.add(node)
-  } else {
-    updateNode(node, false)
+export function signal(value) {
+  return {
+    get value() {
+      subscribe(this)
+      return value
+    },
+    set value(newValue) {
+      commit(this)
+      value = newValue
+    },
   }
 }
 
 /**
- * @template T
- * @param {space.Getter<T>} sourceFunction
+ * @template Type
+ * @overload
+ * @param {() => Type} fn
+ * @returns {ReadonlySignal<Type | undefined>}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {() => Type} fn
+ * @param {Type} value
+ * @returns {ReadonlySignal<Type>}
+ */
+/**
+ * @template Type
+ * @param {() => Type} fn
+ * @param {Type} [value]
+ * @returns {ReadonlySignal<Type | undefined>}
+ */
+export function memo(fn, value) {
+  const data = signal(value)
+  effect(() => {
+    data.value = fn()
+  })
+  return {
+    get value() {
+      return data.value
+    },
+  }
+}
+
+/**
+ * @template Type
+ * @overload
+ * @param {() => Type} fn
+ * @returns {ReadonlySignal<Type | undefined>}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {() => Type} fn
+ * @param {Type} value
+ * @returns {ReadonlySignal<Type>}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {() => Type} fn
+ * @param {Type} value
+ * @param {number} timeout
+ * @returns {ReadonlySignal<Type>}
+ */
+/**
+ * @template Type
+ * @param {() => Type} fn
+ * @param {Type} [value]
  * @param {number} [timeout]
- * @returns {space.ReadOnlySignal<T>}
+ * @returns {ReadonlySignal<Type | undefined>}
  */
-export function createDeferred(sourceFunction, timeout) {
-  const source = createSource()
-  createEffect((handle) => {
-    const nextValue = sourceFunction()
+export function deferred(fn, value, timeout) {
+  const data = signal(value)
+  effect((handle) => {
+    const value = fn()
     cancelIdleCallback(handle)
-    return requestIdleCallback(() => setSourceValue(source, nextValue), {
+    return requestIdleCallback(() => data.value = value, {
       timeout,
     })
   })
-  return () => getSourceValue(source)
+  return {
+    get value() {
+      return data.value
+    },
+  }
 }
 
 /**
- * @template T
- * @overload
- * @param {space.UpdateFunction<T | undefined>} effectFunction
- * @returns {space.ReadOnlySignal<T | undefined>}
+ * @template Type
+ * @param {() => Type} fn
+ * @returns {Type}
  */
-/**
- * @template T
- * @overload
- * @param {space.UpdateFunction<T>} effectFunction
- * @param {T} initialValue
- * @returns {space.ReadOnlySignal<T>}
- */
-/**
- * @param {space.UpdateFunction<any>} effectFunction
- * @param {any} [initialValue]
- * @returns {space.ReadOnlySignal<any>}
- */
-export function createComputed(effectFunction, initialValue) {
-  const source = createSource(initialValue)
-  createEffect(() => {
-    const nextValue = effectFunction(source.value)
-    setSourceValue(source, nextValue)
-  })
-  return () => getSourceValue(source)
+export function untrack(fn) {
+  const node = currentNode
+  currentNode = undefined
+  const result = fn()
+  currentNode = node
+  return result
 }
 
 /**
- * @param {space.Node | null} node
- * @param {space.Injectionkey} key
- * @returns {any | undefined}
+ * @overload
+ * @param {() => void} fn
+ * @returns {void}
  */
-function lookup(node, key) {
-  if (node === null) {
+/**
+ * @template Type
+ * @overload
+ * @param {(value: Type | undefined) => Type} fn
+ * @returns {void}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {(value: Type) => Type} fn
+ * @param {Type} value
+ * @returns {void}
+ */
+export function effect(fn, value) {
+  /** @type {Node} */
+  const node = Object.create(null)
+  node.function = fn
+  if (value) {
+    node.value = value
+  }
+  if (currentNode) {
+    node.parent = currentNode
+    if (currentNode.children === undefined) {
+      currentNode.children = [node]
+    } else {
+      currentNode.children.push(node)
+    }
+  }
+  queue(node)
+}
+
+/**
+ * @param {Node} node
+ * @param {boolean} dispose
+ */
+function clean(node, dispose) {
+  let i
+  if (node.signals?.length) {
+    i = node.signals.length
+    while (i--) {
+      const effects = effectMap.get(node.signals[i])
+      if (effects) {
+        effects.delete(node)
+        if (dispose) {
+          effectMap.delete(node.signals[i])
+        }
+      }
+    }
+    node.signals.length = 0
+  }
+  if (node.children?.length) {
+    i = node.children.length
+    while (i--) {
+      clean(node.children[i], node.children[i].function ? true : dispose)
+    }
+    node.children.length = 0
+  }
+  if (node.cleanups?.length) {
+    i = node.cleanups.length
+    while (i--) {
+      node.cleanups[i]()
+    }
+    node.cleanups.length = 0
+  }
+  delete node.context
+  if (dispose) {
+    delete node.value
+    delete node.signals
+    delete node.parent
+    delete node.children
+    delete node.function
+    delete node.cleanups
+  }
+}
+
+/**
+ * @param {Node} node
+ */
+function update(node) {
+  clean(node, false)
+  if (node.function == null) {
     return
   }
-  if (node.injections !== null && key in node.injections) {
-    return node.injections[key]
-  }
-  return lookup(node.parentNode, key)
-}
-
-/**
- * @template T
- * @param {T} [initialValue]
- * @returns {space.Source<T>}
- */
-function createSource(initialValue) {
-  return { value: initialValue, nodes: null, nodeSlots: null }
-}
-
-/**
- * @template T
- * @param {space.Source<T>} source
- * @returns {T | undefined}
- */
-function getSourceValue(source) {
-  if (activeNode !== null && activeNode.onupdate !== null) {
-    const sourceSlot = source.nodes?.length ?? 0,
-      nodeSlot = activeNode.sources?.length ?? 0
-    if (activeNode.sources === null) {
-      activeNode.sources = [source]
-      activeNode.sourceSlots = [sourceSlot]
-    } else {
-      activeNode.sources.push(source)
-      // @ts-expect-error: activeNode.sourceSlots will be not null
-      activeNode.sourceSlots.push(sourceSlot)
-    }
-    if (source.nodes === null) {
-      source.nodes = [activeNode]
-      source.nodeSlots = [nodeSlot]
-    } else {
-      source.nodes.push(activeNode)
-      // @ts-expect-error: source.nodeSlots will be not null
-      source.nodeSlots.push(nodeSlot)
-    }
-  }
-  return source.value
-}
-
-/**
- * @template T
- * @overload
- * @param {space.Source<T>} source
- * @param {T} nextValue
- */
-/**
- * @template T
- * @overload
- * @param {Source<T>} source
- * @param {UpdateFunction<T>} nextValue
- */
-/**
- * @template T
- * @param {space.Source<T>} source
- * @param {T} nextValue
- */
-function setSourceValue(source, nextValue) {
-  if (typeof nextValue === "function") {
-    nextValue = nextValue(source.value)
-  }
-  source.value = nextValue
-  if (source.nodes?.length) {
-    batch(() => {
-      // @ts-expect-error: source.nodes will be not null
-      for (const node of source.nodes) {
-        nodeQueue.add(node)
-      }
-    })
+  const prevNode = currentNode
+  try {
+    currentNode = node
+    node.value = node.function(node.value)
+  } catch (error) {
+    handleError(error)
+  } finally {
+    currentNode = prevNode
   }
 }
 
 /**
- * @template T
- * @overload
- * @returns {space.Signal<T | undefined>}
+ * @param {Cleanup} fn
  */
-/**
- * @template T
- * @overload
- * @param {T} initialValue
- * @returns {space.Signal<T>}
- */
-/**
- * @template T
- * @param {any} [initialValue]
- * @returns {space.Signal<any>}
- */
-export function createSignal(initialValue) {
-  const source = createSource(initialValue)
-  return function Signal() {
-    if (arguments.length === 0) {
-      return getSourceValue(source)
-    }
-    setSourceValue(source, arguments[0])
+export function cleanup(fn) {
+  if (currentNode === undefined) {
+    throw new Error("cleanup(fn) called without parent.")
+  }
+  if (currentNode.cleanups) {
+    currentNode.cleanups.push(fn)
+  } else {
+    currentNode.cleanups = [fn]
   }
 }
 
 /**
- * @template [T = any]
- * @param {T} error
+ * @param {(error: any) => void} fn
+ */
+export function catchError(fn) {
+  if (currentNode === undefined) {
+    throw new Error(`catchError(fn): called without parent.`)
+  }
+  if (currentNode.context === undefined) {
+    currentNode.context = {}
+  }
+  if (currentNode.context[errorKey]) {
+    currentNode.context[errorKey].push(fn)
+  } else {
+    currentNode.context[errorKey] = [fn]
+  }
+}
+
+/**
+ * @param {any} error
  */
 function handleError(error) {
-  const errorFunctions = lookup(activeNode, errorSymbol)
+  const errorFunctions = lookup(currentNode, errorKey)
   if (!errorFunctions) {
     return reportError(error)
   }
@@ -309,209 +379,48 @@ function handleError(error) {
 }
 
 /**
- * @template [T = any]
- * @param {(error: T) => void} errorFunction
- * @returns {void}
+ * @param {Signal} signal
  */
-export function catchError(errorFunction) {
-  if (activeNode === null) {
-    throw new Error(`catchError(errorFunction): activeNode is null!`)
-  }
-  if (activeNode.injections === null) {
-    activeNode.injections = { [errorSymbol]: [errorFunction] }
-  } else {
-    activeNode.injections[errorSymbol]?.push(errorFunction)
+function subscribe(signal) {
+  if (currentNode?.function) {
+    let effects = effectMap.get(signal)
+    if (effects === undefined) {
+      effects = new Set()
+      effectMap.set(signal, effects)
+    }
+    effects.add(currentNode)
+    if (currentNode.signals === undefined) {
+      currentNode.signals = [signal]
+    } else {
+      currentNode.signals.push(signal)
+    }
   }
 }
 
 /**
- * @param {space.Cleanup} cleanupFunction
+ * @param {Signal} signal
  */
-export function onCleanup(cleanupFunction) {
-  if (activeNode === null) {
-    throw new Error(`onCleanup(cleanupFunction): activeNode is null!`)
-  }
-  if (activeNode.cleanups === null) {
-    activeNode.cleanups = [cleanupFunction]
-  } else {
-    activeNode.cleanups.push(cleanupFunction)
-  }
+function commit(signal) {
+  effectMap.get(signal)?.forEach(queue)
 }
 
 /**
- * @template T
- * @param {space.Getter<T>} getter
- * @returns {T}
+ * @param {Node} node
  */
-export function untrack(getter) {
-  const previousNode = activeNode
-  activeNode = null
-  const result = getter()
-  activeNode = previousNode
-  return result
-}
-
-/**
- * @template T
- * @param {space.Getter<T>} getter
- * @returns {T}
- */
-function batch(getter) {
-  if (isRunning) {
-    return getter()
-  }
-  isRunning = true
-  const result = getter()
-  queueMicrotask(flush)
-  return result
-}
-
-function flush() {
+function queue(node) {
+  effectQueue.add(node)
   if (isRunning === false) {
-    return
-  }
-  for (const node of nodeQueue) {
-    nodeQueue.delete(node)
-    updateNode(node, false)
-  }
-  isRunning = false
-}
-
-/**
- * @param {space.Node} node
- * @param {boolean} [complete]
- */
-function updateNode(node, complete) {
-  cleanNode(node, complete)
-  if (node.onupdate == null) {
-    return
-  }
-  const previousNode = activeNode
-  activeNode = node
-  try {
-    node.value = node.onupdate(node.value)
-  } catch (error) {
-    handleError(error)
-  } finally {
-    activeNode = previousNode
+    isRunning = true
+    queueMicrotask(batch)
   }
 }
 
-/**
- * @param {space.Node} node
- * @param {boolean} [complete]
- */
-function cleanNode(node, complete) {
-  if (node.sources?.length) {
-    while (node.sources.length) {
-      /** @type {space.Source} */
-      // @ts-expect-error: node.sources will be not null
-      const source = node.sources.pop()
-      /** @type {number} */
-      // @ts-expect-error: node.sourceSlots will be not null
-      const sourceSlot = node.sourceSlots.pop()
-      if (source.nodes?.length) {
-        /** @type {space.Node} */
-        // @ts-expect-error: source.nodes will be not null
-        const sourceNode = source.nodes.pop()
-        /** @type {number} */
-        // @ts-expect-error: source.nodeSlots will be not null
-        const nodeSlot = source.nodeSlots.pop()
-        if (sourceSlot < source.nodes.length) {
-          source.nodes[sourceSlot] = sourceNode
-          // @ts-expect-error: source.nodeSlots will be not null
-          source.nodeSlots[sourceSlot] = nodeSlot
-          // @ts-expect-error: sourceNode.sourceSlots will be not null
-          sourceNode.sourceSlots[nodeSlot] = sourceSlot
-        }
-      }
+function batch() {
+  if (isRunning) {
+    for (const effect of effectQueue) {
+      update(effect)
     }
-  }
-  if (node.childNodes?.length) {
-    const isUpdatable = node.onupdate !== null
-    while (node.childNodes.length) {
-      /** @type {space.Node} */
-      // @ts-expect-error: node.childNodes.pop() will return a node here
-      const childNode = node.childNodes.pop()
-      cleanNode(
-        childNode,
-        complete || isUpdatable && childNode.onupdate !== null,
-      )
-    }
-  }
-  if (node.cleanups?.length) {
-    while (node.cleanups.length) {
-      node.cleanups.pop()?.()
-    }
-  }
-  node.injections = null
-  if (complete) {
-    node.value = null
-    node.parentNode = null
-    node.childNodes = null
-    node.cleanups = null
-    node.onupdate = null
-    node.sources = null
-    node.sourceSlots = null
-  }
-}
-
-/**
- * @template {space.Injectionkey} Key
- * @overload
- * @param {Key} key
- * @returns {space.Injections[Key] | undefined}
- */
-/**
- * @template T
- * @template {space.Injectionkey | string | number | symbol} K
- * @overload
- * @param {K} key
- * @param {T} defaultValue
- * @returns {space.Injections[K] | T}
- */
-/**
- * @param {any} key
- * @param {any} [defaultValue]
- * @returns {any | undefined}
- */
-export function inject(key, defaultValue) {
-  if (activeNode === null) {
-    throw new Error(
-      `inject(${String(key)}, ${String(defaultValue)}): activeNode is null!`,
-    )
-  }
-  return lookup(activeNode, key) ?? defaultValue
-}
-
-/**
- * @template {space.Injectionkey} Key
- * @overload
- * @param {Key} key
- * @param {space.Injections[Key]} value
- * @returns {void}
- */
-/**
- * @template T
- * @overload
- * @param {string | number | symbol} key
- * @param {T} value
- * @returns {void}
- */
-/**
- * @param {string | number | symbol} key
- * @param {any} value
- * @returns {void}
- */
-export function provide(key, value) {
-  if (activeNode === null) {
-    throw new Error(
-      `provide(${String(key)}, ${String(value)}): activeNode is null!`,
-    )
-  }
-  if (activeNode.injections === null) {
-    activeNode.injections = { [key]: value }
-  } else {
-    activeNode.injections[key] = value
+    effectQueue.clear()
+    isRunning = false
   }
 }

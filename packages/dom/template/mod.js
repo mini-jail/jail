@@ -59,7 +59,7 @@ export function createTemplate(templateStringsArray) {
         let attributes = null
         match = match.replace(elementAttributeRegExp, function () {
           const aData = createAttributeData(arguments[arguments.length - 1])
-          if (aData.isStatic) {
+          if (aData === null) {
             return arguments[0]
           }
           if (attributes === null) {
@@ -89,7 +89,7 @@ export function createTemplate(templateStringsArray) {
 
 /**
  * @param {space.AttributeGroups} groups
- * @returns {space.AttributeData}
+ * @returns {space.AttributeData | null}
  */
 function createAttributeData(groups) {
   const name = groups.nameSlot ? +groups.nameSlot : groups.name
@@ -113,12 +113,14 @@ function createAttributeData(groups) {
       }
     }
   }
+  if (slot === null && slots === null && namespace === null) {
+    return null
+  }
   return {
-    name,
     namespace,
-    slots,
+    name,
     value,
-    isStatic: slot === null && slots === null && namespace === null,
+    slots,
   }
 }
 

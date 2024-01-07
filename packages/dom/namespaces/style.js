@@ -4,5 +4,5 @@
  * @param {unknown} value
  */
 export function style(elt, arg, value) {
-  elt.style[arg] = value || null
+  elt.style[arg] = value ?? null
 }

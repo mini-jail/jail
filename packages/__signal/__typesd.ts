@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import type { errorSymbol } from "./mod.js"
+import type { errorSymbol } from "./__mod.js"
 
 declare global {
   namespace space {
