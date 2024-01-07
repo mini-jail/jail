@@ -278,7 +278,7 @@ export function effect(fn, value) {
   /** @type {Node} */
   const node = Object.create(null)
   node.function = fn
-  if (value) {
+  if (value !== undefined) {
     node.value = value
   }
   if (currentNode) {
