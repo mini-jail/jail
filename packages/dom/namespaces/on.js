@@ -1,4 +1,4 @@
-export const delegatedEventsSymbol = Symbol("DelegatedEvents")
+const delegatedEventsKey = Symbol("DelegatedEvents")
 /**
  * @type {Record<string, true | undefined>}
  */
@@ -7,89 +7,63 @@ const argRegExp = /[A-Z][a-z]+/g
 const nameRegExp = /[a-z]+/
 
 /**
- * @param {space.Element} elt
+ * @param {import("space/dom").DOMElement} elt
  * @param {string} arg
- * @param {space.EventListener} value
+ * @param {import("space/dom").DOMEventListener<any>} value
  */
 export function on(elt, arg, value) {
-  const options = {}, name = arg.match(nameRegExp)?.[0] + ""
-  let delegate = false
+  const listenerOptions = {},
+    options = {},
+    name = arg.match(nameRegExp)?.[0] + ""
   arg.match(argRegExp)?.forEach((option) => {
     switch (option) {
       case "Once":
         return options.once = true
-      case "Capture":
-        return options.capture = true
-      case "Passive":
-        return options.passive = true
       case "Prevent":
-        return value = decoratePrevent(elt, value)
+        return options.prevent = true
       case "Stop": {
-        return value = decorateStop(elt, value)
+        return options.stop = true
       }
-      case "Delegate": {
-        delegate = true
-        if (elt[delegatedEventsSymbol] === undefined) {
-          elt[delegatedEventsSymbol] = {}
-        }
-        if (elt[delegatedEventsSymbol][name] === undefined) {
-          elt[delegatedEventsSymbol][name] = []
-        }
-        elt[delegatedEventsSymbol][name].push(value)
-      }
+      case "Capture":
+        return listenerOptions.capture = true
+      case "Passive":
+        return listenerOptions.passive = true
     }
   })
-  if (delegate) {
-    const id = JSON.stringify({ name, options })
-    if (delegatedEvents[id] === undefined) {
-      delegatedEvents[id] = true
-      addEventListener(name, delegatedEventListener, options)
-    }
-  } else {
-    elt.addEventListener(name, value, options)
+  if (elt[delegatedEventsKey] === undefined) {
+    elt[delegatedEventsKey] = {}
+  }
+  const id = JSON.stringify({ name, listenerOptions })
+  elt[delegatedEventsKey][name] = value
+  if (delegatedEvents[id] === undefined) {
+    delegatedEvents[id] = true
+    addEventListener(
+      name,
+      eventListener.bind(options),
+      listenerOptions,
+    )
   }
 }
 
 /**
- * @param {space.Element} elt
- * @param {space.EventListener} listener
- * @returns {space.EventListener}
+ * @this {{ stop?: boolean, prevent?: boolean, once?: boolean }}
+ * @param {import("space/dom").DOMEvent<any>} event
  */
-function decoratePrevent(elt, listener) {
-  const originalListener = listener
-  return function (event) {
-    event.preventDefault()
-    return originalListener.call(elt, event)
-  }
-}
-
-/**
- * @param {space.Element} elt
- * @param {space.EventListener} listener
- * @returns {space.EventListener}
- */
-function decorateStop(elt, listener) {
-  const originalListener = listener
-  return function (event) {
-    event.stopPropagation()
-    return originalListener.call(elt, event)
-  }
-}
-
-/**
- * @param {space.Event} event
- */
-function delegatedEventListener(event) {
-  /**
-   * @type {space.Element | null}
-   */
+function eventListener(event) {
   let elt = event.target
   while (elt !== null) {
-    elt
-      ?.[delegatedEventsSymbol]
-      ?.[event.type]
-      // @ts-expect-error: elt is not null here, duh
-      ?.forEach((listener) => listener.call(elt, event))
+    if (elt?.[delegatedEventsKey]?.[event.type]) {
+      if (this.stop) {
+        event.stopPropagation()
+      }
+      if (this.prevent) {
+        event.preventDefault()
+      }
+      elt[delegatedEventsKey][event.type].call(elt, event)
+      if (this.once) {
+        elt[delegatedEventsKey][event.type] = undefined
+      }
+    }
     elt = elt.parentNode
   }
 }

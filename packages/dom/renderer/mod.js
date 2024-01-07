@@ -1,23 +1,19 @@
-/// <reference path="./types.d.ts" />
-import { cleanup, effect, root } from "space/signal"
-import {
-  isResolvable,
-  resolve,
-  setPropertyOrAttribute,
-} from "../helpers/mod.js"
+import { cleanup, effect, resolvable, resolve, root } from "space/signal"
+import { setPropertyOrAttribute } from "../helpers/mod.js"
 import { placeholderRegExp } from "../regexp/mod.js"
 import { createTemplate } from "../template/mod.js"
 import namespaces from "../namespaces/mod.js"
 import components from "../components/mod.js"
 
 /**
- * @param {space.DocumentFragment} fragment
- * @param {space.Template} template
- * @param {space.Slot[]} slots
- * @returns {space.RenderResult}
+ * @param {DocumentFragment} fragment
+ * @param {import("space/dom").Template} template
+ * @param {import("space/dom").Slot[]} slots
+ * @returns {import("space/dom").DOMResult}
  */
 function createRenderResult(fragment, template, slots) {
   fragment.querySelectorAll(`[${template.hash}]`)
+    // @ts-ignore: dont worry, small stupid ts
     .forEach((elt) => renderElement(elt, template, slots))
   switch (fragment.childNodes.length) {
     case 0:
@@ -30,11 +26,15 @@ function createRenderResult(fragment, template, slots) {
 }
 
 /**
- * @param {space.TemplateElement} elt
- * @param {space.Template} template
- * @param {space.Slot[]} slots
+ * @param {import("space/dom").TemplateElement} elt
+ * @param {import("space/dom").Template} template
+ * @param {import("space/dom").Slot[]} slots
  */
 function renderElement(elt, template, slots) {
+  /**
+   * @type {import("space/dom").TemplateValue}
+   */
+  // @ts-ignore: will have a value
   const data = template.data[elt.getAttribute(template.hash)]
   if (typeof data === "number") {
     renderChild(elt, slots[data])
@@ -54,16 +54,17 @@ function renderElement(elt, template, slots) {
       const props = component.length
         ? createProps(elt, data, template, slots)
         : undefined
+      // @ts-ignore: mhm sure
       renderChild(elt, component(props))
     })
   }
 }
 
 /**
- * @param {space.TemplateElement} elt
- * @param {space.ComponentData} data
- * @param {space.Template} template
- * @param {space.Slot[]} slots
+ * @param {import("space/dom").TemplateElement} elt
+ * @param {import("space/dom").ComponentData} data
+ * @param {import("space/dom").Template} template
+ * @param {import("space/dom").Slot[]} slots
  * @returns {object}
  */
 function createProps(elt, data, template, slots) {
@@ -84,15 +85,15 @@ function createProps(elt, data, template, slots) {
 }
 
 /**
- * @param {space.Element} elt
- * @param {space.AttributeData} attribute
- * @param {space.Slot[]} slots
+ * @param {import("space/dom").DOMElement} elt
+ * @param {import("space/dom").AttributeData} attribute
+ * @param {import("space/dom").Slot[]} slots
  */
 function setElementData(elt, attribute, slots) {
   const value = createValue(attribute, slots), name = attribute.name
   if (attribute.namespace !== null) {
     /**
-     * @type {space.Namespace | undefined}
+     * @type {import("space/dom").Namespace<any, any> | undefined}
      */
     // @ts-expect-error: hi ts, i'm sorry
     const namespace = typeof attribute.namespace === "string"
@@ -103,7 +104,7 @@ function setElementData(elt, attribute, slots) {
     }
     const arg = typeof name === "string" ? name : slots[name]
     effect(() => namespace(elt, resolve(arg), resolve(value)))
-  } else if (isResolvable(value)) {
+  } else if (resolvable(value)) {
     effect((currentValue) => {
       const nextValue = value.value
       if (currentValue !== nextValue) {
@@ -119,9 +120,9 @@ function setElementData(elt, attribute, slots) {
 }
 
 /**
- * @param {space.AttributeData} attribute
- * @param {space.Slot[]} slots
- * @returns {space.Slot}
+ * @param {import("space/dom").AttributeData} attribute
+ * @param {import("space/dom").Slot[]} slots
+ * @returns {import("space/dom").Slot}
  */
 function createValue(attribute, slots) {
   if (typeof attribute.value === "boolean") {
@@ -130,7 +131,7 @@ function createValue(attribute, slots) {
     return slots[attribute.value]
   } else if (attribute.slots === null) {
     return attribute.value
-  } else if (attribute.slots.some((slot) => isResolvable(slots[slot]))) {
+  } else if (attribute.slots.some((slot) => resolvable(slots[slot]))) {
     return {
       get value() {
         return String.prototype.replace.call(
@@ -149,14 +150,14 @@ function createValue(attribute, slots) {
 }
 
 /**
- * @param {Node[]} nodeArray
+ * @param {import("space/dom").DOMNode[]} nodeArray
  * @param  {...any} elements
- * @returns {Node[]}
+ * @returns {import("space/dom").DOMNode[]}
  */
 export function createNodeArray(nodeArray, ...elements) {
-  for (const elt of elements) {
+  elements?.forEach((elt) => {
     if (elt == null || typeof elt === "boolean") {
-      continue
+      return
     } else if (elt instanceof Node) {
       nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
@@ -165,15 +166,15 @@ export function createNodeArray(nodeArray, ...elements) {
       createNodeArray(nodeArray, elt())
     } else if (Symbol.iterator in elt) {
       createNodeArray(nodeArray, ...elt)
-    } else if (isResolvable(elt)) {
+    } else if (resolvable(elt)) {
       createNodeArray(nodeArray, elt.value)
     }
-  }
+  })
   return nodeArray
 }
 
 /**
- * @param {space.Element} targetElt
+ * @param {import("space/dom").DOMElement} targetElt
  * @param {any} child
  */
 function renderChild(targetElt, child) {
@@ -184,7 +185,7 @@ function renderChild(targetElt, child) {
   } else if (typeof child === "string" || typeof child === "number") {
     targetElt.replaceWith(child + "")
   } else if (
-    isResolvable(child) ||
+    resolvable(child) ||
     Symbol.iterator in child ||
     typeof child === "function"
   ) {
@@ -198,12 +199,13 @@ function renderChild(targetElt, child) {
 
 /**
  * @param {TemplateStringsArray} templateStringsArray
- * @param  {...space.Slot} slots
- * @returns {space.RenderResult}
+ * @param  {...import("space/dom").Slot} slots
+ * @returns {import("space/dom").DOMResult}
  */
 export function template(templateStringsArray, ...slots) {
   const template = createTemplate(templateStringsArray)
   return createRenderResult(
+    // @ts-ignore: its alright, small one
     template.fragment.cloneNode(true),
     template,
     slots,
@@ -211,9 +213,24 @@ export function template(templateStringsArray, ...slots) {
 }
 
 /**
+ * This is what most *users* would do.
+ * @overload
+ * @param {Element} rootElement
+ * @param {() => any} code
+ * @returns {import("space/signal").Cleanup}
+ */
+/**
+ * This is what some *devs* might want.
+ * @overload
+ * @param {null} rootElement
+ * @param {() => any} code
+ * @param {ChildNode} anchor
+ * @returns {import("space/signal").Cleanup}
+ */
+/**
  * @param {Element | null} rootElement
  * @param {() => any} code
- * @param {ChildNode | null} [anchor]
+ * @param {ChildNode} [anchor]
  */
 export function mount(rootElement, code, anchor) {
   return root((dispose) => {
@@ -245,24 +262,30 @@ export function mount(rootElement, code, anchor) {
  * @param {(Node & { data?: string })[] | undefined} nextNodes
  */
 function reconcile(rootElement, anchor, currentNodes, nextNodes) {
-  nextNodes?.forEach((nextNode, i) => {
-    const child = currentNodes?.[i]
-    currentNodes?.some((currentNode, j) => {
-      if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
-        currentNode.data = nextNode.data
-      } else if (currentNode.nodeType === 8 && nextNode.nodeType === 8) {
-        currentNode.data = nextNode.data
+  if (nextNodes?.length) {
+    nextNodes?.forEach((nextNode, i) => {
+      const child = currentNodes?.[i]
+      if (currentNodes?.length) {
+        currentNodes.some((currentNode, j) => {
+          if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
+            currentNode.data = nextNode.data
+          } else if (currentNode.nodeType === 8 && nextNode.nodeType === 8) {
+            currentNode.data = nextNode.data
+          }
+          if (currentNode.isEqualNode(nextNode)) {
+            nextNodes[i] = currentNode
+            currentNodes.splice(j, 1)
+            return true
+          }
+          return false
+        })
       }
-      if (currentNode.isEqualNode(nextNode)) {
-        nextNodes[i] = currentNode
-        currentNodes.splice(j, 1)
-        return true
+      if (nextNodes[i] !== child) {
+        rootElement?.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
       }
-      return false
     })
-    if (nextNodes[i] !== child) {
-      rootElement?.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
-    }
-  })
-  currentNodes?.forEach((childNode) => childNode.remove())
+  }
+  if (currentNodes?.length) {
+    currentNodes.forEach((childNode) => childNode.remove())
+  }
 }

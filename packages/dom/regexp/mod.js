@@ -1,29 +1,28 @@
-export const key = "####"
 const validName = `[a-z][\\w\\-]*`
 const validComponentName = `(?:[A-Z][a-z0-9]+)+`
 const validAttributes = `(?:"[^"]*"|'[^']*'|[^'">])*`
 const validValue = [
-  `(?:="${key}(?<slot1>\\d+)${key}")`,
-  `(?:='${key}(?<slot2>\\d+)${key}')`,
-  `(?:=${key}(?<slot3>\\d+)${key})`,
+  `(?:="{{(?<slot1>\\d+)}}")`,
+  `(?:='{{(?<slot2>\\d+)}}')`,
+  `(?:={{(?<slot3>\\d+)}})`,
   `(?:="(?<value1>[^"]*)")`,
   `(?:='(?<value2>[^']*)')`,
   `(?:=(?<value3>[^\\s=>"']+))`,
 ].join("|")
-export const placeholderRegExp = RegExp(`${key}(\\d+)${key}`, "g")
+export const placeholderRegExp = /{{(\d+)}}/g
 export const elementRegExp = RegExp(`<[a-z\\-]+${validAttributes}>`, "g")
 export const elementAttributeRegExp = RegExp(
   [
     `\\s`,
-    `(?:(?:(?<namespace>${validName})|(?:${key}(?<namespaceSlot>\\d+)${key})):)?`,
-    `(?:(?<name>${validName})|(?:${key}(?<nameSlot>\\d+)${key}))`,
+    `(?:(?:(?<namespace>${validName})|(?:{{(?<namespaceSlot>\\d+)}})):)?`,
+    `(?:(?<name>${validName})|(?:{{(?<nameSlot>\\d+)}}))`,
     `(?:${validValue})?`,
   ].join(""),
   "gi",
 )
 export const componentRegExp = RegExp(
   [
-    `<(?:(?:${key}(?<slot>\\d+)${key})|(?<name>${validComponentName}))`,
+    `<(?:(?:{{(?<slot>\\d+)}})|(?<name>${validComponentName}))`,
     `(?<attributes>${validAttributes})>`,
   ].join(""),
   "g",
@@ -33,6 +32,6 @@ export const componentPropsRegExp = RegExp(
   "gi",
 )
 export const closingComponentRegExp = RegExp(
-  `<\\/(?:${key}(\\d+)${key}|${validComponentName})>`,
+  `<\\/(?:{{(\\d+)}}|${validComponentName})>`,
   "g",
 )

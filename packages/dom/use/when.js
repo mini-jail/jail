@@ -1,8 +1,8 @@
 export const whenSymbol = Symbol("When")
 
 /**
- * @param {space.Element} elt
- * @param {space.BooleanLike} value
+ * @param {import("space/dom").DOMElement} elt
+ * @param {boolean | "true" | "false"} value
  */
 export function when(elt, value) {
   if (elt[whenSymbol] === undefined) {

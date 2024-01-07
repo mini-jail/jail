@@ -1,5 +1,5 @@
 import { memo, signal } from "space/signal"
-import html from "space/dom"
+import html, { DOMEvent } from "space/dom"
 
 type ToDoItem = {
   id: number
@@ -45,7 +45,7 @@ export default function ToDo() {
     })
     text.value = ""
   }
-  const onInput = (ev: space.Event<HTMLInputElement>) => {
+  const onInput = (ev: DOMEvent<HTMLInputElement>) => {
     text.value = ev.target.value
   }
   const length = memo(() => list.value.length, 0)

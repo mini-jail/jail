@@ -1,16 +1,16 @@
 import { effect, inject, provide } from "space/signal"
 
-export const switchSymbol = Symbol("Switch")
+const switchKey = Symbol("Switch")
 
 /**
- * @param {space.SwitchProps} props
+ * @param {{ children?: any, fallback?: any }} props
  */
 export function Switch(props) {
   /**
-   * @type {Set<space.Match>}
+   * @type {Set<{ when?: any, children?: any }>}
    */
   const matches = new Set()
-  provide(switchSymbol, matches)
+  provide(switchKey, matches)
   return function* () {
     yield props.children
     for (const match of matches) {
@@ -24,11 +24,11 @@ export function Switch(props) {
 }
 
 /**
- * @param {space.MatchProps} props
+ * @param {{ when?: boolean | "true" | "false", children?: any }} props
  */
 export function Match(props) {
   effect(() => {
-    inject(switchSymbol)?.add({
+    inject(switchKey)?.add({
       get when() {
         return props.when + "" === "true"
       },

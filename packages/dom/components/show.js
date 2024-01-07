@@ -1,5 +1,5 @@
 /**
- * @param {space.ShowProps} props
+ * @param {{ when: boolean | "true" | "false", children?: any, fallback?: any }} props
  */
 export function Show(props) {
   return function () {

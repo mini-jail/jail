@@ -1,13 +1,13 @@
 /**
  * @template [Type = any]
  * @typedef {{
- *   function?: (value: Type) =>  Type
  *   value?: Type
  *   parent?: Node
  *   children?: Node[]
  *   signals?: Signal[]
  *   context?: Record<string | symbol, any>
  *   cleanups?: Cleanup[]
+ *   function?: (value: Type) =>  Type
  * }} Node
  */
 /**
@@ -20,6 +20,13 @@
 /**
  * @template [Type = any]
  * @typedef {{ readonly value: Type }} ReadonlySignal
+ */
+/**
+ * @template Type
+ * @typedef {Type extends { value: any } ? Type["value"] : Type} Resolved
+ */
+/**
+ * @typedef {{ value: any }} Resolvable
  */
 /**
  * @type {WeakMap<Signal, Set<Node>>}
@@ -297,33 +304,32 @@ export function effect(fn, value) {
  * @param {boolean} dispose
  */
 function clean(node, dispose) {
-  let i
   if (node.signals?.length) {
-    i = node.signals.length
-    while (i--) {
-      const effects = effectMap.get(node.signals[i])
+    let lastSignal = node.signals.pop()
+    while (lastSignal) {
+      const effects = effectMap.get(lastSignal)
       if (effects) {
         effects.delete(node)
         if (dispose) {
-          effectMap.delete(node.signals[i])
+          effectMap.delete(lastSignal)
         }
       }
+      lastSignal = node.signals.pop()
     }
-    node.signals.length = 0
   }
   if (node.children?.length) {
-    i = node.children.length
-    while (i--) {
-      clean(node.children[i], node.children[i].function ? true : dispose)
+    let lastChild = node.children.pop()
+    while (lastChild) {
+      clean(lastChild, lastChild.function ? true : dispose)
+      lastChild = node.children.pop()
     }
-    node.children.length = 0
   }
   if (node.cleanups?.length) {
-    i = node.cleanups.length
-    while (i--) {
-      node.cleanups[i]()
+    let lastCleanup = node.cleanups.pop()
+    while (lastCleanup) {
+      lastCleanup()
+      lastCleanup = node.cleanups.pop()
     }
-    node.cleanups.length = 0
   }
   delete node.context
   if (dispose) {
@@ -446,6 +452,20 @@ function batch() {
   }
 }
 
-export function probablySignal(signal) {
-  return
+/**
+ * @param {any} data
+ * @returns {data is { value: any }}
+ */
+export function resolvable(data) {
+  return data && typeof data === "object" &&
+    !!Object.getOwnPropertyDescriptor(data, "value")?.get
+}
+
+/**
+ * @template Type
+ * @param {Type} data
+ * @returns {Resolved<Type>}
+ */
+export function resolve(data) {
+  return resolvable(data) ? data.value : data
 }

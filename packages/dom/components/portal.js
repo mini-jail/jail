@@ -2,7 +2,7 @@ import { cleanup, effect, signal } from "space/signal"
 import { mount } from "../renderer/mod.js"
 
 /**
- * @param {space.PortalProps} props
+ * @param {{ selector?: string, mount?: Element, children?: any }} props
  */
 export function Portal(props) {
   const live = signal(true)

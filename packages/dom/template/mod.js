@@ -1,16 +1,14 @@
-/// <reference path="./types.d.ts" />
 import {
   closingComponentRegExp,
   componentPropsRegExp,
   componentRegExp,
   elementAttributeRegExp,
   elementRegExp,
-  key,
   placeholderRegExp,
 } from "../regexp/mod.js"
 
 /**
- * @type {Map<TemplateStringsArray, space.Template>}
+ * @type {Map<TemplateStringsArray, import("space/dom").Template>}
  */
 const templateCache = new Map()
 
@@ -25,24 +23,24 @@ function createPlaceholder(hash, id, close) {
 
 /**
  * @param {TemplateStringsArray} templateStringsArray
- * @returns {space.Template}
+ * @returns {import("space/dom").Template}
  */
 export function createTemplate(templateStringsArray) {
   let template = templateCache.get(templateStringsArray)
   if (template === undefined) {
     /**
-     * @type {space.TemplateData}
+     * @type {import("space/dom").TemplateData}
      */
     const data = {}, hash = "_" + Math.random().toString(36).slice(2, 7) + "_"
     let string = "", arg = 0, id = -1
     while (arg < templateStringsArray.length - 1) {
-      string = string + templateStringsArray[arg] + `${key}${arg++}${key}`
+      string = string + templateStringsArray[arg] + `{{${arg++}}}`
     }
     string = string + templateStringsArray[arg]
     /**
-     * @type {space.TemplateElement}
+     * @type {import("space/dom").TemplateElement}
      */
-    // @ts-expect-error: it's ok TS, it is only used internally
+    // @ts-ignore: tsk tsk tsk
     const elt = document.createElement("template")
     elt.innerHTML = string
       .replace(/^[\s]+/gm, "")
@@ -54,7 +52,7 @@ export function createTemplate(templateStringsArray) {
       .replace(closingComponentRegExp, "</template>")
       .replace(elementRegExp, (match) => {
         /**
-         * @type {space.AttributeData[] | null}
+         * @type {import("space/dom").AttributeData[] | null}
          */
         let attributes = null
         match = match.replace(elementAttributeRegExp, function () {
@@ -80,7 +78,6 @@ export function createTemplate(templateStringsArray) {
       hash,
       data,
       fragment: elt.content,
-      templateString: elt.innerHTML,
     }
     templateCache.set(templateStringsArray, template)
   }
@@ -88,8 +85,8 @@ export function createTemplate(templateStringsArray) {
 }
 
 /**
- * @param {space.AttributeGroups} groups
- * @returns {space.AttributeData | null}
+ * @param {import("space/dom").AttributeGroups} groups
+ * @returns {import("space/dom").AttributeData | null}
  */
 function createAttributeData(groups) {
   const name = groups.nameSlot ? +groups.nameSlot : groups.name
@@ -134,17 +131,17 @@ function throwOnAttributeSyntaxError(data) {
 }
 
 /**
- * @param {space.ComponentGroups} groups
- * @returns {space.ComponentData}
+ * @param {import("space/dom").ComponentGroups} groups
+ * @returns {import("space/dom").ComponentData}
  */
 function createComponentData(groups) {
   /**
-   * @type {space.ComponentDataProps}
+   * @type {import("space/dom").ComponentDataProps}
    */
   const props = {}
   for (const match of groups.attributes.matchAll(componentPropsRegExp)) {
     /**
-     * @type {space.ComponentPropsGroups}
+     * @type {import("space/dom").ComponentPropsGroups}
      */
     // @ts-expect-error: if it matches, it matches. it will match
     const data = match.groups

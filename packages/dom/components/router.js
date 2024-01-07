@@ -7,8 +7,8 @@ import {
   signal,
   untrack,
 } from "space/signal"
-export const paramsSymbol = Symbol("Params")
-export const routesSymbol = Symbol("Routes")
+const paramsKey = Symbol("Params")
+const routesKey = Symbol("Routes")
 export const path = signal("")
 
 const routeTypeHandlerMap = {
@@ -61,10 +61,10 @@ const routeTypeHandlerMap = {
 }
 
 /**
- * @returns {space.Params | undefined}
+ * @returns {{ [field: string]: string | undefined } | undefined}
  */
 export function getParams() {
-  return inject(paramsSymbol)
+  return inject(paramsKey)
 }
 
 /**
@@ -92,23 +92,22 @@ function createMatcher(path) {
  *   </Router>
  * `
  * ```
- * @param {space.RouterProps} props
- * @returns {space.Slot}
+ * @param {{ type: string, children?: any, fallback?: any }} props
  */
 export function Router(props) {
   routeTypeHandlerMap[props.type]()
   /**
-   * @type {Set<space.Route>}
+   * @type {Set<{ path: string, regexp: RegExp, children?: any }>}
    */
   const routes = new Set()
-  provide(routesSymbol, routes)
+  provide(routesKey, routes)
   return function* () {
     const nextPath = path.value
     yield props.children
     for (const route of routes) {
       if (route.regexp.test(nextPath)) {
         yield root(() => {
-          provide(paramsSymbol, route.regexp.exec(nextPath)?.groups)
+          provide(paramsKey, route.regexp.exec(nextPath)?.groups)
           return route.children
         })
         return
@@ -119,12 +118,11 @@ export function Router(props) {
 }
 
 /**
- * @param {space.RouteProps} props
- * @returns {space.Slot}
+ * @param {{ path: string, children?: any }} props
  */
 export function Route(props) {
   effect(() => {
-    inject(routesSymbol)?.add({
+    inject(routesKey)?.add({
       path: props.path,
       regexp: createMatcher(props.path),
       get children() {

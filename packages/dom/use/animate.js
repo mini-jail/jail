@@ -1,6 +1,6 @@
 /**
- * @param {space.Element} elt
- * @param {space.AnimateValue} value
+ * @param {import("space/dom").DOMElement} elt
+ * @param {object} value
  */
 export function animate(elt, value) {
   const { keyframes, ...options } = value

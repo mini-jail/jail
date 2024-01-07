@@ -1,5 +1,5 @@
 /**
- * @param {space.Element} elt
+ * @param {import("space/dom").DOMElement} elt
  * @param {string} name
  * @param {unknown} value
  * @returns {boolean}
@@ -15,7 +15,7 @@ export function setAttribute(elt, name, value) {
 }
 
 /**
- * @param {space.Element} elt
+ * @param {import("space/dom").DOMElement} elt
  * @param {string} name
  * @param {unknown} value
  */
@@ -25,24 +25,6 @@ export function setPropertyOrAttribute(elt, name, value) {
   } else {
     elt[name] = value
   }
-}
-
-/**
- * @param {any} data
- * @returns {data is { value: any }}
- */
-export function isResolvable(data) {
-  return data && typeof data === "object" &&
-    !!Object.getOwnPropertyDescriptor(data, "value")?.get
-}
-
-/**
- * @template T
- * @param {T} data
- * @returns {space.Resolved<T>}
- */
-export function resolve(data) {
-  return isResolvable(data) ? data.value : data
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * @param {space.Element} elt
+ * @param {import("space/dom").DOMElement} elt
  * @param {string | number | symbol} arg
  * @param {unknown} value
  */

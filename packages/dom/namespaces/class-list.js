@@ -1,7 +1,7 @@
 /**
- * @param {space.Element} elt
+ * @param {import("space/dom").DOMElement} elt
  * @param {string} arg
- * @param {space.BooleanLike} value
+ * @param {boolean | "true" | "false"} value
  */
 export function classList(elt, arg, value) {
   if (value + "" === "true") {

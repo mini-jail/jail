@@ -1,9 +1,9 @@
 import directives from "../use/mod.js"
 /**
  * @template T
- * @param {space.Element} elt
- * @param {space.Directive<T> | string} arg
- * @param {space.Resolved<T>} value
+ * @param {import("space/dom").DOMElement} elt
+ * @param {import("space/dom").Directive<T> | string} arg
+ * @param {import("space/signal").Resolved<T>} value
  */
 export function use(elt, arg, value) {
   if (typeof arg === "string") {

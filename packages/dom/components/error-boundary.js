@@ -1,5 +1,5 @@
 /**
- * @param {space.ErrorBoundaryProps} props
+ * @param {{ children?: any, onError?(error: any): void, fallback?: any }} props
  */
 export function ErrorBoundary(props) {
   return function () {
