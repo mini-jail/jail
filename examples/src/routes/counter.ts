@@ -7,8 +7,8 @@ import html from "space/dom"
 
 function SimpleCounter() {
   const counter = signal(0)
-  const up = (ev) => counter.value++
-  const down = (ev) => counter.value--
+  const up = () => counter.value++
+  const down = () => counter.value--
   return html\`
     <button on:click=\${down}>-</button>
     <span>current value: \${counter}</span>
@@ -19,16 +19,16 @@ function SimpleCounter() {
 export default function Counter() {
   const counter = signal(0)
   const show = signal(false)
-  const up = (_event: Event) => counter.value++
-  const down = (_event: Event) => counter.value--
+  const up = () => counter.value++
+  const down = () => counter.value--
 
   return html`
-    ${counter}
+    orphan child: ${counter} (will be still cleaned up)
     <article>
       <h4>
         counter example
         <sub>(...what else?)</sub>
-        <button on:clickDelegate=${(_ev) => show.value = !show.value}>
+        <button on:clickDelegate=${() => show.value = !show.value}>
           <Show when=${show} fallback="show code">
             hide code
           </Show>

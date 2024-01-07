@@ -34,8 +34,8 @@ const Dot = (x: number, y: number, target: number) => {
   return html`
     <div
       use:text=${text} style=${css} style:background-color=${bgColor}
-      on:mouseoverDelegate=${(_event) => hover.value = true}
-      on:mouseoutDelegate=${(_event) => hover.value = false}
+      on:mouseoverDelegate=${() => hover.value = true}
+      on:mouseoutDelegate=${() => hover.value = false}
     ></div>
   `
 }

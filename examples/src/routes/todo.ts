@@ -37,7 +37,7 @@ const Item = (props: ToDoItem) => {
 
 export default function ToDo() {
   const text = signal("")
-  const addItem = (_event: Event) => {
+  const addItem = () => {
     list.value = list.value.concat({
       id: Date.now(),
       done: false,

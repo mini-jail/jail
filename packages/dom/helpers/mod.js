@@ -42,7 +42,7 @@ export function isResolvable(data) {
  * @returns {space.Resolved<T>}
  */
 export function resolve(data) {
-  return data?.["value"] ?? data
+  return isResolvable(data) ? data.value : data
 }
 
 /**
