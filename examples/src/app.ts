@@ -53,4 +53,4 @@ const pathAnimation = memo(() => {
   }
 })
 
-mount(document.body, App)
+const _clean = mount(document.body, App)!

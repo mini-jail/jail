@@ -224,6 +224,32 @@ export function deferred(fn, value, timeout) {
 
 /**
  * @template Type
+ * @param {() => any} fn
+ * @param {(value: Type) => Type} cb
+ * @returns {(value: Type) => Type}
+ */
+export function on(fn, cb) {
+  return function (value) {
+    fn()
+    return untrack(() => cb(value))
+  }
+}
+
+/**
+ * @template Type
+ * @param {(value: Type) => Type} fn
+ * @param {Signal[]} signals
+ * @returns {(value: Type) => Type}
+ */
+export function deps(fn, ...signals) {
+  return function (value) {
+    signals.forEach((signal) => signal.value)
+    return untrack(() => fn(value))
+  }
+}
+
+/**
+ * @template Type
  * @param {() => Type} fn
  * @returns {Type}
  */
@@ -235,11 +261,6 @@ export function untrack(fn) {
   return result
 }
 
-/**
- * @overload
- * @param {() => void} fn
- * @returns {void}
- */
 /**
  * @template Type
  * @overload

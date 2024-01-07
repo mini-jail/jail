@@ -216,22 +216,25 @@ export function template(templateStringsArray, ...slots) {
  * @param {ChildNode | null} [anchor]
  */
 export function mount(rootElement, code, anchor) {
-  effect(() => {
-    let children = []
-    cleanup(() => {
-      children.forEach((node) => node.remove())
-      anchor?.remove()
-    })
+  return root((dispose) => {
     effect(() => {
-      const nextNodes = createNodeArray([], code())
-      reconcile(
-        rootElement ?? anchor?.parentElement ?? null,
-        anchor ?? null,
-        children,
-        nextNodes,
-      )
-      children = nextNodes
+      let children = []
+      cleanup(() => {
+        children.forEach((node) => node.remove())
+        anchor?.remove()
+      })
+      effect(() => {
+        const nextNodes = createNodeArray([], code())
+        reconcile(
+          rootElement ?? anchor?.parentElement ?? null,
+          anchor ?? null,
+          children,
+          nextNodes,
+        )
+        children = nextNodes
+      })
     })
+    return dispose
   })
 }
 

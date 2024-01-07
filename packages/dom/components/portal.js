@@ -1,4 +1,4 @@
-import { cleanup, effect, signal, untrack } from "space/signal"
+import { cleanup, effect, signal } from "space/signal"
 import { mount } from "../renderer/mod.js"
 
 /**
@@ -15,9 +15,7 @@ export function Portal(props) {
     if (target === null) {
       throw new Error(`Portal target is null!`)
     }
-    untrack(() => {
-      mount(target, () => live.value && props.children)
-    })
+    mount(target, () => live.value && props.children)
     cleanup(() => live.value = false)
   })
 }
