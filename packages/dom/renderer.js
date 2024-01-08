@@ -1,9 +1,9 @@
 import { cleanup, effect, resolvable, resolve, root } from "space/signal"
-import { setPropertyOrAttribute } from "../helpers/mod.js"
-import { placeholderRegExp } from "../regexp/mod.js"
-import { createTemplate } from "../template/mod.js"
-import namespaces from "../namespaces/mod.js"
-import components from "../components/mod.js"
+import { setPropertyOrAttribute } from "./helpers.js"
+import { placeholderRegExp } from "./regexp.js"
+import { createTemplate } from "./template.js"
+import namespaces from "./namespaces.js"
+import components from "./components.js"
 
 /**
  * @param {DocumentFragment} fragment

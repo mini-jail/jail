@@ -1,4 +1,4 @@
-import { setAttribute } from "../helpers/mod.js"
+import { setAttribute } from "../helpers.js"
 
 /**
  * @param {import("space/dom").DOMElement} elt

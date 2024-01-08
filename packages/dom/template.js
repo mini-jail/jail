@@ -5,7 +5,7 @@ import {
   elementAttributeRegExp,
   elementRegExp,
   placeholderRegExp,
-} from "../regexp/mod.js"
+} from "./regexp.js"
 
 /**
  * @type {Map<TemplateStringsArray, import("space/dom").Template>}

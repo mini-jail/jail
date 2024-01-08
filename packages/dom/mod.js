@@ -103,29 +103,50 @@
  *   content: DocumentFragment
  * }} TemplateElement
  */
-import { mount, template } from "./renderer/mod.js"
-export { mount, template }
-export {
-  attr,
-  classList,
-  namespaces,
-  on,
-  prop,
-  style,
-  use,
-} from "./namespaces/mod.js"
-export { animate, directives, ref, show, text, when } from "./use/mod.js"
-export {
-  components,
-  ErrorBoundary,
-  For,
-  getParams,
-  Match,
-  path,
-  Portal,
-  Route,
-  Router,
-  Show,
-  Switch,
-} from "./components/mod.js"
+import { mount, template } from "./renderer.js"
+
+import { namespaces } from "./namespaces.js"
+import { on } from "./namespaces/on.js"
+import { prop } from "./namespaces/prop.js"
+import { use } from "./namespaces/use.js"
+import { attr } from "./namespaces/attr.js"
+import { style } from "./namespaces/style.js"
+import { classList } from "./namespaces/class-list.js"
+namespaces.on = on
+namespaces.prop = prop
+namespaces.use = use
+namespaces.attr = attr
+namespaces.style = style
+namespaces.classList = classList
+
+import { directives } from "./use.js"
+import { animate } from "./use/animate.js"
+import { when } from "./use/when.js"
+import { show } from "./use/show.js"
+import { text } from "./use/text.js"
+import { ref } from "./use/ref.js"
+directives.animate = animate
+directives.when = when
+directives.show = show
+directives.text = text
+directives.ref = ref
+
+import { components } from "./components.js"
+import { For } from "./components/for.js"
+import { getParams, path, Route, Router } from "./components/router.js"
+import { Portal } from "./components/portal.js"
+import { Show } from "./components/show.js"
+import { Match, Switch } from "./components/switch.js"
+import { ErrorBoundary } from "./components/error-boundary.js"
+components.For = For
+components.Router = Router
+components.Route = Route
+components.Portal = Portal
+components.Show = Show
+components.Switch = Switch
+components.Match = Match
+components.ErrorBoundary = ErrorBoundary
+
 export default template
+
+export { components, directives, getParams, mount, namespaces, path, template }

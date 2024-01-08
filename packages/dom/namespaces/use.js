@@ -1,4 +1,5 @@
-import directives from "../use/mod.js"
+import directives from "../use.js"
+
 /**
  * @template T
  * @param {import("space/dom").DOMElement} elt

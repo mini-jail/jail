@@ -1,5 +1,5 @@
 import { cleanup, effect, signal } from "space/signal"
-import { mount } from "../renderer/mod.js"
+import { mount } from "../renderer.js"
 
 /**
  * @param {{ selector?: string, mount?: Element, children?: any }} props
