@@ -4,7 +4,6 @@ const MODE_WHITESPACE = 2
 const MODE_TAGNAME = 3
 const MODE_COMMENT = 4
 const MODE_PROP_SET = 5
-const MODE_PROP_APPEND = 6
 const ELEMENT_OPEN = 0
 const ELEMENT_CLOSE = 1
 const CHILD = 2
@@ -46,11 +45,8 @@ export function compile(statics) {
       flatTree.push(PROPS_ASSIGN, slot - 1)
     } else if (mode === MODE_WHITESPACE && buffer && slot === null) {
       flatTree.push(PROP_SET, buffer, true)
-    } else if (mode >= MODE_PROP_SET) {
-      if (slot ?? buffer) {
-        flatTree.push(PROP_SET, propName, slot !== null ? slot - 1 : buffer)
-        mode = MODE_PROP_APPEND
-      }
+    } else if (mode === MODE_PROP_SET && (slot ?? buffer)) {
+      flatTree.push(PROP_SET, propName, slot !== null ? slot - 1 : buffer)
     }
     buffer = ""
   }
