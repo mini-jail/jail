@@ -1,4 +1,11 @@
-import { cleanup, effect, resolvable, resolve, root } from "space/signal"
+import {
+  cleanup,
+  effect,
+  resolvable,
+  resolve,
+  root,
+  untrack,
+} from "space/signal"
 import { getTree } from "./compiler.js"
 import { components } from "./components.js"
 import { directives } from "./directives.js"
@@ -332,23 +339,21 @@ export function svg(statics, ...values) {
 export function mount(rootElement, code, before) {
   return root((dispose) => {
     let children = []
+    cleanup(() => {
+      before?.remove()
+      while (children.length) {
+        children.pop()?.remove()
+      }
+    })
     effect(() => {
-      cleanup(() => {
-        before?.remove()
-        while (children.length) {
-          children.pop()?.remove()
-        }
-      })
-      effect(() => {
-        const nextNodes = nodesFrom([], code())
-        reconcile(
-          rootElement ?? before?.parentElement ?? null,
-          before ?? null,
-          children,
-          nextNodes,
-        )
-        children = nextNodes
-      })
+      const nextNodes = nodesFrom([], code())
+      reconcile(
+        rootElement ?? before?.parentElement ?? null,
+        before ?? null,
+        children,
+        nextNodes,
+      )
+      children = nextNodes
     })
     return dispose
   })

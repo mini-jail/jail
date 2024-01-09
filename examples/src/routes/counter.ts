@@ -14,11 +14,12 @@ function SimpleCounter() {
   \`
 }`.trim()
 
-export default function Counter() {
-  const counter = signal(0)
-  const show = signal(false)
+const counter = signal(0)
 
+export default function Counter() {
+  const show = signal(false)
   return html`
+    (${counter} this one is global)
     <article>
       <h4>
         counter example

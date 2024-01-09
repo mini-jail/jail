@@ -1,4 +1,4 @@
-import { cleanup, effect, inject, provide, signal } from "space/signal"
+import { cleanup, effect, inject, provide, root, signal } from "space/signal"
 
 export const path = signal("")
 const paramsKey = Symbol("Params")
@@ -97,15 +97,15 @@ function hashChangeListener() {
  */
 export function* Router(props) {
   /**
-   * @type {import("space/signal").Signal<{ matcher: RegExp, path: string, children: any }[]>}
+   * @type {{ matcher: RegExp, path: string, children: any }[]}
    */
-  const routes = signal([])
+  const routes = []
   provide(routesKey, routes)
   routeTypeHandlerMap[props.type]()
   yield props.children
   yield function Router() {
     const nextRoute = path.value
-    for (const route of routes.value) {
+    for (const route of routes) {
       if (route.matcher.test(nextRoute)) {
         provide(paramsKey, route.matcher.exec(nextRoute)?.groups)
         return route.children
@@ -119,11 +119,9 @@ export function* Router(props) {
  * @param {{ path: string, children?: any }} props
  */
 export function Route(props) {
-  inject(routesKey).value.push({
+  inject(routesKey).push({
     matcher: createMatcher(props.path),
     path: props.path,
-    get children() {
-      return props.children
-    },
+    children: props.children,
   })
 }

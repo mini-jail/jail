@@ -35,6 +35,7 @@ function App() {
         <a href="/sierpinski">sierpinski</a>
         <a href="/todo">todo</a>
         <a href="/about">about</a>
+        <a onClick=${dispose}>dispose</a>
       </nav>
     </header>
     <main d-animate=${pathAnimation}>
@@ -46,32 +47,16 @@ function App() {
 component("AppRouter", () => {
   return html`
     <Router type="pathname" fallback=${NotFound}>
-      <Route path="/">
-        <${Home} />
-      </Route>
-      <Route path="/counter">
-        <${Counter} />
-      </Route>
-      <Route path="/counter/simple">
-        <${SimpleCounter} />
-      </Route>
-      <Route path="/sierpinski">
-        <${Sierpinski} />
-      </Route>
-      <Route path="/sierpinski/:target">
-        <${Sierpinski} />
-      </Route>
-      <Route path="/sierpinski/:target/:size">
-        <${Sierpinski} />
-      </Route>
-      <Route path="/about">
-        <${About} />
-      </Route>
-      <Route path="/todo">
-        <${ToDo} />
-      </Route>
+      <Route path="/" children=${Home} />
+      <Route path="/counter" children=${Counter} />
+      <Route path="/counter/simple" children=${SimpleCounter} />
+      <Route path="/sierpinski" children=${Sierpinski} />
+      <Route path="/sierpinski/:target" children=${Sierpinski} />
+      <Route path="/sierpinski/:target/:size" children=${Sierpinski} />
+      <Route path="/about" children=${About} />
+      <Route path="/todo" children=${ToDo} />
     </Router>
   `
 })
 
-const _clean = mount(document.body, App)
+const dispose = mount(document.body, App)

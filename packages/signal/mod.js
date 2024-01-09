@@ -149,8 +149,8 @@ export function signal(value) {
     },
     set value(newValue) {
       if (value !== newValue) {
-        pub(this)
         value = newValue
+        pub(this)
       }
     },
   }
