@@ -24,15 +24,19 @@ export default function Counter() {
         counter example
         <sub>(...what else?)</sub>
         <button onClick=${() => show.value = !show.value}>
-          <Show when=${show} fallback="show code" children="hide code" />
+          <Show when=${show} fallback="show code">
+            hide code
+          </Show>
         </button>
       </h4>
       <button onClick=${() => counter.value--}>-</button>
       <span>current value: ${counter}</span>
       <button onClick=${() => counter.value++}>+</button>
-      <code d-show=${show}>
-        ${code.split("\n").map((line) => html`<pre>${line}</pre>`)}
-      </code>
+      <Show when=${show}>
+        <code>
+          ${code.split("\n").map((line) => html`<pre>${line}</pre>`)}
+        </code>
+      </Show>
     </article>
   `
 }
