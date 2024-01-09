@@ -87,7 +87,7 @@ export function compile(statics) {
         submit()
         mode = MODE_TEXT
       } else if (mode === MODE_SLASH) {
-        // nuh uh
+        // nothing to do here; see [github](https://github.com/developit/htm/blob/master/src/build.mjs#L250C25-L250C25)
       } else if (char === "=") {
         mode = MODE_PROP_SET
         propName = buffer
@@ -114,10 +114,10 @@ export function compile(statics) {
 }
 
 /**
- * @param {any[]} flatTree
+ * @param {any[]} compiled
  * @returns {import("./mod.js").Child[] | import("./mod.js").Child | null}
  */
-export function createTree(flatTree) {
+export function createTree(compiled) {
   /**
    * @type {import("./mod.js").Tree[]}
    */
@@ -127,12 +127,11 @@ export function createTree(flatTree) {
    */
   const stack = []
   let value, propName, type, nextTree, tree
-
-  for (let i = 0; i < flatTree.length; i++) {
-    type = flatTree[i]
+  for (let i = 0; i < compiled.length; i++) {
+    type = compiled[i]
     tree = stack.at(-1)
     if (type === ELEMENT_OPEN) {
-      nextTree = { type: flatTree[++i], props: null, children: null }
+      nextTree = { type: compiled[++i], props: null, children: null }
       stack.push(nextTree)
       if (tree) {
         if (tree.children === null) {
@@ -148,7 +147,7 @@ export function createTree(flatTree) {
     } else if (type === ELEMENT_CLOSE) {
       stack.pop()
     } else if (type === CHILD) {
-      value = flatTree[++i]
+      value = compiled[++i]
       if (tree) {
         if (tree.children === null) {
           tree.children = value
@@ -161,8 +160,8 @@ export function createTree(flatTree) {
         root.push(value)
       }
     } else if (type === PROP_SET) {
-      propName = flatTree[++i]
-      value = flatTree[++i]
+      propName = compiled[++i]
+      value = compiled[++i]
       if (tree) {
         if (tree.props === null) {
           tree.props = {}
@@ -170,7 +169,7 @@ export function createTree(flatTree) {
         tree.props[propName] = value
       }
     } else if (type === PROPS_ASSIGN) {
-      value = flatTree[++i]
+      value = compiled[++i]
       if (tree) {
         if (tree.props === null) {
           tree.props = {}

@@ -1,4 +1,11 @@
-import { cleanup, effect, resolvable, resolve, root } from "space/signal"
+import {
+  cleanup,
+  effect,
+  resolvable,
+  resolve,
+  root,
+  untrack,
+} from "space/signal"
 import { getTree } from "./compiler.js"
 import { components } from "./components.js"
 import { directives } from "./directives.js"
@@ -17,8 +24,7 @@ const nameRE = /(?:d-)?(?<name>[^.:]+)(?::(?<arg>[^.:]+))?(?:.(?<mods>\S+)*)?/
 function renderDOM(node, values, svg) {
   if (node == null) {
     return
-  }
-  if (Array.isArray(node)) {
+  } else if (Array.isArray(node)) {
     switch (node.length) {
       case 0:
         return
@@ -27,11 +33,9 @@ function renderDOM(node, values, svg) {
       default:
         return node.map((node) => renderDOM(node, values, svg))
     }
-  }
-  if (typeof node === "string") {
+  } else if (typeof node === "string") {
     return node
-  }
-  if (typeof node === "number") {
+  } else if (typeof node === "number") {
     return values[node]
   }
   return createElement(node, values, svg)
@@ -86,33 +90,7 @@ function componentProperties(nodeProps, values, props, children) {
     } else if (name === "children") {
       children.push(value)
     } else {
-      Object.defineProperty(props, name, {
-        get() {
-          return resolve(value)
-        },
-      })
-    }
-  }
-}
-
-/**
- * @param {any} nodeChildren
- * @param {any[]} values
- * @param {boolean} svg
- * @param {any[]} children
- */
-function componentChildren(nodeChildren, values, svg, children) {
-  if (Array.isArray(nodeChildren)) {
-    for (const child of nodeChildren) {
-      const result = renderDOM(child, values, svg)
-      if (result != null) {
-        children.push(result)
-      }
-    }
-  } else {
-    const result = renderDOM(nodeChildren, values, svg)
-    if (result != null) {
-      children.push(result)
+      defineProperty(props, name, value)
     }
   }
 }
@@ -129,20 +107,43 @@ function createComponent(fn, node, values, svg) {
     componentProperties(node.props, values, props, children)
   }
   if (node.children !== null) {
-    componentChildren(node.children, values, svg, children)
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const result = renderDOM(child, values, svg)
+        if (result != null) {
+          children.push(result)
+        }
+      }
+    } else {
+      const result = renderDOM(node.children, values, svg)
+      if (result != null) {
+        children.push(result)
+      }
+    }
   }
   if (children.length) {
-    Object.defineProperty(props, "children", {
-      get() {
-        return children.length === 1
-          ? resolve(children[0])
-          : children.map(resolve)
-      },
-    })
+    defineProperty(
+      props,
+      "children",
+      children.length === 1 ? children[0] : children,
+    )
   }
   return function Component() {
     return fn(props)
   }
+}
+
+/**
+ * @param {object} props
+ * @param {string} name
+ * @param {any} value
+ */
+function defineProperty(props, name, value) {
+  Object.defineProperty(props, name, {
+    get() {
+      return resolve(value)
+    },
+  })
 }
 
 /**
@@ -175,10 +176,9 @@ function createBinding(key, value) {
  * @param {boolean} svg
  */
 function setProperties(elt, props, values, svg) {
-  let name, type, value
-  for (name in props) {
-    type = props[name]
-    value = typeof type === "number" ? values[type] : type
+  for (const name in props) {
+    const type = props[name]
+    const value = typeof type === "number" ? values[type] : type
     if (name.startsWith("...")) {
       setProperties(elt, value, values, svg)
     } else if (name === "children") {
@@ -263,32 +263,32 @@ function addChild(elt, child, values, svg) {
   if (typeof child === "string") {
     elt.append(child)
   } else if (typeof child === "number") {
-    insertChildren(elt, values[child])
+    insertChild(elt, values[child])
   } else {
-    insertChildren(elt, renderDOM(child, values, svg))
+    insertChild(elt, renderDOM(child, values, svg))
   }
 }
 
 /**
  * @param {Element} elt
- * @param  {...any} children
+ * @param  {any} child
  */
-function insertChildren(elt, ...children) {
-  for (const child of children) {
-    if (child == null || typeof child === "boolean") {
-      continue
+function insertChild(elt, child) {
+  if (child == null || typeof child === "boolean") {
+    return
+  }
+  if (typeof child === "number" || typeof child === "string") {
+    elt.append(child + "")
+  } else if (child instanceof Node) {
+    elt.append(child)
+  } else if (Symbol.iterator in child) {
+    for (const subChild of child) {
+      insertChild(elt, subChild)
     }
-    if (typeof child === "number" || typeof child === "string") {
-      elt.append(child + "")
-    } else if (child instanceof Node) {
-      elt.append(child)
-    } else if (Symbol.iterator in child) {
-      insertChildren(elt, ...child)
-    } else if (resolvable(child) || typeof child === "function") {
-      mount(elt, () => child, elt.appendChild(new Text()))
-    } else {
-      elt.append(String(child))
-    }
+  } else if (resolvable(child) || typeof child === "function") {
+    mount(elt, () => child, elt.appendChild(new Text()))
+  } else {
+    elt.append(String(child))
   }
 }
 

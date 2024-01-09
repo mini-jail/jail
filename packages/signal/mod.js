@@ -7,7 +7,7 @@
  *   signals?: Signal[]
  *   context?: Record<string | symbol, any>
  *   cleanups?: Cleanup[]
- *   function?: (value: Type) =>  Type
+ *   fn?: (value: Type) =>  Type
  * }} Node
  */
 /**
@@ -23,7 +23,7 @@
  */
 /**
  * @template Type
- * @typedef {Type extends { value: any } ? Type["value"] : Type} Resolved
+ * @typedef {Type extends Resolvable ? Type["value"] : Type} Resolved
  */
 /**
  * @typedef {{ value: any }} Resolvable
@@ -148,8 +148,10 @@ export function signal(value) {
       return value
     },
     set value(newValue) {
-      pub(this)
-      value = newValue
+      if (value !== newValue) {
+        pub(this)
+        value = newValue
+      }
     },
   }
 }
@@ -284,7 +286,7 @@ export function untrack(fn) {
 export function effect(fn, value) {
   /** @type {Node} */
   const node = Object.create(null)
-  node.function = fn
+  node.fn = fn
   if (value !== undefined) {
     node.value = value
   }
@@ -324,7 +326,7 @@ function clean(node, dispose) {
   if (node.children?.length) {
     let lastChild = node.children.pop()
     while (lastChild) {
-      clean(lastChild, lastChild.function ? true : dispose)
+      clean(lastChild, lastChild.fn ? true : dispose)
       lastChild = node.children.pop()
     }
   }
@@ -341,7 +343,7 @@ function clean(node, dispose) {
     delete node.signals
     delete node.parent
     delete node.children
-    delete node.function
+    delete node.fn
     delete node.cleanups
   }
 }
@@ -351,13 +353,13 @@ function clean(node, dispose) {
  */
 function update(node) {
   clean(node, false)
-  if (node.function == null) {
+  if (node.fn == null) {
     return
   }
   const prevNode = currentNode
   try {
     currentNode = node
-    node.value = node.function(node.value)
+    node.value = node.fn(node.value)
   } catch (error) {
     handleError(error)
   } finally {
@@ -413,7 +415,7 @@ function handleError(error) {
  * @param {Signal} signal
  */
 export function sub(signal) {
-  if (currentNode?.function) {
+  if (currentNode?.fn) {
     let effects = effectMap.get(signal)
     if (effects === undefined) {
       effects = new Set()
