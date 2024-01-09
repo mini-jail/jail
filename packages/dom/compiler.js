@@ -17,6 +17,10 @@ const WHITESPACES = { " ": true, "\t": true, "\n": true, "\r": true }
 const treeCache = new Map()
 
 /**
+ * Based on [htm](https://github.com/developit/htm/blob/master/src/build.mjs)
+ * by [developit](https://github.com/developit).
+ *
+ * This guy is really great!
  * @param {TemplateStringsArray} statics
  * @returns {(number | string | boolean)[]}
  */
