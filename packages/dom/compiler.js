@@ -5,11 +5,11 @@ const MODE_TAGNAME = 3
 const MODE_COMMENT = 4
 const MODE_PROP_SET = 5
 const MODE_PROP_APPEND = 6
-const ELEMENT_OPEN = "0: ELEMENT_OPEN"
-const ELEMENT_CLOSE = "1: ELEMENT_CLOSE"
-const CHILD = "2: CHILD"
-const PROP_SET = "3: PROP_SET"
-const PROPS_ASSIGN = "4: PROPS_ASSIGN"
+const ELEMENT_OPEN = 0
+const ELEMENT_CLOSE = 1
+const CHILD = 2
+const PROP_SET = 3
+const PROPS_ASSIGN = 4
 const WHITESPACES = { " ": true, "\t": true, "\n": true, "\r": true }
 /**
  * @type {Map<TemplateStringsArray, import("./mod.js").Child | import("./mod.js").Child[] | null>}
