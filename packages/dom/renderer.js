@@ -1,11 +1,4 @@
-import {
-  cleanup,
-  effect,
-  resolvable,
-  resolve,
-  root,
-  untrack,
-} from "space/signal"
+import { cleanup, effect, resolvable, resolve, root } from "space/signal"
 import { getTree } from "./compiler.js"
 import { components } from "./components.js"
 import { directives } from "./directives.js"
