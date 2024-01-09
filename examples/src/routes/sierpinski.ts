@@ -1,22 +1,15 @@
-import {
-  cleanup,
-  effect,
-  inject,
-  memo,
-  provide,
-  signal,
-  untrack,
-} from "space/signal"
-import html, { getParams } from "space/dom"
+import { cleanup, effect, inject, memo, provide, signal } from "space/signal"
+import html, { component, getParams } from "space/dom"
 
-const Dot = (x: number, y: number, target: number) => {
+type DotProps = { x: number; y: number; target: number }
+
+const Dot = ({ x, y, target }: DotProps) => {
   const counter = inject<{ value: number }>("counter")!
   const hover = signal(false)
   const text = memo(() => {
     return hover.value ? "*" + counter.value + "*" : counter.value + ""
   })
   const bgColor = memo(() => hover.value ? "lightpink" : "white")
-
   const css = `
     width: ${target}px;
     height: ${target}px;
@@ -30,26 +23,44 @@ const Dot = (x: number, y: number, target: number) => {
     cursor: pointer;
     user-select: none;
   `
-
   return html`
     <div
-      use:text=${text} style=${css} style:background-color=${bgColor}
-      on:mouseoverDelegate=${() => hover.value = true}
-      on:mouseoutDelegate=${() => hover.value = false}
+      d-text=${text}
+      d-style:backgroundColor=${bgColor}
+      style=${css}
+      onMouseover=${() => hover.value = true}
+      onMouseout=${() => hover.value = false}
     ></div>
   `
 }
 
-const Triangle = (x: number, y: number, target: number, size: number) => {
+type TriangleProps = { x: number; y: number; target: number; size: number }
+
+const Triangle = ({ x, y, target, size }: TriangleProps) => {
   if (target <= size) {
-    return Dot(x, y, target)
+    return html`<Dot x=${x} y=${y} target=${target} />`
   }
   target = target / 2
-  return [
-    Triangle(x, y - target / 2, target, size),
-    Triangle(x - target, y + target / 2, target, size),
-    Triangle(x + target, y + target / 2, target, size),
-  ]
+  return html`
+    <Triangle 
+      x=${x} 
+      y=${y - target / 2} 
+      target=${target} 
+      size=${size}
+    />
+    <Triangle 
+      x=${x - target} 
+      y=${y + target / 2} 
+      target=${target} 
+      size=${size}
+    />
+    <Triangle 
+      x=${x + target} 
+      y=${y + target / 2} 
+      target=${target} 
+      size=${size}
+    />
+  `
 }
 
 export default function Sierpinski() {
@@ -65,15 +76,13 @@ export default function Sierpinski() {
   provide("counter", count)
 
   effect(() => {
-    untrack(() => {
-      id = setInterval(() => count.value = (count.value % 10) + 1, 1000)
-      const start = Date.now()
-      const frame = () => {
-        elapsed.value = Date.now() - start
-        requestAnimationFrame(frame)
-      }
+    id = setInterval(() => count.value = (count.value % 10) + 1, 1000)
+    const start = Date.now()
+    const frame = () => {
+      elapsed.value = Date.now() - start
       requestAnimationFrame(frame)
-    })
+    }
+    requestAnimationFrame(frame)
   })
 
   cleanup(() => {
@@ -81,12 +90,17 @@ export default function Sierpinski() {
     console.log("Sierpinski is dead")
   })
 
+  const transform = memo(() => `scale(${scale.value}) translateZ(0.1px)`)
+
   return html`
     <div 
       style="position: absolute; left: 50%; top: 50%;" 
-      style:transform="scale(${scale}) translateZ(0.1px)"
+      d-style:transform=${transform}
     >
-      ${Triangle(0, 0, +target, +size)}
+      <Triangle x=${0} y=${0} target=${+target} size=${+size} />
     </div>
   `
 }
+
+component("Triangle", Triangle)
+component("Dot", Dot)

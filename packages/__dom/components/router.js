@@ -1,18 +1,25 @@
-import { cleanup, effect, inject, provide, signal } from "space/signal"
-
-export const path = signal("")
+import {
+  cleanup,
+  effect,
+  inject,
+  provide,
+  root,
+  signal,
+  untrack,
+} from "space/signal"
 const paramsKey = Symbol("Params")
 const routesKey = Symbol("Routes")
+export const path = signal("")
 
 const routeTypeHandlerMap = {
   hash() {
+    const hash = () => location.hash.slice(1) || "/"
+    const hashChangeListener = () => path.value = hash()
     effect(() => {
-      path.value = hash()
+      untrack(() => path.value = hash())
       addEventListener("hashchange", hashChangeListener)
     })
-    cleanup(() => {
-      removeEventListener("hashchange", hashChangeListener)
-    })
+    cleanup(() => removeEventListener("hashchange", hashChangeListener))
   },
   pathname() {
     const url = new URL(location.toString())
@@ -32,9 +39,17 @@ const routeTypeHandlerMap = {
         elt = elt?.parentElement
       }
     }
-
-    effect(() => {
+    /**
+     * @param {PopStateEvent} event
+     */
+    const popStateListener = (event) => {
+      event.preventDefault()
       path.value = location.pathname
+    }
+    effect(() => {
+      untrack(() => {
+        path.value = location.pathname
+      })
       addEventListener("click", clickListener)
       addEventListener("popstate", popStateListener)
     })
@@ -63,22 +78,6 @@ function createMatcher(path) {
 }
 
 /**
- * @param {PopStateEvent} event
- */
-function popStateListener(event) {
-  event.preventDefault()
-  path.value = location.pathname
-}
-
-function hash() {
-  return location.hash.slice(1) || "/"
-}
-
-function hashChangeListener() {
-  path.value = hash()
-}
-
-/**
  * Allows usage of the following:
  * @example
  * ```javascript
@@ -95,23 +94,26 @@ function hashChangeListener() {
  * ```
  * @param {{ type: string, children?: any, fallback?: any }} props
  */
-export function* Router(props) {
-  /**
-   * @type {import("space/signal").Signal<{ matcher: RegExp, path: string, children: any }[]>}
-   */
-  const routes = signal([])
-  provide(routesKey, routes)
+export function Router(props) {
   routeTypeHandlerMap[props.type]()
-  yield props.children
-  yield function Router() {
-    const nextRoute = path.value
-    for (const route of routes.value) {
-      if (route.matcher.test(nextRoute)) {
-        provide(paramsKey, route.matcher.exec(nextRoute)?.groups)
-        return route.children
+  /**
+   * @type {Set<{ path: string, regexp: RegExp, children?: any }>}
+   */
+  const routes = new Set()
+  provide(routesKey, routes)
+  return function* () {
+    const nextPath = path.value
+    yield props.children
+    for (const route of routes) {
+      if (route.regexp.test(nextPath)) {
+        yield root(() => {
+          provide(paramsKey, route.regexp.exec(nextPath)?.groups)
+          return route.children
+        })
+        return
       }
     }
-    return props.fallback
+    yield props.fallback
   }
 }
 
@@ -119,11 +121,13 @@ export function* Router(props) {
  * @param {{ path: string, children?: any }} props
  */
 export function Route(props) {
-  inject(routesKey).value.push({
-    matcher: createMatcher(props.path),
-    path: props.path,
-    get children() {
-      return props.children
-    },
+  effect(() => {
+    inject(routesKey)?.add({
+      path: props.path,
+      regexp: createMatcher(props.path),
+      get children() {
+        return props.children
+      },
+    })
   })
 }

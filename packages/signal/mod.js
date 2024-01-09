@@ -296,7 +296,11 @@ export function effect(fn, value) {
       currentNode.children.push(node)
     }
   }
-  queue(node)
+  if (isRunning) {
+    effectQueue.add(node)
+  } else {
+    queueMicrotask(() => update(node))
+  }
 }
 
 /**

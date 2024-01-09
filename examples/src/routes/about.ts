@@ -3,7 +3,7 @@ import html from "space/dom"
 export default function About() {
   return html`
     <Portal selector="header nav">
-      <a href="/error">[hehe]</a>
+      <a href="/error">hehe</a>
     </Portal>
     <article>
       <h4>

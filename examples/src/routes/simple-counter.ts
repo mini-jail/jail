@@ -3,11 +3,9 @@ import html from "space/dom"
 
 export default function SimpleCounter() {
   const counter = signal(0)
-  const up = () => counter.value++
-  const down = () => counter.value--
   return html`
-    <button on:clickDelegate=${down}>-</button>
+    <button onClick=${() => counter.value--}>-</button>
     <span>current value: ${counter}</span>
-    <button on:clickDelegate=${up}>+</button>
+    <button onClick=${() => counter.value++}>+</button>
   `
 }

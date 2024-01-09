@@ -21,14 +21,14 @@ const Item = (props: ToDoItem) => {
     list.value = list.value.slice()
   }
   return html`
-    <div class="todo-item" id="item_${props.id}">
+    <div class="todo-item">
       <div 
-        class="todo-item-text" on:clickDelegate=${toggleItem}
+        class="todo-item-text" onClick=${toggleItem}
         style="${props.done ? "color: grey; font-style: italic;" : null}"
       >
         ${props.text}
       </div>
-      <div use:show=${props.done} class="todo-item-delete" on:clickDelegate=${deleteItem}>
+      <div d-show=${props.done} class="todo-item-delete" onClick=${deleteItem}>
         delete
       </div>
     </div>
@@ -60,15 +60,17 @@ export default function ToDo() {
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>
       <div class="todo-app-container">
-        <form on:submitPreventDelegate=${addItem}>
+        <form onSubmit.prevent=${addItem}>
           <input 
             type="text" placeholder="...milk?"
             required class="todo_input" value=${text}
-            on:inputDelegate=${onInput}
+            onInput=${onInput}
           />
         </form>
         <div class="todo-items">
-          <For each=${list} do=${Item} />
+          <For each=${list}>
+            ${(item: ToDoItem) => Item(item)}
+          </For>
         </div>
         <label>progress: ${done}/${length}</label>
         <progress max=${length} value=${done}></progress>

@@ -1,5 +1,5 @@
 import { effect, memo } from "space/signal"
-import html, { mount, path } from "space/dom"
+import html, { component, mount, path } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
 import SimpleCounter from "./routes/simple-counter.ts"
@@ -13,6 +13,19 @@ function App() {
     document.title = `space${path.value}`
   })
 
+  const pathAnimation = memo(() => {
+    path.value
+    return {
+      keyframes: [
+        { opacity: 0, transform: "translateY(-10px)" },
+        { opacity: 1, transform: "unset" },
+      ],
+      delay: 50,
+      duration: 250,
+      fill: "both",
+    }
+  })
+
   return html`
     <header>
       <h3>space${path}</h3>
@@ -24,33 +37,41 @@ function App() {
         <a href="/about">about</a>
       </nav>
     </header>
-    <main use:animate=${pathAnimation}>
-      <Router type="pathname">
-        <Route path="/" children=${Home} />
-        <Route path="/counter" children=${Counter} />
-        <Route path="/counter/simple" children=${SimpleCounter} />
-        <Route path="/sierpinski" children=${Sierpinski} />
-        <Route path="/sierpinski/:target" children=${Sierpinski} />
-        <Route path="/sierpinski/:target/:size" children=${Sierpinski} />
-        <Route path="/about" children=${About} />
-        <Route path="/todo" children=${ToDo} />
-        <Route path="/.+" children=${NotFound} />
-      </Router>
+    <main d-animate=${pathAnimation}>
+      <AppRouter />
     </main>
   `
 }
 
-const pathAnimation = memo(() => {
-  path.value
-  return {
-    keyframes: [
-      { opacity: 0, transform: "translateY(-10px)" },
-      { opacity: 1, transform: "unset" },
-    ],
-    delay: 50,
-    duration: 250,
-    fill: "both",
-  }
+component("AppRouter", () => {
+  return html`
+    <Router type="pathname" fallback=${NotFound}>
+      <Route path="/">
+        <${Home} />
+      </Route>
+      <Route path="/counter">
+        <${Counter} />
+      </Route>
+      <Route path="/counter/simple">
+        <${SimpleCounter} />
+      </Route>
+      <Route path="/sierpinski">
+        <${Sierpinski} />
+      </Route>
+      <Route path="/sierpinski/:target">
+        <${Sierpinski} />
+      </Route>
+      <Route path="/sierpinski/:target/:size">
+        <${Sierpinski} />
+      </Route>
+      <Route path="/about">
+        <${About} />
+      </Route>
+      <Route path="/todo">
+        <${ToDo} />
+      </Route>
+    </Router>
+  `
 })
 
 const _clean = mount(document.body, App)

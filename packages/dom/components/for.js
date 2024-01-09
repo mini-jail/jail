@@ -1,11 +1,8 @@
 /**
- * @param {{ children?: any, each: Iterable<any>, do: (item: any) => any }} props
+ * @param {{ children: (item: any) => any, each: Iterable<any> }} props
  */
-export function For(props) {
-  return function* () {
-    yield props.children
-    for (const item of props.each) {
-      yield props.do(item)
-    }
+export function* For(props) {
+  for (const item of props.each) {
+    yield props.children(item)
   }
 }

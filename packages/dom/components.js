@@ -1,7 +1,13 @@
 /**
- * ## For devs only!
- * Extend it only, if you know what you do :3
- * @type {Record<string, import("space/dom").Component<any>>}
+ * @type {Record<Capitalize<string>, import("./mod.js").Component<any>>}
  */
 export const components = Object.create(null)
-export default components
+
+/**
+ * @template {import("./mod.js").Props} Type
+ * @param {Capitalize<string>} name
+ * @param {import("./mod.js").Component<Type>} fn
+ */
+export function component(name, fn) {
+  components[name] = fn
+}

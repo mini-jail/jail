@@ -1,215 +1,311 @@
 import { cleanup, effect, resolvable, resolve, root } from "space/signal"
-import { setPropertyOrAttribute } from "./helpers.js"
-import { placeholderRegExp } from "./regexp.js"
-import { createTemplate } from "./template.js"
-import namespaces from "./namespaces.js"
-import components from "./components.js"
+import { getTree } from "./compiler.js"
+import { components } from "./components.js"
+import { directives } from "./directives.js"
 
 /**
- * @param {DocumentFragment} fragment
- * @param {import("space/dom").Template} template
- * @param {import("space/dom").Slot[]} slots
- * @returns {import("space/dom").DOMResult}
+ * @type {Record<string, boolean | undefined>}
  */
-function createRenderResult(fragment, template, slots) {
-  fragment.querySelectorAll(`[${template.hash}]`)
-    // @ts-ignore: dont worry, small stupid ts
-    .forEach((elt) => renderElement(elt, template, slots))
-  switch (fragment.childNodes.length) {
-    case 0:
-      return
-    case 1:
-      return fragment.childNodes[0]
-    default:
-      return Array.from(fragment.childNodes)
+const listeners = {}
+const nameRE = /(?:d-)?(?<name>[^.:]+)(?::(?<arg>[^.:]+))?(?:.(?<mods>\S+)*)?/
+
+/**
+ * @param {import("./mod.js").Child | import("./mod.js").Child[] | undefined | null} node
+ * @param  {any[]} values
+ * @param {boolean} svg
+ */
+function renderDOM(node, values, svg) {
+  if (node == null) {
+    return
   }
+  if (Array.isArray(node)) {
+    switch (node.length) {
+      case 0:
+        return
+      case 1:
+        return renderDOM(node[0], values, svg)
+      default:
+        return node.map((node) => renderDOM(node, values, svg))
+    }
+  }
+  if (typeof node === "string") {
+    return node
+  }
+  if (typeof node === "number") {
+    return values[node]
+  }
+  return createElement(node, values, svg)
 }
 
 /**
- * @param {import("space/dom").TemplateElement} elt
- * @param {import("space/dom").Template} template
- * @param {import("space/dom").Slot[]} slots
+ * @param {import("./mod.js").Tree} node
+ * @param {any[]} values
+ * @param {boolean} svg
  */
-function renderElement(elt, template, slots) {
-  /**
-   * @type {import("space/dom").TemplateValue}
-   */
-  // @ts-ignore: will have a value
-  const data = template.data[elt.getAttribute(template.hash)]
-  if (typeof data === "number") {
-    renderChild(elt, slots[data])
-  } else if (Array.isArray(data)) {
-    elt.removeAttribute(template.hash)
-    for (const attribute of data) {
-      setElementData(elt, attribute, slots)
-    }
-  } else {
-    const component = typeof data.name === "string"
-      ? components[data.name]
-      : slots[data.name]
-    if (typeof component !== "function") {
-      throw new TypeError(`Component is not a function!`)
-    }
-    root(() => {
-      const props = component.length
-        ? createProps(elt, data, template, slots)
-        : undefined
-      // @ts-ignore: mhm sure
-      renderChild(elt, component(props))
-    })
+function createElement(node, values, svg) {
+  const type = typeof node.type === "number" ? values[node.type] : node.type
+  if (typeof type === "function" || type in components) {
+    const component = typeof type === "function" ? type : components[type]
+    return createComponent(component, node, values, svg)
   }
-}
-
-/**
- * @param {import("space/dom").TemplateElement} elt
- * @param {import("space/dom").ComponentData} data
- * @param {import("space/dom").Template} template
- * @param {import("space/dom").Slot[]} slots
- * @returns {object}
- */
-function createProps(elt, data, template, slots) {
-  const props = { children: createRenderResult(elt.content, template, slots) }
-  for (const prop in data.props) {
-    const type = data.props[prop]
-    let value = typeof type === "number" ? slots[type] : type
-    if (prop === "children" && props.children) {
-      value = [props.children, value]
-    }
-    Object.defineProperty(props, prop, {
-      get() {
-        return resolve(value)
-      },
-    })
+  if (node.type === "svg") {
+    svg = true
+  } else if (node.type === "foreignObject") {
+    svg = false
   }
-  return props
-}
-
-/**
- * @param {import("space/dom").DOMElement} elt
- * @param {import("space/dom").AttributeData} attribute
- * @param {import("space/dom").Slot[]} slots
- */
-function setElementData(elt, attribute, slots) {
-  const value = createValue(attribute, slots), name = attribute.name
-  if (attribute.namespace !== null) {
-    /**
-     * @type {import("space/dom").Namespace<any, any> | undefined}
-     */
-    // @ts-expect-error: hi ts, i'm sorry
-    const namespace = typeof attribute.namespace === "string"
-      ? namespaces[attribute.namespace]
-      : slots[attribute.namespace]
-    if (typeof namespace !== "function") {
-      throw new TypeError(`Namespace is not a function!`)
-    }
-    const arg = typeof name === "string" ? name : slots[name]
-    effect(() => namespace(elt, resolve(arg), resolve(value)))
-  } else if (resolvable(value)) {
-    effect((currentValue) => {
-      const nextValue = value.value
-      if (currentValue !== nextValue) {
-        // @ts-expect-error: name can be only a string here
-        setPropertyOrAttribute(elt, name, nextValue)
+  const elt = svg
+    ? document.createElementNS("http://www.w3.org/2000/svg", type)
+    : document.createElement(type)
+  if (node.props) {
+    setProperties(elt, node.props, values, svg)
+  }
+  if (node.children !== null) {
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        addChild(elt, child, values, svg)
       }
-      return nextValue
-    })
-  } else {
-    // @ts-expect-error: name can be only a string here... too
-    setPropertyOrAttribute(elt, name, value)
+    } else {
+      addChild(elt, node.children, values, svg)
+    }
+  }
+  return elt
+}
+
+/**
+ * @param {object} nodeProps
+ * @param {any[]} values
+ * @param {object} props
+ * @param {any[]} children
+ */
+function componentProperties(nodeProps, values, props, children) {
+  for (const name in nodeProps) {
+    const type = nodeProps[name]
+    const value = typeof type === "number" ? values[type] : type
+    if (name.startsWith("...")) {
+      componentProperties(value, values, props, children)
+    } else if (name === "children") {
+      children.push(value)
+    } else {
+      Object.defineProperty(props, name, {
+        get() {
+          return resolve(value)
+        },
+      })
+    }
   }
 }
 
 /**
- * @param {import("space/dom").AttributeData} attribute
- * @param {import("space/dom").Slot[]} slots
- * @returns {import("space/dom").Slot}
+ * @param {any} nodeChildren
+ * @param {any[]} values
+ * @param {boolean} svg
+ * @param {any[]} children
  */
-function createValue(attribute, slots) {
-  if (typeof attribute.value === "boolean") {
-    return attribute.value
-  } else if (typeof attribute.value === "number") {
-    return slots[attribute.value]
-  } else if (attribute.slots === null) {
-    return attribute.value
-  } else if (attribute.slots.some((slot) => resolvable(slots[slot]))) {
-    return {
-      get value() {
-        return String.prototype.replace.call(
-          attribute.value,
-          placeholderRegExp,
-          (_match, slot) => resolve(slots[slot]) + "",
-        )
+function componentChildren(nodeChildren, values, svg, children) {
+  if (Array.isArray(nodeChildren)) {
+    for (const child of nodeChildren) {
+      const result = renderDOM(child, values, svg)
+      if (result != null) {
+        children.push(result)
+      }
+    }
+  } else {
+    const result = renderDOM(nodeChildren, values, svg)
+    if (result != null) {
+      children.push(result)
+    }
+  }
+}
+
+/**
+ * @param {import("./mod.js").Component<any>} fn
+ * @param {import("./mod.js").Tree} node
+ * @param {any[]} values
+ * @param {boolean} svg
+ */
+function createComponent(fn, node, values, svg) {
+  const props = {}, children = []
+  if (node.props) {
+    componentProperties(node.props, values, props, children)
+  }
+  if (node.children !== null) {
+    componentChildren(node.children, values, svg, children)
+  }
+  if (children.length) {
+    Object.defineProperty(props, "children", {
+      get() {
+        return children.length === 1
+          ? resolve(children[0])
+          : children.map(resolve)
       },
+    })
+  }
+  return function Component() {
+    return fn(props)
+  }
+}
+
+/**
+ * @param {string} key
+ * @param {any} value
+ * @returns {import("./mod.js").Binding<any>}
+ */
+function createBinding(key, value) {
+  const groups = nameRE.exec(key)?.groups
+  if (!groups) {
+    throw new TypeError(`"${key}" does't match "${nameRE}"`)
+  }
+  return {
+    name: groups.name,
+    arg: groups.arg || null,
+    modifiers: groups.mods?.split(".").reduce((mods, key) => {
+      mods[key] = true
+      return mods
+    }, {}) ?? null,
+    get value() {
+      return resolve(value)
+    },
+  }
+}
+
+/**
+ * @param {HTMLElement} elt
+ * @param {Record<string, string | number | boolean>} props
+ * @param {any[]} values
+ * @param {boolean} svg
+ */
+function setProperties(elt, props, values, svg) {
+  let name, type, value
+  for (name in props) {
+    type = props[name]
+    value = typeof type === "number" ? values[type] : type
+    if (name.startsWith("...")) {
+      setProperties(elt, value, values, svg)
+    } else if (name === "children") {
+      addChild(elt, value, values, svg)
+    } else {
+      const binding = createBinding(name, value)
+      if (name.startsWith("d-")) {
+        const directive = directives[binding.name]
+        if (directive === undefined) {
+          throw new Error(`Directive d-${binding.name} not found.`)
+        }
+        effect(() => directive(elt, binding))
+      } else if (resolvable(value)) {
+        effect(() => setAttribute(elt, binding))
+      } else {
+        setAttribute(elt, binding)
+      }
     }
   }
-  return String.prototype.replace.call(
-    attribute.value,
-    placeholderRegExp,
-    (_match, slot) => slots[slot] + "",
-  )
 }
 
 /**
- * @param {import("space/dom").DOMNode[]} nodeArray
- * @param  {...any} elements
- * @returns {import("space/dom").DOMNode[]}
+ * @param {Element} elt
+ *
+ * @param {import("./mod.js").Binding<any>} binding
  */
-export function createNodeArray(nodeArray, ...elements) {
-  elements?.forEach((elt) => {
-    if (elt == null || typeof elt === "boolean") {
-      return
-    } else if (elt instanceof Node) {
-      nodeArray.push(elt)
-    } else if (typeof elt === "string" || typeof elt === "number") {
-      nodeArray.push(new Text(elt + ""))
-    } else if (typeof elt === "function") {
-      createNodeArray(nodeArray, elt())
-    } else if (Symbol.iterator in elt) {
-      createNodeArray(nodeArray, ...elt)
-    } else if (resolvable(elt)) {
-      createNodeArray(nodeArray, elt.value)
+function setAttribute(elt, binding) {
+  let name = binding.name, isProp = name in elt
+  const value = binding.value
+  if (name.startsWith("on")) {
+    name = name.slice(2).toLowerCase()
+    const eventOptions = {}, bindOptions = {}
+    if (binding.modifiers) {
+      const { capture, passive, once, prevent, stop } = binding.modifiers
+      bindOptions.once = once
+      bindOptions.prevent = prevent
+      bindOptions.stop = stop
+      eventOptions.capture = capture
+      eventOptions.passive = passive
     }
-  })
-  return nodeArray
-}
-
-/**
- * @param {import("space/dom").DOMElement} targetElt
- * @param {any} child
- */
-function renderChild(targetElt, child) {
-  if (child == null || typeof child === "boolean") {
-    targetElt.remove()
-  } else if (child instanceof Node) {
-    targetElt.replaceWith(child)
-  } else if (typeof child === "string" || typeof child === "number") {
-    targetElt.replaceWith(child + "")
-  } else if (
-    resolvable(child) ||
-    Symbol.iterator in child ||
-    typeof child === "function"
-  ) {
-    const anchor = new Text()
-    targetElt.replaceWith(anchor)
-    mount(null, () => child, anchor)
+    elt["__events"] = elt["__events"] ?? {}
+    elt["__events"][name] = value
+    const id = JSON.stringify({ name, eventOptions })
+    if (listeners[id] === undefined) {
+      listeners[id] = true
+      addEventListener(
+        name,
+        eventListener.bind(bindOptions),
+        eventOptions,
+      )
+    }
+    return
+  }
+  if (binding.modifiers?.prop) {
+    isProp = true
+  }
+  if (binding.modifiers?.attr) {
+    isProp = false
+  }
+  if (binding.modifiers?.camel) {
+    name = name.replace(/-([a-z])/g, (_match, str) => str.toUpperCase())
+  }
+  if (binding.modifiers?.kebab) {
+    name = name.replace(/([A-Z])/g, "-$1").toLowerCase()
+  }
+  if (isProp) {
+    elt[name] = value
+  } else if (value != null) {
+    elt.setAttribute(name, String(value))
   } else {
-    targetElt.replaceWith(String(child))
+    elt.removeAttribute(name)
   }
 }
 
 /**
- * @param {TemplateStringsArray} templateStringsArray
- * @param  {...import("space/dom").Slot} slots
- * @returns {import("space/dom").DOMResult}
+ * @param {Element} elt
+ * @param {import("./mod.js").Child} child
+ * @param {any[]} values
+ * @param {boolean} svg
  */
-export function template(templateStringsArray, ...slots) {
-  const template = createTemplate(templateStringsArray)
-  return createRenderResult(
-    // @ts-ignore: its alright, small one
-    template.fragment.cloneNode(true),
-    template,
-    slots,
-  )
+function addChild(elt, child, values, svg) {
+  if (typeof child === "string") {
+    elt.append(child)
+  } else if (typeof child === "number") {
+    insertChildren(elt, values[child])
+  } else {
+    insertChildren(elt, renderDOM(child, values, svg))
+  }
+}
+
+/**
+ * @param {Element} elt
+ * @param  {...any} children
+ */
+function insertChildren(elt, ...children) {
+  for (const child of children) {
+    if (child == null || typeof child === "boolean") {
+      continue
+    }
+    if (typeof child === "number" || typeof child === "string") {
+      elt.append(child + "")
+    } else if (child instanceof Node) {
+      elt.append(child)
+    } else if (Symbol.iterator in child) {
+      insertChildren(elt, ...child)
+    } else if (resolvable(child) || typeof child === "function") {
+      mount(elt, () => child, elt.appendChild(new Text()))
+    } else {
+      elt.append(String(child))
+    }
+  }
+}
+
+/**
+ * @param {TemplateStringsArray} statics
+ * @param  {...any} values
+ */
+export function html(statics, ...values) {
+  return renderDOM(getTree(statics), values, false)
+}
+
+/**
+ * @param {TemplateStringsArray} statics
+ * @param  {...any} values
+ */
+export function svg(statics, ...values) {
+  return renderDOM(getTree(statics), values, true)
 }
 
 /**
@@ -224,27 +320,37 @@ export function template(templateStringsArray, ...slots) {
  * @overload
  * @param {null} rootElement
  * @param {() => any} code
- * @param {ChildNode} anchor
+ * @param {ChildNode} before
+ * @returns {import("space/signal").Cleanup}
+ */
+/**
+ * This is what some *devs* might want.
+ * @overload
+ * @param {Element} rootElement
+ * @param {() => any} code
+ * @param {ChildNode} before
  * @returns {import("space/signal").Cleanup}
  */
 /**
  * @param {Element | null} rootElement
  * @param {() => any} code
- * @param {ChildNode} [anchor]
+ * @param {ChildNode} [before]
  */
-export function mount(rootElement, code, anchor) {
+export function mount(rootElement, code, before) {
   return root((dispose) => {
+    let children = []
     effect(() => {
-      let children = []
       cleanup(() => {
-        children.forEach((node) => node.remove())
-        anchor?.remove()
+        before?.remove()
+        while (children.length) {
+          children.pop()?.remove()
+        }
       })
       effect(() => {
-        const nextNodes = createNodeArray([], code())
+        const nextNodes = nodesFrom([], code())
         reconcile(
-          rootElement ?? anchor?.parentElement ?? null,
-          anchor ?? null,
+          rootElement ?? before?.parentElement ?? null,
+          before ?? null,
           children,
           nextNodes,
         )
@@ -257,7 +363,7 @@ export function mount(rootElement, code, anchor) {
 
 /**
  * @param {ParentNode | null} rootElement
- * @param {(ChildNode & { data?: string }) | null} anchor
+ * @param {ChildNode | null} anchor
  * @param {(ChildNode & { data?: string })[] | undefined} currentNodes
  * @param {(Node & { data?: string })[] | undefined} nextNodes
  */
@@ -285,7 +391,54 @@ function reconcile(rootElement, anchor, currentNodes, nextNodes) {
       }
     })
   }
-  if (currentNodes?.length) {
-    currentNodes.forEach((childNode) => childNode.remove())
+  while (currentNodes?.length) {
+    currentNodes.pop()?.remove()
+  }
+}
+
+/**
+ * @param {Node[]} array
+ * @param  {...any} elements
+ * @returns {Node[]}
+ */
+function nodesFrom(array, ...elements) {
+  for (const elt of elements) {
+    if (elt == null || typeof elt === "boolean") {
+      continue
+    } else if (elt instanceof Node) {
+      array.push(elt)
+    } else if (typeof elt === "string" || typeof elt === "number") {
+      array.push(new Text(elt + ""))
+    } else if (typeof elt === "function") {
+      nodesFrom(array, elt())
+    } else if (Symbol.iterator in elt) {
+      nodesFrom(array, ...elt)
+    } else if (resolvable(elt)) {
+      nodesFrom(array, elt.value)
+    }
+  }
+  return array
+}
+
+/**
+ * @this {{ stop?: boolean, prevent?: boolean, once?: boolean }}
+ * @param {import("./mod.js").DOMEvent<any>} event
+ */
+function eventListener(event) {
+  let elt = event.target
+  if (this.stop) {
+    event.stopPropagation()
+  }
+  if (this.prevent) {
+    event.preventDefault()
+  }
+  while (elt !== null) {
+    if (elt?.["__events"]?.[event.type]) {
+      elt["__events"][event.type].call(elt, event)
+      if (this.once) {
+        elt["__events"][event.type] = undefined
+      }
+    }
+    elt = elt.parentNode
   }
 }
