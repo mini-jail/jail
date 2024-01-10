@@ -23,7 +23,7 @@ const Item = (props: ToDoItem) => {
   return html`
     <div class="todo-item">
       <div 
-        class="todo-item-text" onClick=${toggleItem}
+        class="todo-item-text" on:click=${toggleItem}
         style="${props.done ? "color: grey; font-style: italic;" : null}"
       >
         ${props.text}

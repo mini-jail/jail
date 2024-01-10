@@ -1,4 +1,4 @@
-import { cleanup, effect, inject, provide, root, signal } from "space/signal"
+import { cleanup, effect, inject, provide, signal } from "space/signal"
 
 export const path = signal("")
 const paramsKey = Symbol("Params")

@@ -1,11 +1,4 @@
-import {
-  cleanup,
-  effect,
-  resolvable,
-  resolve,
-  root,
-  untrack,
-} from "space/signal"
+import { cleanup, effect, resolvable, resolve, root } from "space/signal"
 import { getTree } from "./compiler.js"
 import { components } from "./components.js"
 import { directives } from "./directives.js"
@@ -36,7 +29,13 @@ function renderDOM(node, values, svg) {
   } else if (typeof node === "string") {
     return node
   } else if (typeof node === "number") {
-    return values[node]
+    const value = values[node]
+    if (resolvableChild(value)) {
+      const before = new Text()
+      mount(null, () => value, before)
+      return before
+    }
+    return value
   }
   return createElement(node, values, svg)
 }
@@ -206,19 +205,29 @@ function setProperties(elt, props, values, svg) {
  * @param {import("./mod.js").Binding<any>} binding
  */
 function setAttribute(elt, binding) {
-  let name = binding.name, isProp = name in elt
+  let name = binding.name
   const value = binding.value
+  // <div on:click[.capture, .passive]=${() => } />
+  if (name === "on" && binding.arg) {
+    const type = binding.arg,
+      eventOptions = {
+        capture: binding.modifiers?.capture,
+        passive: binding.modifiers?.passive,
+      }
+    return elt.addEventListener(type, value, eventOptions)
+  }
+  // <div onClick[.capture, .passive, .once, .prevent, .stop]=${() => } />
   if (name.startsWith("on")) {
     name = name.slice(2).toLowerCase()
-    const eventOptions = {}, bindOptions = {}
-    if (binding.modifiers) {
-      const { capture, passive, once, prevent, stop } = binding.modifiers
-      bindOptions.once = once
-      bindOptions.prevent = prevent
-      bindOptions.stop = stop
-      eventOptions.capture = capture
-      eventOptions.passive = passive
-    }
+    const eventOptions = {
+        capture: binding.modifiers?.capture,
+        passive: binding.modifiers?.passive,
+      },
+      bindOptions = {
+        once: binding.modifiers?.once,
+        prevent: binding.modifiers?.prevent,
+        stop: binding.modifiers?.stop,
+      }
     elt["__events"] = elt["__events"] ?? {}
     elt["__events"][name] = value
     const id = JSON.stringify({ name, eventOptions })
@@ -232,6 +241,7 @@ function setAttribute(elt, binding) {
     }
     return
   }
+  let isProp = name in elt
   if (binding.modifiers?.prop) {
     isProp = true
   }
@@ -276,8 +286,7 @@ function addChild(elt, child, values, svg) {
 function insertChild(elt, child) {
   if (child == null || typeof child === "boolean") {
     return
-  }
-  if (typeof child === "number" || typeof child === "string") {
+  } else if (typeof child === "number" || typeof child === "string") {
     elt.append(child + "")
   } else if (child instanceof Node) {
     elt.append(child)
@@ -285,7 +294,7 @@ function insertChild(elt, child) {
     for (const subChild of child) {
       insertChild(elt, subChild)
     }
-  } else if (resolvable(child) || typeof child === "function") {
+  } else if (resolvableChild(child)) {
     mount(elt, () => child, elt.appendChild(new Text()))
   } else {
     elt.append(String(child))
@@ -439,4 +448,21 @@ function eventListener(event) {
     }
     elt = elt.parentNode
   }
+}
+
+/**
+ * @param {any} data
+ * @returns {data is (() => any) | { value: any } | any[]}
+ */
+function resolvableChild(data) {
+  if (data == null) {
+    return false
+  }
+  switch (typeof data) {
+    case "function":
+      return data.length === 0
+    case "object":
+      return Symbol.iterator in data || "value" in data
+  }
+  return false
 }

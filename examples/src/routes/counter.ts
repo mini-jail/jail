@@ -1,4 +1,4 @@
-import { signal } from "space/signal"
+import { cleanup, effect, signal } from "space/signal"
 import html from "space/dom"
 
 const code = `
@@ -14,12 +14,12 @@ function SimpleCounter() {
   \`
 }`.trim()
 
-const counter = signal(0)
-
 export default function Counter() {
+  const counter = signal(0)
   const show = signal(false)
+
   return html`
-    (${counter} this one is global)
+    (${counter} this one's at the root)
     <article>
       <h4>
         counter example
