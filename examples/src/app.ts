@@ -35,7 +35,7 @@ function App() {
         <a href="/sierpinski">sierpinski</a>
         <a href="/todo">todo</a>
         <a href="/about">about</a>
-        <a onClick=${dispose}>dispose</a>
+        <a onClick=${dispose} title="this will destroy the app">dispose</a>
       </nav>
     </header>
     <main d-animate=${pathAnimation}>

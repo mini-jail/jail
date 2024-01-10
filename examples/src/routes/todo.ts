@@ -54,7 +54,7 @@ export default function ToDo() {
   }, 0)
 
   return html`
-    <article class="todo-app">
+    <article>
       <h4>
         todo
         <sub>(no-one ever have done that, i promise!)</sub>
