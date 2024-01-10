@@ -212,6 +212,7 @@ function setAttribute(elt, binding) {
     return elt.addEventListener(binding.arg, value, {
       capture: binding.modifiers?.capture,
       passive: binding.modifiers?.passive,
+      once: binding.modifiers?.once,
     })
   }
   // <div onClick[.capture, .passive, .once, .prevent, .stop]=${() => } />
