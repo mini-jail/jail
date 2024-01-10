@@ -1,4 +1,4 @@
-import { cleanup, effect, signal } from "space/signal"
+import { signal } from "space/signal"
 import html from "space/dom"
 
 const code = `
