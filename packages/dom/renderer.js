@@ -209,12 +209,10 @@ function setAttribute(elt, binding) {
   const value = binding.value
   // <div on:click[.capture, .passive]=${() => } />
   if (name === "on" && binding.arg) {
-    const type = binding.arg,
-      eventOptions = {
-        capture: binding.modifiers?.capture,
-        passive: binding.modifiers?.passive,
-      }
-    return elt.addEventListener(type, value, eventOptions)
+    return elt.addEventListener(binding.arg, value, {
+      capture: binding.modifiers?.capture,
+      passive: binding.modifiers?.passive,
+    })
   }
   // <div onClick[.capture, .passive, .once, .prevent, .stop]=${() => } />
   if (name.startsWith("on")) {
