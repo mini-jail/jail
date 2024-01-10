@@ -122,12 +122,11 @@ export function createTree(compiled) {
    * @type {import("./mod.js").Tree[]}
    */
   const stack = []
-  let value, propName, type, nextTree, tree
   for (let i = 0; i < compiled.length; i++) {
-    type = compiled[i]
-    tree = stack.at(-1)
+    const type = compiled[i]
+    const tree = stack.at(-1)
     if (type === ELEMENT_OPEN) {
-      nextTree = { type: compiled[++i], props: null, children: null }
+      const nextTree = { type: compiled[++i], props: null, children: null }
       stack.push(nextTree)
       if (tree) {
         if (tree.children === null) {
@@ -143,7 +142,7 @@ export function createTree(compiled) {
     } else if (type === ELEMENT_CLOSE) {
       stack.pop()
     } else if (type === CHILD) {
-      value = compiled[++i]
+      const value = compiled[++i]
       if (tree) {
         if (tree.children === null) {
           tree.children = value
@@ -156,8 +155,8 @@ export function createTree(compiled) {
         root.push(value)
       }
     } else if (type === PROP_SET) {
-      propName = compiled[++i]
-      value = compiled[++i]
+      const propName = compiled[++i]
+      const value = compiled[++i]
       if (tree) {
         if (tree.props === null) {
           tree.props = {}
@@ -165,7 +164,7 @@ export function createTree(compiled) {
         tree.props[propName] = value
       }
     } else if (type === PROPS_ASSIGN) {
-      value = compiled[++i]
+      const value = compiled[++i]
       if (tree) {
         if (tree.props === null) {
           tree.props = {}
