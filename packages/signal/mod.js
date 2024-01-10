@@ -311,30 +311,30 @@ export function effect(fn, value) {
  */
 function clean(node, dispose) {
   if (node.signals?.length) {
-    let lastSignal = node.signals.pop()
-    while (lastSignal) {
-      const effects = effectMap.get(lastSignal)
+    let signal = node.signals.pop()
+    while (signal) {
+      const effects = effectMap.get(signal)
       if (effects) {
         effects.delete(node)
         if (dispose) {
-          effectMap.delete(lastSignal)
+          effectMap.delete(signal)
         }
       }
-      lastSignal = node.signals.pop()
+      signal = node.signals.pop()
     }
   }
   if (node.children?.length) {
-    let lastChild = node.children.pop()
-    while (lastChild) {
-      clean(lastChild, lastChild.fn ? true : dispose)
-      lastChild = node.children.pop()
+    let childNode = node.children.pop()
+    while (childNode) {
+      clean(childNode, childNode.fn ? true : dispose)
+      childNode = node.children.pop()
     }
   }
   if (node.cleanups?.length) {
-    let lastCleanup = node.cleanups.pop()
-    while (lastCleanup) {
-      lastCleanup()
-      lastCleanup = node.cleanups.pop()
+    let cleanup = node.cleanups.pop()
+    while (cleanup) {
+      cleanup()
+      cleanup = node.cleanups.pop()
     }
   }
   delete node.context
@@ -402,12 +402,12 @@ export function catchError(fn) {
  * @param {any} error
  */
 function handleError(error) {
-  const errorFunctions = lookup(currentNode, errorKey)
-  if (!errorFunctions) {
+  const errorFns = lookup(currentNode, errorKey)
+  if (!errorFns) {
     return reportError(error)
   }
-  for (const errorFunction of errorFunctions) {
-    errorFunction(error)
+  for (const errorFn of errorFns) {
+    errorFn(error)
   }
 }
 
@@ -418,8 +418,7 @@ export function sub(signal) {
   if (currentNode?.fn) {
     let effects = effectMap.get(signal)
     if (effects === undefined) {
-      effects = new Set()
-      effectMap.set(signal, effects)
+      effectMap.set(signal, effects = new Set())
     }
     effects.add(currentNode)
     if (currentNode.signals === undefined) {
@@ -463,8 +462,7 @@ function batch() {
  * @returns {data is { value: any }}
  */
 export function resolvable(data) {
-  return data && typeof data === "object" &&
-    !!Object.getOwnPropertyDescriptor(data, "value")?.get
+  return data && typeof data === "object" && Reflect.has(data, "value")
 }
 
 /**
