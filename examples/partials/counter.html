@@ -1,0 +1,7 @@
+<template s-if="path === '/counter'">
+  <article s-scope="Counter(Date.now())" :data-value="value">
+    <button @click="value++">increment</button>
+    current value: {{ value }}
+    <button @click="value--">decrement</button>
+  </article>
+</template>

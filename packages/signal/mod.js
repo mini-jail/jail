@@ -45,7 +45,7 @@ let currentNode
 
 export function getNode() {
   if (currentNode === undefined) {
-    throw new Error("getNode() called without parent.")
+    throw new Error("getNode() called without parent node.")
   }
   return currentNode
 }
@@ -83,7 +83,7 @@ export function root(fn) {
  */
 export function provide(key, value) {
   if (currentNode === undefined) {
-    throw new Error("provide(key, value) called without parent.")
+    throw new Error("provide(key, value) called without parent node.")
   }
   if (currentNode.context === undefined) {
     currentNode.context = {}
@@ -313,13 +313,7 @@ function clean(node, dispose) {
   if (node.signals?.length) {
     let signal = node.signals.pop()
     while (signal) {
-      const effects = effectMap.get(signal)
-      if (effects) {
-        effects.delete(node)
-        if (dispose) {
-          effectMap.delete(signal)
-        }
-      }
+      unsub(signal, node)
       signal = node.signals.pop()
     }
   }
@@ -372,7 +366,7 @@ function update(node) {
  */
 export function cleanup(fn) {
   if (currentNode === undefined) {
-    throw new Error("cleanup(fn) called without parent.")
+    throw new Error("cleanup(fn) called without parent node.")
   }
   if (currentNode.cleanups) {
     currentNode.cleanups.push(fn)
@@ -386,7 +380,7 @@ export function cleanup(fn) {
  */
 export function catchError(fn) {
   if (currentNode === undefined) {
-    throw new Error(`catchError(fn): called without parent.`)
+    throw new Error(`catchError(fn) called without parent node.`)
   }
   if (currentNode.context === undefined) {
     currentNode.context = {}
@@ -425,6 +419,20 @@ export function sub(signal) {
       currentNode.signals = [signal]
     } else {
       currentNode.signals.push(signal)
+    }
+  }
+}
+
+/**
+ * @param {Signal} signal
+ * @param {Node} node
+ */
+export function unsub(signal, node) {
+  const effects = effectMap.get(signal)
+  if (effects) {
+    effects.delete(node)
+    if (effects.size === 0) {
+      effectMap.delete(signal)
     }
   }
 }

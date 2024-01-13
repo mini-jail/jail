@@ -83,9 +83,11 @@ function createElement(node, values, svg) {
 function componentProperties(nodeProps, values, props, children) {
   for (const name in nodeProps) {
     const type = nodeProps[name]
-    const value = typeof type === "number" ? values[type] : type
+    const value = typeof type === "number" ? values[type] ?? type : type
     if (name.startsWith("...")) {
-      componentProperties(value, values, props, children)
+      for (const key in value) {
+        defineProperty(props, key, value[key])
+      }
     } else if (name === "children") {
       children.push(value)
     } else {
@@ -349,9 +351,7 @@ export function mount(rootElement, code, before) {
     let children = []
     cleanup(() => {
       before?.remove()
-      while (children.length) {
-        children.pop()?.remove()
-      }
+      removeNodes(children)
     })
     effect(() => {
       const nextNodes = nodesFrom([], code())
@@ -397,8 +397,15 @@ function reconcile(rootElement, anchor, currentNodes, nextNodes) {
       }
     })
   }
-  while (currentNodes?.length) {
-    currentNodes.pop()?.remove()
+  removeNodes(currentNodes)
+}
+
+/**
+ * @param {ChildNode[]} [nodes]
+ */
+function removeNodes(nodes) {
+  while (nodes?.length) {
+    nodes.pop()?.remove()
   }
 }
 

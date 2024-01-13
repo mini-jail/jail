@@ -2,6 +2,7 @@
   "imports": {
     "space/signal": "./packages/signal/mod.js",
     "space/dom": "./packages/dom/mod.js",
-    "space/deploy": "./packages/deploy/mod.ts"
+    "space/deploy": "./packages/deploy/mod.ts",
+    "space/s-html": "./packages/s-html/mod.js"
   }
 }

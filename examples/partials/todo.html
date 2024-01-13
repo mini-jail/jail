@@ -1,0 +1,41 @@
+<template s-if="path === '/todo'">
+  <article s-scope="ToDo">
+    <h4>
+      todo
+      <sub>(no-one ever have done that, i promise!)</sub>
+    </h4>
+    <div class="todo-app-container">
+      <form @submit.prevent="addItem()">
+        <input
+          required
+          type="text"
+          placeholder="...milk?"
+          class="todo_input"
+          s-modal="text"
+        />
+      </form>
+      <div class="todo-items">
+        <template s-for="item in items">
+          <div class="todo-item" :id="'item_' + item.id">
+            <div
+              class="todo-item-text"
+              @click="toggleItem(item)"
+              :style="item.done ? 'color: grey; font-style: italic;' : ''"
+            >
+              {{ item.text }}
+            </div>
+            <div
+              s-show="item.done"
+              class="todo-item-delete"
+              @click="deleteItem(item)"
+            >
+              delete
+            </div>
+          </div>
+        </template>
+      </div>
+      <label>progress: {{ done }}/{{ size }}</label>
+      <progress :max="size" :value="done"></progress>
+    </div>
+  </article>
+</template>

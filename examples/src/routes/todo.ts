@@ -1,5 +1,5 @@
 import { memo, signal } from "space/signal"
-import html, { DOMEvent } from "space/dom"
+import html, { component, DOMEvent } from "space/dom"
 
 type ToDoItem = {
   id: number
@@ -17,13 +17,17 @@ const Item = (props: ToDoItem) => {
     list.value = list.value.filter((item) => item.id !== props.id)
   }
   const toggleItem = (_ev: Event) => {
-    props.done = !props.done
-    list.value = list.value.slice()
+    const item = list.value.find((item) => item.id === props.id)
+    // can't simply "props.done = !props.done", because this is readonly
+    if (item) {
+      item.done = !item.done
+      list.value = list.value.slice()
+    }
   }
   return html`
     <div class="todo-item">
       <div 
-        class="todo-item-text" on:click=${toggleItem}
+        class="todo-item-text" onClick=${toggleItem}
         style="${props.done ? "color: grey; font-style: italic;" : null}"
       >
         ${props.text}
@@ -69,7 +73,7 @@ export default function ToDo() {
         </form>
         <div class="todo-items">
           <For each=${list}>
-            ${(item: ToDoItem) => Item(item)}
+            ${(item) => html`<ToDoItem ...${item} />`}
           </For>
         </div>
         <label>progress: ${done}/${length}</label>
@@ -78,3 +82,5 @@ export default function ToDo() {
     </article>
   `
 }
+
+component("ToDoItem", Item)
