@@ -1,5 +1,5 @@
 /**
- * @template [Type = any]
+ * @template [Type = unknown]
  * @typedef {{
  *   value?: Type
  *   parent?: Node
@@ -15,11 +15,11 @@
  * @typedef {() => void} Cleanup
  */
 /**
- * @template [Type = any]
+ * @template [Type = unknown]
  * @typedef {{ value: Type }} Signal
  */
 /**
- * @template [Type = any]
+ * @template [Type = unknown]
  * @typedef {{ readonly value: Type }} ReadonlySignal
  */
 /**
@@ -27,7 +27,7 @@
  * @typedef {Type extends Resolvable ? Type["value"] : Type} Resolved
  */
 /**
- * @typedef {{ value: any }} Resolvable
+ * @typedef {{ value: unknown }} Resolvable
  */
 /**
  * @type {WeakMap<Signal, Set<Node>>}
@@ -40,13 +40,13 @@ const effectQueue = new Set()
 const errorKey = Symbol("Error")
 let isRunning = false
 /**
- * @type {Node | undefined}
+ * @type {Node | null}
  */
-let activeNode
+let activeNode = null
 
 export function getNode() {
-  if (activeNode === undefined) {
-    throw new Error("getNode(): activeNode is undefined!")
+  if (activeNode === null) {
+    throw new Error("getNode(): activeNode is null!")
   }
   return activeNode
 }
@@ -83,8 +83,8 @@ export function root(fn) {
  * @param {Type} value
  */
 export function provide(key, value) {
-  if (activeNode === undefined) {
-    throw new Error("provide(key, value): activeNode is undefined!")
+  if (activeNode === null) {
+    throw new Error("provide(key, value): activeNode is null!")
   }
   if (activeNode.context === undefined) {
     activeNode.context = {}
@@ -244,7 +244,7 @@ export function deferred(fn, value, timeout) {
  */
 export function untrack(fn) {
   const node = activeNode
-  activeNode = undefined
+  activeNode = null
   const result = fn()
   activeNode = node
   return result
@@ -350,8 +350,8 @@ export function update(node) {
  * @param {Cleanup} fn
  */
 export function onCleanup(fn) {
-  if (activeNode === undefined) {
-    throw new Error("onCleanup(fn): activeNode is undefined!")
+  if (activeNode === null) {
+    throw new Error("onCleanup(fn): activeNode is null!")
   }
   if (activeNode.cleanup === undefined) {
     activeNode.cleanup = fn
@@ -368,8 +368,8 @@ export function onCleanup(fn) {
  * @param {(error: any) => void} fn
  */
 export function catchError(fn) {
-  if (activeNode === undefined) {
-    throw new Error(`catchError(fn): activeNode is undefined!`)
+  if (activeNode === null) {
+    throw new Error(`catchError(fn): activeNode is null!`)
   }
   if (activeNode.context === undefined) {
     activeNode.context = {}
