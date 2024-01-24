@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" s-scope="App">
+<html lang="en" s-scope="App()">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,8 +20,8 @@
     </header>
     <main s-animate="pathAnimation">
       <template s-partial="./partials/home.html"></template>
-      <template s-partial="./partials/about.html"></template>
       <template s-partial="./partials/counter.html"></template>
+      <template s-partial="./partials/about.html"></template>
       <template s-partial="./partials/todo.html"></template>
     </main>
   </body>

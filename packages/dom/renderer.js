@@ -1,4 +1,4 @@
-import { cleanup, effect, resolvable, resolve, root } from "space/signal"
+import { effect, onCleanup, resolvable, resolve, root } from "space/signal"
 import { getTree } from "./compiler.js"
 import { components } from "./components.js"
 import { directives } from "./directives.js"
@@ -84,7 +84,7 @@ function componentProperties(nodeProps, values, props, children) {
   for (const name in nodeProps) {
     const type = nodeProps[name]
     const value = typeof type === "number" ? values[type] ?? type : type
-    if (name.startsWith("...")) {
+    if (name === "...") {
       for (const key in value) {
         defineProperty(props, key, value[key])
       }
@@ -180,7 +180,7 @@ function setProperties(elt, props, values, svg) {
   for (const name in props) {
     const type = props[name]
     const value = typeof type === "number" ? values[type] : type
-    if (name.startsWith("...")) {
+    if (name === "...") {
       setProperties(elt, value, values, svg)
     } else if (name === "children") {
       addChild(elt, value, values, svg)
@@ -349,7 +349,7 @@ export function svg(statics, ...values) {
 export function mount(rootElement, code, before) {
   return root((dispose) => {
     let children = []
-    cleanup(() => {
+    onCleanup(() => {
       before?.remove()
       removeNodes(children)
     })

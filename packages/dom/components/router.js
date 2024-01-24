@@ -1,4 +1,4 @@
-import { cleanup, effect, inject, provide, signal } from "space/signal"
+import { effect, inject, onCleanup, provide, signal } from "space/signal"
 
 export const path = signal("")
 const paramsKey = Symbol("Params")
@@ -10,7 +10,7 @@ const routeTypeHandlerMap = {
       path.value = hash()
       addEventListener("hashchange", hashChangeListener)
     })
-    cleanup(() => {
+    onCleanup(() => {
       removeEventListener("hashchange", hashChangeListener)
     })
   },
@@ -38,7 +38,7 @@ const routeTypeHandlerMap = {
       addEventListener("click", clickListener)
       addEventListener("popstate", popStateListener)
     })
-    cleanup(() => {
+    onCleanup(() => {
       removeEventListener("click", clickListener)
       removeEventListener("popstate", popStateListener)
     })

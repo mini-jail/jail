@@ -169,11 +169,7 @@ export function createTree(compiled) {
         if (tree.props === null) {
           tree.props = {}
         }
-        let propName = "..."
-        while (tree.props[propName] !== undefined) {
-          propName += "."
-        }
-        tree.props[propName] = value
+        tree.props["..."] = value
       }
     }
   }

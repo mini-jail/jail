@@ -6,6 +6,7 @@
  *   children?: Node[]
  *   signals?: Signal[]
  *   context?: Record<string | symbol, any>
+ *   cleanup?: Cleanup
  *   cleanups?: Cleanup[]
  *   fn?: (value: Type) =>  Type
  * }} Node
@@ -41,13 +42,13 @@ let isRunning = false
 /**
  * @type {Node | undefined}
  */
-let currentNode
+let activeNode
 
 export function getNode() {
-  if (currentNode === undefined) {
-    throw new Error("getNode() called without parent node.")
+  if (activeNode === undefined) {
+    throw new Error("getNode(): activeNode is undefined!")
   }
-  return currentNode
+  return activeNode
 }
 
 /**
@@ -57,22 +58,22 @@ export function getNode() {
 export function root(fn) {
   /** @type {Node} */
   const node = Object.create(null),
-    prevNode = currentNode
-  if (currentNode) {
-    node.parent = currentNode
-    if (currentNode.children === undefined) {
-      currentNode.children = [node]
+    prevNode = activeNode
+  if (activeNode) {
+    node.parent = activeNode
+    if (activeNode.children === undefined) {
+      activeNode.children = [node]
     } else {
-      currentNode.children.push(node)
+      activeNode.children.push(node)
     }
   }
   try {
-    currentNode = node
+    activeNode = node
     return fn(() => clean(node, true))
   } catch (error) {
     handleError(error)
   } finally {
-    currentNode = prevNode
+    activeNode = prevNode
   }
 }
 
@@ -82,13 +83,13 @@ export function root(fn) {
  * @param {Type} value
  */
 export function provide(key, value) {
-  if (currentNode === undefined) {
-    throw new Error("provide(key, value) called without parent node.")
+  if (activeNode === undefined) {
+    throw new Error("provide(key, value): activeNode is undefined!")
   }
-  if (currentNode.context === undefined) {
-    currentNode.context = {}
+  if (activeNode.context === undefined) {
+    activeNode.context = {}
   }
-  currentNode.context[key] = value
+  activeNode.context[key] = value
 }
 
 /**
@@ -110,7 +111,7 @@ export function provide(key, value) {
  * @param {Type} [value]
  */
 export function inject(key, value) {
-  return lookup(currentNode, key) ?? value
+  return lookup(activeNode, key) ?? value
 }
 
 /**
@@ -158,33 +159,42 @@ export function signal(value) {
 
 /**
  * @template Type
+ * @param {Signal<Type>} signal
+ * @returns {ReadonlySignal<Type>}
+ */
+export function readonly(signal) {
+  return {
+    get value() {
+      return signal.value
+    },
+  }
+}
+
+/**
+ * @template Type
  * @overload
- * @param {() => Type} fn
+ * @param {(value: Type | undefined) => Type} fn
  * @returns {ReadonlySignal<Type | undefined>}
  */
 /**
  * @template Type
  * @overload
- * @param {() => Type} fn
+ * @param {(value: Type) => Type} fn
  * @param {Type} value
  * @returns {ReadonlySignal<Type>}
  */
 /**
  * @template Type
- * @param {() => Type} fn
+ * @param {(value: Type | undefined) => Type} fn
  * @param {Type} [value]
  * @returns {ReadonlySignal<Type | undefined>}
  */
 export function memo(fn, value) {
-  const data = signal(value)
+  const mSignal = signal(value)
   effect(() => {
-    data.value = fn()
+    mSignal.value = fn(untrack(() => mSignal.value))
   })
-  return {
-    get value() {
-      return data.value
-    },
-  }
+  return readonly(mSignal)
 }
 
 /**
@@ -216,45 +226,15 @@ export function memo(fn, value) {
  * @returns {ReadonlySignal<Type | undefined>}
  */
 export function deferred(fn, value, timeout) {
-  const data = signal(value)
+  const dSignal = signal(value)
   effect((handle) => {
     const value = fn()
     cancelIdleCallback(handle)
-    return requestIdleCallback(() => data.value = value, {
+    return requestIdleCallback(() => dSignal.value = value, {
       timeout,
     })
   })
-  return {
-    get value() {
-      return data.value
-    },
-  }
-}
-
-/**
- * @template Type
- * @param {() => any} fn
- * @param {(value: Type) => Type} cb
- * @returns {(value: Type) => Type}
- */
-export function on(fn, cb) {
-  return function (value) {
-    fn()
-    return untrack(() => cb(value))
-  }
-}
-
-/**
- * @template Type
- * @param {(value: Type) => Type} fn
- * @param {Signal[]} signals
- * @returns {(value: Type) => Type}
- */
-export function deps(fn, ...signals) {
-  return function (value) {
-    signals.forEach((signal) => signal.value)
-    return untrack(() => fn(value))
-  }
+  return readonly(dSignal)
 }
 
 /**
@@ -263,10 +243,10 @@ export function deps(fn, ...signals) {
  * @returns {Type}
  */
 export function untrack(fn) {
-  const node = currentNode
-  currentNode = undefined
+  const node = activeNode
+  activeNode = undefined
   const result = fn()
-  currentNode = node
+  activeNode = node
   return result
 }
 
@@ -287,15 +267,15 @@ export function effect(fn, value) {
   /** @type {Node} */
   const node = Object.create(null)
   node.fn = fn
-  if (value !== undefined) {
+  if (arguments.length === 2) {
     node.value = value
   }
-  if (currentNode) {
-    node.parent = currentNode
-    if (currentNode.children === undefined) {
-      currentNode.children = [node]
+  if (activeNode) {
+    node.parent = activeNode
+    if (activeNode.children === undefined) {
+      activeNode.children = [node]
     } else {
-      currentNode.children.push(node)
+      activeNode.children.push(node)
     }
   }
   if (isRunning) {
@@ -309,7 +289,7 @@ export function effect(fn, value) {
  * @param {Node} node
  * @param {boolean} dispose
  */
-function clean(node, dispose) {
+export function clean(node, dispose) {
   if (node.signals?.length) {
     let signal = node.signals.pop()
     while (signal) {
@@ -323,6 +303,10 @@ function clean(node, dispose) {
       clean(childNode, childNode.fn ? true : dispose)
       childNode = node.children.pop()
     }
+  }
+  if (node.cleanup) {
+    node.cleanup()
+    node.cleanup = undefined
   }
   if (node.cleanups?.length) {
     let cleanup = node.cleanups.pop()
@@ -338,6 +322,7 @@ function clean(node, dispose) {
     delete node.parent
     delete node.children
     delete node.fn
+    delete node.cleanup
     delete node.cleanups
   }
 }
@@ -345,33 +330,37 @@ function clean(node, dispose) {
 /**
  * @param {Node} node
  */
-function update(node) {
+export function update(node) {
   clean(node, false)
-  if (node.fn == null) {
+  if (node.fn === undefined) {
     return
   }
-  const prevNode = currentNode
+  const prevNode = activeNode
   try {
-    currentNode = node
+    activeNode = node
     node.value = node.fn(node.value)
   } catch (error) {
     handleError(error)
   } finally {
-    currentNode = prevNode
+    activeNode = prevNode
   }
 }
 
 /**
  * @param {Cleanup} fn
  */
-export function cleanup(fn) {
-  if (currentNode === undefined) {
-    throw new Error("cleanup(fn) called without parent node.")
+export function onCleanup(fn) {
+  if (activeNode === undefined) {
+    throw new Error("onCleanup(fn): activeNode is undefined!")
   }
-  if (currentNode.cleanups) {
-    currentNode.cleanups.push(fn)
+  if (activeNode.cleanup === undefined) {
+    activeNode.cleanup = fn
+    return
+  }
+  if (activeNode.cleanups) {
+    activeNode.cleanups.push(fn)
   } else {
-    currentNode.cleanups = [fn]
+    activeNode.cleanups = [fn]
   }
 }
 
@@ -379,16 +368,16 @@ export function cleanup(fn) {
  * @param {(error: any) => void} fn
  */
 export function catchError(fn) {
-  if (currentNode === undefined) {
-    throw new Error(`catchError(fn) called without parent node.`)
+  if (activeNode === undefined) {
+    throw new Error(`catchError(fn): activeNode is undefined!`)
   }
-  if (currentNode.context === undefined) {
-    currentNode.context = {}
+  if (activeNode.context === undefined) {
+    activeNode.context = {}
   }
-  if (currentNode.context[errorKey]) {
-    currentNode.context[errorKey].push(fn)
+  if (activeNode.context[errorKey]) {
+    activeNode.context[errorKey].push(fn)
   } else {
-    currentNode.context[errorKey] = [fn]
+    activeNode.context[errorKey] = [fn]
   }
 }
 
@@ -396,7 +385,7 @@ export function catchError(fn) {
  * @param {any} error
  */
 function handleError(error) {
-  const errorFns = lookup(currentNode, errorKey)
+  const errorFns = lookup(activeNode, errorKey)
   if (!errorFns) {
     return reportError(error)
   }
@@ -409,16 +398,16 @@ function handleError(error) {
  * @param {Signal} signal
  */
 export function sub(signal) {
-  if (currentNode?.fn) {
+  if (activeNode?.fn) {
     let effects = effectMap.get(signal)
     if (effects === undefined) {
       effectMap.set(signal, effects = new Set())
     }
-    effects.add(currentNode)
-    if (currentNode.signals === undefined) {
-      currentNode.signals = [signal]
+    effects.add(activeNode)
+    if (activeNode.signals === undefined) {
+      activeNode.signals = [signal]
     } else {
-      currentNode.signals.push(signal)
+      activeNode.signals.push(signal)
     }
   }
 }
@@ -428,13 +417,7 @@ export function sub(signal) {
  * @param {Node} node
  */
 export function unsub(signal, node) {
-  const effects = effectMap.get(signal)
-  if (effects) {
-    effects.delete(node)
-    if (effects.size === 0) {
-      effectMap.delete(signal)
-    }
-  }
+  effectMap.get(signal)?.delete(node)
 }
 
 /**
@@ -456,13 +439,11 @@ function queue(node) {
 }
 
 function batch() {
-  if (isRunning) {
-    for (const effect of effectQueue) {
-      update(effect)
-    }
-    effectQueue.clear()
-    isRunning = false
+  for (const effect of effectQueue) {
+    update(effect)
   }
+  effectQueue.clear()
+  isRunning = false
 }
 
 /**

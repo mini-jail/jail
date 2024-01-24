@@ -1,4 +1,4 @@
-import { cleanup, effect, inject, memo, provide, signal } from "space/signal"
+import { effect, inject, memo, onCleanup, provide, signal } from "space/signal"
 import html, { component, getParams } from "space/dom"
 
 type DotProps = { x: number; y: number; target: number }
@@ -85,7 +85,7 @@ export default function Sierpinski() {
     requestAnimationFrame(frame)
   })
 
-  cleanup(() => {
+  onCleanup(() => {
     clearInterval(id)
     console.log("Sierpinski is dead")
   })

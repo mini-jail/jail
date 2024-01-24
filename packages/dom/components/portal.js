@@ -1,4 +1,4 @@
-import { cleanup, effect, signal } from "space/signal"
+import { effect, onCleanup, signal } from "space/signal"
 import { mount } from "../renderer.js"
 
 /**
@@ -25,5 +25,5 @@ export function Portal(props) {
     }
     mount(target, () => live.value && props.children)
   })
-  cleanup(() => live.value = false)
+  onCleanup(() => live.value = false)
 }

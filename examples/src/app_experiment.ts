@@ -1,5 +1,5 @@
-import { application, type Binding } from "space/s-html"
-import { cleanup, effect, memo, signal } from "space/signal"
+import { createApplication, type Scope } from "space/s-html"
+import { effect, memo, onCleanup, signal } from "space/signal"
 
 type ToDoItem = {
   id: number
@@ -7,7 +7,7 @@ type ToDoItem = {
   text: string
 }
 
-function App() {
+function useRouter() {
   const path = signal(location.pathname)
   const url = new URL(location.toString())
   const clickListener = (event) => {
@@ -29,6 +29,20 @@ function App() {
     event.preventDefault()
     path.value = location.pathname
   }
+  effect(() => {
+    path.value = location.pathname
+    addEventListener("click", clickListener)
+    addEventListener("popstate", popStateListener)
+  })
+  onCleanup(() => {
+    removeEventListener("click", clickListener)
+    removeEventListener("popstate", popStateListener)
+  })
+  return path
+}
+
+function App(): Scope {
+  const path = useRouter()
   const pathAnimation = memo(() => {
     path.value
     return {
@@ -41,15 +55,6 @@ function App() {
       fill: "both",
     }
   })
-  effect(() => {
-    path.value = location.pathname
-    addEventListener("click", clickListener)
-    addEventListener("popstate", popStateListener)
-  })
-  cleanup(() => {
-    removeEventListener("click", clickListener)
-    removeEventListener("popstate", popStateListener)
-  })
   return {
     get title() {
       return `smol${path.value}`
@@ -61,7 +66,7 @@ function App() {
       return pathAnimation.value
     },
     $directives: {
-      animate(elt: Element, binding: Binding) {
+      animate(elt, binding) {
         const { keyframes, ...options } = binding.evaluate()
         elt.animate(keyframes, options)
       },
@@ -70,7 +75,19 @@ function App() {
 }
 
 function Counter(initialValue?: number) {
-  return signal(initialValue ?? 0)
+  const counter = signal(initialValue ?? 0)
+  let clickedValue = 0
+  const clicked = memo(() => {
+    counter.value
+    return clickedValue++
+  })
+  return {
+    counter,
+    clicked,
+    get key() {
+      return "key_" + counter.value.toString()
+    },
+  }
 }
 
 const list = signal<ToDoItem[]>([
@@ -80,11 +97,6 @@ const list = signal<ToDoItem[]>([
 function ToDo() {
   const text = signal("")
   return {
-    $components: {
-      ToDoItem() {
-        return { $template: "#todo-item" }
-      },
-    },
     text,
     addItem() {
       list.value = list.value.concat({
@@ -113,5 +125,5 @@ function ToDo() {
   }
 }
 
-application({ App, Counter, ToDo })
+createApplication({ App, Counter, ToDo })
   .mount(document)

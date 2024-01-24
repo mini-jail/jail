@@ -1,5 +1,5 @@
 import { memo, signal } from "space/signal"
-import html, { component, DOMEvent } from "space/dom"
+import html, { DOMEvent } from "space/dom"
 
 type ToDoItem = {
   id: number
@@ -73,7 +73,7 @@ export default function ToDo() {
         </form>
         <div class="todo-items">
           <For each=${list}>
-            ${(item) => html`<ToDoItem ...${item} />`}
+            ${Item}
           </For>
         </div>
         <label>progress: ${done}/${length}</label>
@@ -82,5 +82,3 @@ export default function ToDo() {
     </article>
   `
 }
-
-component("ToDoItem", Item)

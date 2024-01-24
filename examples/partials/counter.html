@@ -1,7 +1,13 @@
 <template s-if="path === '/counter'">
-  <article s-scope="Counter(Date.now())" :data-value="value">
-    <button @click="value++">increment</button>
-    current value: {{ value }}
-    <button @click="value--">decrement</button>
+  <article s-scope="Counter(0)" :data-value="counter.value">
+    <button @click="counter.value++">increment</button>
+    current value: {{ counter.value }} (clicked {{ clicked.value }} times)
+    <button @click="counter.value--">decrement</button>
+    <div s-if="clicked.value > 10">...wuaaaoh greater than ten!!!</div>
+    <div s-if="clicked.value > 20">...wuaaaoh greater than twenny!!!</div>
+    <div s-if="clicked.value > 30">...wuaaaoh greater than sörtyy!!!</div>
+    <div s-if="clicked.value > 40">...wuaaaoh greater than fotyy!!!</div>
+    <div s-if="clicked.value > 9999">...ITS OVER NINE THOUSAND!!!</div>
+    <div :[key]="counter.value">experiment {{ key }}</div>
   </article>
 </template>
