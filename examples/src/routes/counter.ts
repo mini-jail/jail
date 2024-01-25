@@ -15,11 +15,8 @@ function SimpleCounter() {
 }`.trim()
 
 export default function Counter() {
-  const counter = signal(0)
-  const show = signal(false)
-
+  const counter = signal(0), show = signal(false)
   return html`
-    (${counter} this one's at the root)
     <article>
       <h4>
         counter example
