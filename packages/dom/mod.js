@@ -42,18 +42,6 @@
 import { compile, createTree, getTree } from "./compiler.js"
 import { html, mount, svg } from "./renderer.js"
 
-import { directive, directives } from "./directives.js"
-import textDirective from "./directives/text.js"
-import styleDirective from "./directives/style.js"
-import ifDirective from "./directives/if.js"
-import showDirective from "./directives/show.js"
-import animateDirective from "./directives/animate.js"
-directives.text = textDirective
-directives.style = styleDirective
-directives.if = ifDirective
-directives.show = showDirective
-directives.animate = animateDirective
-
 import { component, components } from "./components.js"
 import { Animate } from "./components/animate.js"
 import { For } from "./components/for.js"
@@ -72,8 +60,6 @@ export {
   component,
   components,
   createTree,
-  directive,
-  directives,
   getParams,
   getTree,
   html,

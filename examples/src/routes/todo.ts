@@ -32,7 +32,11 @@ const Item = (props: ToDoItem) => {
       >
         ${props.text}
       </div>
-      <div d-show=${props.done} class="todo-item-delete" onClick=${deleteItem}>
+      <div 
+        style=${`display: ${props.done ? null : "none"}`} 
+        class="todo-item-delete" 
+        onClick=${deleteItem}
+      >
         delete
       </div>
     </div>

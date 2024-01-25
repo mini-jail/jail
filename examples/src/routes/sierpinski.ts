@@ -21,9 +21,9 @@ const Dot = ({ x, y, target }: DotProps) => {
   `
   return html`
     <div
-      d-text=${text}
-      d-style:backgroundColor=${bgColor}
+      textContent=${text}
       style=${css}
+      style:backgroundColor=${bgColor}
       class="sierpinski-dot"
       onMouseover=${() => hover.value = true}
       onMouseout=${() => hover.value = false}
@@ -91,7 +91,7 @@ export default function Sierpinski() {
   return html`
     <div 
       class="sierpinski-wrapper"
-      d-style:transform=${transform}
+      style:transform=${transform}
     >
       <Triangle x=${0} y=${0} target=${750} size=${25} />
     </div>

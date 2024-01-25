@@ -1,7 +1,6 @@
 import { effect, onCleanup, resolvable, resolve, root } from "space/signal"
 import { getTree } from "./compiler.js"
 import { components } from "./components.js"
-import { directives } from "./directives.js"
 
 /**
  * @type {Record<string, boolean | undefined>}
@@ -184,13 +183,7 @@ function setProperties(elt, props, values, svg) {
       addChild(elt, value, values, svg)
     } else {
       const binding = createBinding(name, value)
-      if (name.startsWith("d-")) {
-        const directive = directives[binding.name]
-        if (directive === undefined) {
-          throw new Error(`Directive d-${binding.name} not found.`)
-        }
-        effect(() => directive(elt, binding))
-      } else if (resolvable(value)) {
+      if (resolvable(value)) {
         effect(() => setAttribute(elt, binding))
       } else {
         setAttribute(elt, binding)
@@ -200,16 +193,36 @@ function setProperties(elt, props, values, svg) {
 }
 
 /**
- * @param {Element} elt
- *
+ * @param {HTMLElement} elt
  * @param {import("./mod.js").Binding<any>} binding
  */
 function setAttribute(elt, binding) {
   let name = binding.name
-  const value = binding.value
+  const value = binding.value, argument = binding.arg
+  if (name === "style") {
+    if (argument) {
+      // <div style:color="red" />
+      elt.style[argument] = value ?? null
+    } else if (value != null && typeof value === "object") {
+      // <div style=${{ color: "red" }} />
+      Object.assign(elt.style, value)
+    } else {
+      // <div style="color: red" />
+      elt.style.cssText += value + ""
+    }
+    return
+  }
+  if (name === "textContent") {
+    if (elt["__textContent"] === undefined) {
+      elt["__textContent"] = new Text()
+      elt.prepend(elt["__textContent"])
+    }
+    elt["__textContent"].data = value + ""
+    return
+  }
   // <div on:click[.capture, .passive]=${() => } />
-  if (name === "on" && binding.arg) {
-    return elt.addEventListener(binding.arg, value, {
+  if (name === "on" && argument) {
+    return elt.addEventListener(argument, value, {
       capture: binding.modifiers?.capture,
       passive: binding.modifiers?.passive,
       once: binding.modifiers?.once,
