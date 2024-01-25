@@ -33,7 +33,7 @@ const Item = (props: ToDoItem) => {
         ${props.text}
       </div>
       <div 
-        style=${`display: ${props.done ? null : "none"}`} 
+        style:display=${props.done ? null : "none"} 
         class="todo-item-delete" 
         onClick=${deleteItem}
       >
