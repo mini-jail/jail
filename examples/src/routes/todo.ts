@@ -72,7 +72,7 @@ export default function ToDo() {
           />
         </form>
         <div class="todo-items">
-          <For each=${list}>
+          <For each=${list} fallback="No Items">
             ${Item}
           </For>
         </div>
