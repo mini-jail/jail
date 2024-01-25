@@ -104,7 +104,7 @@ function hashChangeListener() {
  */
 export function* Router(props) {
   /**
-   * @type {{ matcher: RegExp, path: string, children: any }[]}
+   * @type {{ matcher: RegExp, children: any }[]}
    */
   const routes = []
   provide(routesKey, routes)
@@ -132,7 +132,6 @@ export function Route(props) {
   effect(() => {
     inject(routesKey).push({
       matcher: createMatcher(props.path),
-      path: props.path,
       children: props.children,
     })
   })
