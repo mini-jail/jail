@@ -21,10 +21,6 @@
  * }} Binding
  */
 /**
- * @template Type
- * @typedef {(elt: HTMLElement, binding: Binding<Type>) => void} Directive
- */
-/**
  * @template {Props} Type
  * @typedef {(props: Type) => any} Component
  */
