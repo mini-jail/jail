@@ -1,4 +1,11 @@
-import { effect, onCleanup, resolvable, resolve, root } from "space/signal"
+import {
+  effect,
+  memo,
+  onCleanup,
+  resolvable,
+  resolve,
+  root,
+} from "space/signal"
 import { getTree } from "./compiler.js"
 import { components } from "./components.js"
 
@@ -442,6 +449,13 @@ function nodesFrom(array, ...elements) {
     }
   }
   return array
+}
+
+/**
+ * @param {unknown} child
+ */
+export function children(child) {
+  return memo(() => nodesFrom([], child), [])
 }
 
 /**
