@@ -89,10 +89,7 @@ export default function Sierpinski() {
   const transform = memo(() => `scale(${scale.value}) translateZ(0.1px)`)
 
   return html`
-    <div 
-      class="sierpinski-wrapper"
-      style:transform=${transform}
-    >
+    <div class="sierpinski-wrapper" style:transform=${transform}>
       <Triangle x=${0} y=${0} target=${750} size=${25} />
     </div>
   `
