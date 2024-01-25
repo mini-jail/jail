@@ -1,5 +1,5 @@
 import { effect, inject, memo, onCleanup, provide, signal } from "space/signal"
-import html, { component, getParams } from "space/dom"
+import html, { component } from "space/dom"
 
 type DotProps = { x: number; y: number; target: number }
 
@@ -18,16 +18,13 @@ const Dot = ({ x, y, target }: DotProps) => {
     top: ${y}px;
     font-size: ${(target / 2.5)}px;
     border-radius: ${target}px;
-    position: absolute;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
   `
   return html`
     <div
       d-text=${text}
       d-style:backgroundColor=${bgColor}
       style=${css}
+      class="sierpinski-dot"
       onMouseover=${() => hover.value = true}
       onMouseout=${() => hover.value = false}
     ></div>
@@ -64,7 +61,6 @@ const Triangle = ({ x, y, target, size }: TriangleProps) => {
 }
 
 export default function Sierpinski() {
-  const { target = "750", size = "25" } = getParams() || {}
   let id: number
   const elapsed = signal(0)
   const count = signal(0)
@@ -97,7 +93,7 @@ export default function Sierpinski() {
       style="position: absolute; left: 50%; top: 50%;" 
       d-style:transform=${transform}
     >
-      <Triangle x=${0} y=${0} target=${+target} size=${+size} />
+      <Triangle x=${0} y=${0} target=${750} size=${25} />
     </div>
   `
 }

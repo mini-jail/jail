@@ -201,3 +201,10 @@ code pre:nth-child(odd) {
   display: block;
   margin: 0 auto;
 }
+
+.sierpinski-dot {
+  position: absolute;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}

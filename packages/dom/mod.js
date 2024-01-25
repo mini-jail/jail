@@ -55,10 +55,12 @@ directives.show = showDirective
 directives.animate = animateDirective
 
 import { component, components } from "./components.js"
+import { Animate } from "./components/animate.js"
 import { For } from "./components/for.js"
 import { Portal } from "./components/portal.js"
 import { getParams, path, Route, Router } from "./components/router.js"
 import { Show } from "./components/show.js"
+components.Animate = Animate
 components.For = For
 components.Portal = Portal
 components.Router = Router
