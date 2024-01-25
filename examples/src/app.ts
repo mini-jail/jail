@@ -1,5 +1,5 @@
 import { effect, memo } from "space/signal"
-import html, { component, mount, path } from "space/dom"
+import html, { mount, path } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
 import SimpleCounter from "./routes/simple-counter.ts"
@@ -39,24 +39,16 @@ function App() {
       </nav>
     </header>
     <main d-animate=${pathAnimation}>
-      <AppRouter />
+      <Router type="pathname" fallback=${NotFound}>
+        <Route path="/" children=${Home} />
+        <Route path="/counter" children=${Counter} />
+        <Route path="/counter/simple" children=${SimpleCounter} />
+        <Route path="/sierpinski" children=${Sierpinski} />
+        <Route path="/about" children=${About} />
+        <Route path="/todo" children=${ToDo} />
+      </Router>
     </main>
   `
 }
-
-component("AppRouter", () => {
-  return html`
-    <Router type="pathname" fallback=${NotFound}>
-      <Route path="/" children=${Home} />
-      <Route path="/counter" children=${Counter} />
-      <Route path="/counter/simple" children=${SimpleCounter} />
-      <Route path="/sierpinski" children=${Sierpinski} />
-      <Route path="/sierpinski/:target" children=${Sierpinski} />
-      <Route path="/sierpinski/:target/:size" children=${Sierpinski} />
-      <Route path="/about" children=${About} />
-      <Route path="/todo" children=${ToDo} />
-    </Router>
-  `
-})
 
 const dispose = mount(document.body, App)
