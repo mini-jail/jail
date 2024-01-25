@@ -14,6 +14,6 @@ export function For(props) {
     if (array.length === 0) {
       return props.fallback
     }
-    return array.map((item, index) => props.children(item, index))
+    return array.map((item, index) => root(() => props.children(item, index)))
   })
 }
