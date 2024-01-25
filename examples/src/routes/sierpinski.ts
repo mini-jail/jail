@@ -90,7 +90,7 @@ export default function Sierpinski() {
 
   return html`
     <div 
-      style="position: absolute; left: 50%; top: 50%;" 
+      class="sierpinski-wrapper"
       d-style:transform=${transform}
     >
       <Triangle x=${0} y=${0} target=${750} size=${25} />

@@ -208,3 +208,9 @@ code pre:nth-child(odd) {
   cursor: pointer;
   user-select: none;
 }
+
+.sierpinski-wrapper {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
