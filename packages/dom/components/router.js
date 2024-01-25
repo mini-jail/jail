@@ -1,4 +1,12 @@
-import { effect, inject, onCleanup, provide, signal } from "space/signal"
+import {
+  effect,
+  inject,
+  memo,
+  onCleanup,
+  provide,
+  root,
+  signal,
+} from "space/signal"
 
 export const path = signal("")
 const paramsKey = Symbol("Params")
@@ -32,7 +40,6 @@ const routeTypeHandlerMap = {
         elt = elt?.parentElement
       }
     }
-
     effect(() => {
       path.value = location.pathname
       addEventListener("click", clickListener)
@@ -103,25 +110,30 @@ export function* Router(props) {
   provide(routesKey, routes)
   routeTypeHandlerMap[props.type]()
   yield props.children
-  yield function Router() {
+  yield memo(() => {
     const nextRoute = path.value
-    for (const route of routes) {
-      if (route.matcher.test(nextRoute)) {
-        provide(paramsKey, route.matcher.exec(nextRoute)?.groups)
-        return route.children
+    return root(() => {
+      for (const route of routes) {
+        if (route.matcher.test(nextRoute)) {
+          const params = route.matcher.exec(nextRoute)?.groups
+          provide(paramsKey, params)
+          return route.children
+        }
       }
-    }
-    return props.fallback
-  }
+      return props.fallback
+    })
+  })
 }
 
 /**
  * @param {{ path: string, children?: any }} props
  */
 export function Route(props) {
-  inject(routesKey).push({
-    matcher: createMatcher(props.path),
-    path: props.path,
-    children: props.children,
+  effect(() => {
+    inject(routesKey).push({
+      matcher: createMatcher(props.path),
+      path: props.path,
+      children: props.children,
+    })
   })
 }

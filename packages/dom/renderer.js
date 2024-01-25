@@ -129,9 +129,7 @@ function createComponent(fn, node, values, svg) {
       children.length === 1 ? children[0] : children,
     )
   }
-  return function Component() {
-    return fn(props)
-  }
+  return root(() => fn(props))
 }
 
 /**
