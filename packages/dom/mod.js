@@ -43,16 +43,16 @@ import { compile, createTree, getTree } from "./compiler.js"
 import { html, mount, svg } from "./renderer.js"
 
 import { directive, directives } from "./directives.js"
-import { text } from "./directives/text.js"
-import { style } from "./directives/style.js"
-import { when } from "./directives/when.js"
-import { show } from "./directives/show.js"
-import { animate } from "./directives/animate.js"
-directives.text = text
-directives.style = style
-directives.when = when
-directives.show = show
-directives.animate = animate
+import textDirective from "./directives/text.js"
+import styleDirective from "./directives/style.js"
+import ifDirective from "./directives/if.js"
+import showDirective from "./directives/show.js"
+import animateDirective from "./directives/animate.js"
+directives.text = textDirective
+directives.style = styleDirective
+directives.if = ifDirective
+directives.show = showDirective
+directives.animate = animateDirective
 
 import { component, components } from "./components.js"
 import { For } from "./components/for.js"
