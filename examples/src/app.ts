@@ -31,7 +31,7 @@ function App() {
       </nav>
     </header>
     <${Animate} 
-      on=${path}
+      signal=${path}
       keyframes=${keyframes} 
       options=${{ delay: 50, duration: 250, fill: "both" }}
     >

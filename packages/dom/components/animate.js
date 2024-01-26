@@ -5,12 +5,14 @@ import { effect } from "space/signal"
  *   keyframes: Keyframe[],
  *   children: Element,
  *   options: KeyframeAnimationOptions
- *   on?: import("space/signal").Signal
+ *   signal?: import("space/signal").Signal
+ *   on?: () => void
  * }} props
  */
 export function Animate(props) {
   effect(() => {
-    props.on?.value
+    props.on?.()
+    props.signal?.value
     props.children.animate(props.keyframes, props.options)
   })
   return props.children
