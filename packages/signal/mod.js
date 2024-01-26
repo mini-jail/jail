@@ -3,7 +3,9 @@
  * @typedef {{
  *   value?: Type
  *   parent?: Node
+ *   child?: Node
  *   children?: Node[]
+ *   signal?: Signal
  *   signals?: Signal[]
  *   context?: Record<string | symbol, any>
  *   cleanup?: Cleanup
@@ -61,7 +63,9 @@ export function root(fn) {
     prevNode = activeNode
   if (activeNode) {
     node.parent = activeNode
-    if (activeNode.children === undefined) {
+    if (activeNode.child === undefined) {
+      activeNode.child = node
+    } else if (activeNode.children === undefined) {
       activeNode.children = [node]
     } else {
       activeNode.children.push(node)
@@ -283,7 +287,9 @@ export function effect(fn, value) {
   node.value = value
   if (activeNode) {
     node.parent = activeNode
-    if (activeNode.children === undefined) {
+    if (activeNode.child === undefined) {
+      activeNode.child = node
+    } else if (activeNode.children === undefined) {
       activeNode.children = [node]
     } else {
       activeNode.children.push(node)
@@ -301,12 +307,20 @@ export function effect(fn, value) {
  * @param {boolean} dispose
  */
 export function clean(node, dispose) {
+  if (node.signal) {
+    unsub(node.signal, node)
+    node.signal = undefined
+  }
   if (node.signals?.length) {
     let signal = node.signals.pop()
     while (signal) {
       unsub(signal, node)
       signal = node.signals.pop()
     }
+  }
+  if (node.child) {
+    clean(node.child, node.child.fn ? true : dispose)
+    node.child = undefined
   }
   if (node.children?.length) {
     let childNode = node.children.pop()
@@ -329,8 +343,10 @@ export function clean(node, dispose) {
   delete node.context
   if (dispose) {
     delete node.value
+    delete node.signal
     delete node.signals
     delete node.parent
+    delete node.child
     delete node.children
     delete node.fn
     delete node.cleanup
@@ -366,12 +382,10 @@ export function onCleanup(fn) {
   }
   if (activeNode.cleanup === undefined) {
     activeNode.cleanup = fn
-    return
-  }
-  if (activeNode.cleanups) {
-    activeNode.cleanups.push(fn)
-  } else {
+  } else if (activeNode.cleanups === undefined) {
     activeNode.cleanups = [fn]
+  } else {
+    activeNode.cleanups.push(fn)
   }
 }
 
@@ -415,10 +429,14 @@ export function sub(signal) {
       effectMap.set(signal, effects = new Set())
     }
     effects.add(activeNode)
-    if (activeNode.signals === undefined) {
-      activeNode.signals = [signal]
-    } else {
-      activeNode.signals.push(signal)
+    if (activeNode.signal === undefined) {
+      activeNode.signal = signal
+    } else if (activeNode.signal !== signal) {
+      if (activeNode.signals === undefined) {
+        activeNode.signals = [signal]
+      } else if (!activeNode.signals.includes(signal)) {
+        activeNode.signals.push(signal)
+      }
     }
   }
 }
