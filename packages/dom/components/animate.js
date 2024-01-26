@@ -10,7 +10,7 @@ import { effect } from "space/signal"
  */
 export function Animate(props) {
   effect(() => {
-    props?.on?.value
+    props.on?.value
     props.children.animate(props.keyframes, props.options)
   })
   return props.children
