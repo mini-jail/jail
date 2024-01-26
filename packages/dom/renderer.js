@@ -53,7 +53,7 @@ function renderDOM(node, values, svg) {
 function createElement(node, values, svg) {
   const type = typeof node.type === "number" ? values[node.type] : node.type
   if (typeof type === "function") {
-    return createComponent(type, node, values, svg)
+    return root(() => createComponent(type, node, values, svg))
   }
   if (node.type === "svg") {
     svg = true
@@ -79,37 +79,27 @@ function createElement(node, values, svg) {
 }
 
 /**
- * @param {object} nodeProps
- * @param {any[]} values
- * @param {object} props
- * @param {any[]} children
- */
-function componentProperties(nodeProps, values, props, children) {
-  for (const name in nodeProps) {
-    const type = nodeProps[name]
-    const value = typeof type === "number" ? values[type] ?? type : type
-    if (name === "...") {
-      for (const key in value) {
-        defineProperty(props, key, value[key])
-      }
-    } else if (name === "children") {
-      children.push(value)
-    } else {
-      defineProperty(props, name, value)
-    }
-  }
-}
-
-/**
- * @param {import("./mod.js").Component<any>} fn
+ * @param {import("./mod.js").Component<any>} component
  * @param {import("./mod.js").Tree} node
  * @param {any[]} values
  * @param {boolean} svg
  */
-function createComponent(fn, node, values, svg) {
+function createComponent(component, node, values, svg) {
   const props = {}, children = []
   if (node.props) {
-    componentProperties(node.props, values, props, children)
+    for (const name in node.props) {
+      const type = node.props[name]
+      const value = typeof type === "number" ? values[type] ?? type : type
+      if (name === "...") {
+        for (const key in value) {
+          defineProperty(props, key, value[key])
+        }
+      } else if (name === "children") {
+        children.push(value)
+      } else {
+        defineProperty(props, name, value)
+      }
+    }
   }
   if (node.children !== null) {
     if (Array.isArray(node.children)) {
@@ -133,7 +123,7 @@ function createComponent(fn, node, values, svg) {
       children.length === 1 ? children[0] : children,
     )
   }
-  return root(() => fn(props))
+  return component(props)
 }
 
 /**

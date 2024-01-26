@@ -100,7 +100,7 @@ function hashChangeListener() {
  *   </Router>
  * `
  * ```
- * @param {{ type: string, children?: any, fallback?: any }} props
+ * @param {{ type: "hash" | "pathname", children?: any, fallback?: any }} props
  */
 export function* Router(props) {
   /**
