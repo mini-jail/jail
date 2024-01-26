@@ -13,13 +13,10 @@ function App() {
     document.title = `space${path.value}`
   })
 
-  const keyframes = memo(() => {
-    path.value
-    return [
-      { opacity: 0, transform: "translateY(-10px)" },
-      { opacity: 1, transform: "unset" },
-    ]
-  })
+  const keyframes = [
+    { opacity: 0, transform: "translateY(-10px)" },
+    { opacity: 1, transform: "unset" },
+  ]
 
   return html`
     <header>
@@ -34,6 +31,7 @@ function App() {
       </nav>
     </header>
     <${Animate} 
+      on=${path}
       keyframes=${keyframes} 
       options=${{ delay: 50, duration: 250, fill: "both" }}
     >
