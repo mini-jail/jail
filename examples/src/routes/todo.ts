@@ -76,9 +76,7 @@ export default function ToDo() {
           />
         </form>
         <div class="todo-items">
-          <${For} each=${list} fallback="No Items">
-            ${Item}
-          </>
+          <${For} each=${list} fallback="No Items" children=${Item} />
         </div>
         <label>progress: ${done}/${length}</label>
         <progress max=${length} value=${done}></progress>

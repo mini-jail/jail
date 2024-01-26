@@ -199,6 +199,19 @@ export function memo(fn, value) {
 
 /**
  * @template Type
+ * @param {() => Promise<Type>} fn
+ * @returns {ReadonlySignal<Type | undefined>}
+ */
+export function fromPromise(fn) {
+  const pSignal = signal()
+  effect(() => {
+    fn().then((value) => pSignal.value = value)
+  })
+  return readonly(pSignal)
+}
+
+/**
+ * @template Type
  * @overload
  * @param {() => Type} fn
  * @returns {ReadonlySignal<Type | undefined>}
