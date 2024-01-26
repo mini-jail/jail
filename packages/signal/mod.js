@@ -280,9 +280,7 @@ export function effect(fn, value) {
   /** @type {Node} */
   const node = Object.create(null)
   node.fn = fn
-  if (arguments.length === 2) {
-    node.value = value
-  }
+  node.value = value
   if (activeNode) {
     node.parent = activeNode
     if (activeNode.children === undefined) {
@@ -437,7 +435,7 @@ export function unsub(signal, node) {
  * @param {Signal} signal
  */
 export function pub(signal) {
-  effectMap.get(signal)?.forEach(queue)
+  effectMap.get(signal)?.forEach((node) => queue(node))
 }
 
 /**
