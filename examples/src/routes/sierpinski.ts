@@ -1,5 +1,5 @@
 import { effect, inject, memo, onCleanup, provide, signal } from "space/signal"
-import html, { component } from "space/dom"
+import html from "space/dom"
 
 type DotProps = { x: number; y: number; target: number }
 
@@ -35,23 +35,23 @@ type TriangleProps = { x: number; y: number; target: number; size: number }
 
 const Triangle = ({ x, y, target, size }: TriangleProps) => {
   if (target <= size) {
-    return html`<Dot x=${x} y=${y} target=${target} />`
+    return html`<${Dot} x=${x} y=${y} target=${target} />`
   }
   target = target / 2
   return html`
-    <Triangle 
+    <${Triangle} 
       x=${x} 
       y=${y - target / 2} 
       target=${target} 
       size=${size}
     />
-    <Triangle 
+    <${Triangle} 
       x=${x - target} 
       y=${y + target / 2} 
       target=${target} 
       size=${size}
     />
-    <Triangle 
+    <${Triangle} 
       x=${x + target} 
       y=${y + target / 2} 
       target=${target} 
@@ -90,10 +90,7 @@ export default function Sierpinski() {
 
   return html`
     <div class="sierpinski-wrapper" style:transform=${transform}>
-      <Triangle x=${0} y=${0} target=${750} size=${25} />
+      <${Triangle} x=${0} y=${0} target=${750} size=${25} />
     </div>
   `
 }
-
-component("Triangle", Triangle)
-component("Dot", Dot)

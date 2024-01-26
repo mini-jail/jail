@@ -1,10 +1,10 @@
-import html from "space/dom"
+import html, { Portal } from "space/dom"
 
 export default function About() {
   return html`
-    <Portal selector="header nav">
+    <${Portal} selector="header nav">
       <a href="/error">hehe</a>
-    </Portal>
+    <//>
     <article>
       <h4>
         about

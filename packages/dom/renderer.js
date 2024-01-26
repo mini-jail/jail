@@ -7,7 +7,6 @@ import {
   root,
 } from "space/signal"
 import { getTree } from "./compiler.js"
-import { components } from "./components.js"
 
 /**
  * @type {Record<string, boolean | undefined>}
@@ -53,9 +52,8 @@ function renderDOM(node, values, svg) {
  */
 function createElement(node, values, svg) {
   const type = typeof node.type === "number" ? values[node.type] : node.type
-  if (typeof type === "function" || type in components) {
-    const component = typeof type === "function" ? type : components[type]
-    return createComponent(component, node, values, svg)
+  if (typeof type === "function") {
+    return createComponent(type, node, values, svg)
   }
   if (node.type === "svg") {
     svg = true
@@ -215,7 +213,7 @@ function setAttribute(elt, binding) {
       Object.assign(elt.style, value)
     } else {
       // <div style="color: red" />
-      elt.style.cssText += value + ""
+      elt.style.cssText = value + ""
     }
     return
   }

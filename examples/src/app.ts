@@ -1,5 +1,5 @@
 import { effect, memo } from "space/signal"
-import html, { mount, path } from "space/dom"
+import html, { Animate, mount, path, Route, Router } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
 import SimpleCounter from "./routes/simple-counter.ts"
@@ -33,21 +33,21 @@ function App() {
         <a onClick=${dispose} title="this will destroy the app">dispose</a>
       </nav>
     </header>
-    <Animate 
+    <${Animate} 
       keyframes=${keyframes} 
       options=${{ delay: 50, duration: 250, fill: "both" }}
     >
       <main>
-        <Router type="pathname" fallback=${NotFound}>
-          <Route path="/" children=${Home} />
-          <Route path="/counter" children=${Counter} />
-          <Route path="/counter/simple" children=${SimpleCounter} />
-          <Route path="/sierpinski" children=${Sierpinski} />
-          <Route path="/about" children=${About} />
-          <Route path="/todo" children=${ToDo} />
-        </Router>
+        <${Router} type="pathname" fallback=${NotFound}>
+          <${Route} path="/" children=${Home} />
+          <${Route} path="/counter" children=${Counter} />
+          <${Route} path="/counter/simple" children=${SimpleCounter} />
+          <${Route} path="/sierpinski" children=${Sierpinski} />
+          <${Route} path="/about" children=${About} />
+          <${Route} path="/todo" children=${ToDo} />
+        <//>
       </main>
-    </Animate>
+    <//>
   `
 }
 
