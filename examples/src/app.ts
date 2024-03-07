@@ -1,4 +1,4 @@
-import { effect, memo } from "space/signal"
+import { effect } from "space/signal"
 import html, { Animate, mount, path, Route, Router } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"

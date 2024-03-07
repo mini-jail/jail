@@ -380,29 +380,25 @@ export function mount(rootElement, code, before) {
  * @param {(Node & { data?: string })[] | undefined} nextNodes
  */
 function reconcile(rootElement, anchor, currentNodes, nextNodes) {
-  if (nextNodes?.length) {
-    nextNodes?.forEach((nextNode, i) => {
-      const child = currentNodes?.[i]
-      if (currentNodes?.length) {
-        currentNodes.some((currentNode, j) => {
-          if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
-            currentNode.data = nextNode.data
-          } else if (currentNode.nodeType === 8 && nextNode.nodeType === 8) {
-            currentNode.data = nextNode.data
-          }
-          if (currentNode.isEqualNode(nextNode)) {
-            nextNodes[i] = currentNode
-            currentNodes.splice(j, 1)
-            return true
-          }
-          return false
-        })
+  nextNodes?.forEach((nextNode, i) => {
+    const child = currentNodes?.[i]
+    currentNodes?.some((currentNode, j) => {
+      if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
+        currentNode.data = nextNode.data
+      } else if (currentNode.nodeType === 8 && nextNode.nodeType === 8) {
+        currentNode.data = nextNode.data
       }
-      if (nextNodes[i] !== child) {
-        rootElement?.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
+      if (currentNode.isEqualNode(nextNode)) {
+        nextNodes[i] = currentNode
+        currentNodes.splice(j, 1)
+        return true
       }
+      return false
     })
-  }
+    if (nextNodes[i] !== child) {
+      rootElement?.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
+    }
+  })
   removeNodes(currentNodes)
 }
 
