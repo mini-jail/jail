@@ -1,20 +1,20 @@
 import {
-  effect,
+  createEffect,
+  createMemo,
+  createRoot,
+  createSignal,
   inject,
-  memo,
   onCleanup,
   provide,
-  root,
-  signal,
 } from "space/signal"
 
-export const path = signal("")
+export const path = createSignal("")
 const paramsKey = Symbol("Params")
 const routesKey = Symbol("Routes")
 
 const routeTypeHandlerMap = {
   hash() {
-    effect(() => {
+    createEffect(() => {
       path.value = hash()
       addEventListener("hashchange", hashChangeListener)
     })
@@ -40,7 +40,7 @@ const routeTypeHandlerMap = {
         elt = elt?.parentElement
       }
     }
-    effect(() => {
+    createEffect(() => {
       path.value = location.pathname
       addEventListener("click", clickListener)
       addEventListener("popstate", popStateListener)
@@ -110,9 +110,9 @@ export function* Router(props) {
   provide(routesKey, routes)
   routeTypeHandlerMap[props.type]()
   yield props.children
-  yield memo(() => {
+  yield createMemo(() => {
     const nextRoute = path.value
-    return root(() => {
+    return createRoot(() => {
       for (const route of routes) {
         if (route.matcher.test(nextRoute)) {
           const params = route.matcher.exec(nextRoute)?.groups
@@ -129,7 +129,7 @@ export function* Router(props) {
  * @param {{ path: string, children?: any }} props
  */
 export function Route(props) {
-  effect(() => {
+  createEffect(() => {
     inject(routesKey).push({
       matcher: createMatcher(props.path),
       children: props.children,

@@ -1,10 +1,10 @@
 import {
-  effect,
-  memo,
+  createEffect,
+  createMemo,
+  createRoot,
+  isResolvable,
   onCleanup,
-  resolvable,
   resolve,
-  root,
 } from "space/signal"
 import { getTree } from "./compiler.js"
 
@@ -35,7 +35,7 @@ function renderDOM(node, values, svg) {
     return node
   } else if (typeof node === "number") {
     const value = values[node]
-    if (resolvableChild(value)) {
+    if (isResolvableChild(value)) {
       const before = new Text()
       mount(null, () => value, before)
       return before
@@ -53,7 +53,7 @@ function renderDOM(node, values, svg) {
 function createElement(node, values, svg) {
   const type = typeof node.type === "number" ? values[node.type] : node.type
   if (typeof type === "function") {
-    return root(() => createComponent(type, node, values, svg))
+    return createRoot(() => createComponent(type, node, values, svg))
   }
   if (node.type === "svg") {
     svg = true
@@ -178,8 +178,8 @@ function setProperties(elt, props, values, svg) {
       addChild(elt, value, values, svg)
     } else {
       const binding = createBinding(name, value)
-      if (resolvable(value)) {
-        effect(() => setAttribute(elt, binding))
+      if (isResolvable(value)) {
+        createEffect(() => setAttribute(elt, binding))
       } else {
         setAttribute(elt, binding)
       }
@@ -301,7 +301,7 @@ function insertChild(elt, child) {
     for (const subChild of child) {
       insertChild(elt, subChild)
     }
-  } else if (resolvableChild(child)) {
+  } else if (isResolvableChild(child)) {
     mount(elt, () => child, elt.appendChild(new Text()))
   } else {
     elt.append(String(child))
@@ -353,13 +353,13 @@ export function svg(statics, ...values) {
  * @param {ChildNode} [before]
  */
 export function mount(rootElement, code, before) {
-  return root((dispose) => {
+  return createRoot((dispose) => {
     let children = []
     onCleanup(() => {
       before?.remove()
       removeNodes(children)
     })
-    effect(() => {
+    createEffect(() => {
       const nextNodes = nodesFrom([], code())
       reconcile(
         rootElement ?? before?.parentElement ?? null,
@@ -428,7 +428,7 @@ function nodesFrom(array, ...elements) {
       nodesFrom(array, elt())
     } else if (Symbol.iterator in elt) {
       nodesFrom(array, ...elt)
-    } else if (resolvable(elt)) {
+    } else if (isResolvable(elt)) {
       nodesFrom(array, elt.value)
     }
   }
@@ -438,8 +438,8 @@ function nodesFrom(array, ...elements) {
 /**
  * @param {unknown} child
  */
-export function children(child) {
-  return memo(() => nodesFrom([], child), [])
+export function createChildren(child) {
+  return createMemo(() => nodesFrom([], child), [])
 }
 
 /**
@@ -469,7 +469,7 @@ function eventListener(event) {
  * @param {any} data
  * @returns {data is (() => any) | { value: any } | any[]}
  */
-function resolvableChild(data) {
+function isResolvableChild(data) {
   if (data == null) {
     return false
   }

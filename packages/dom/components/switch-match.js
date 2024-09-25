@@ -1,4 +1,10 @@
-import { effect, inject, memo, provide, root } from "space/signal"
+import {
+  createEffect,
+  createMemo,
+  createRoot,
+  inject,
+  provide,
+} from "space/signal"
 
 const switchKey = Symbol("Switch")
 
@@ -12,8 +18,8 @@ export function* Switch(props) {
   const matchPropsSet = new Set()
   provide(switchKey, matchPropsSet)
   yield props.children
-  yield memo(() => {
-    return root(() => {
+  yield createMemo(() => {
+    return createRoot(() => {
       for (const props of matchPropsSet) {
         if (props.when + "" === "true") {
           return props.children
@@ -28,5 +34,5 @@ export function* Switch(props) {
  * @param {{ when: boolean | "true" | "false", children: any }} props
  */
 export function Match(props) {
-  effect(() => inject(switchKey).add(props))
+  createEffect(() => inject(switchKey).add(props))
 }

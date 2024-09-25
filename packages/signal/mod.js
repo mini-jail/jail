@@ -1,16 +1,13 @@
 /**
  * @template [Type = unknown]
  * @typedef {{
- *   value?: Type
- *   parent?: Node
- *   child?: Node
- *   children?: Node[]
- *   signal?: Signal
- *   signals?: Signal[]
- *   context?: Record<string | symbol, any>
- *   cleanup?: Cleanup
- *   cleanups?: Cleanup[]
- *   fn?: (value: Type) =>  Type
+ *   value: Type | undefined
+ *   parent: Node | null
+ *   children: Node[] | null
+ *   signals: Signal[] | null
+ *   context: Record<string | symbol, any> | null
+ *   cleanups: Cleanup[] | null
+ *   fn: ((value: Type) =>  Type)  | null
  * }} Node
  */
 /**
@@ -54,30 +51,45 @@ export function getNode() {
 }
 
 /**
- * @template Type
- * @param {(cleanup: Cleanup) => Type} fn
+ * @returns {Node}
  */
-export function root(fn) {
-  /** @type {Node} */
-  const node = Object.create(null),
-    prevNode = activeNode
+export function createNode() {
+  /**
+   * @type {Node}
+   */
+  const node = {
+    children: null,
+    cleanups: null,
+    context: null,
+    fn: null,
+    parent: null,
+    signals: null,
+    value: undefined,
+  }
   if (activeNode) {
     node.parent = activeNode
-    if (activeNode.child === undefined) {
-      activeNode.child = node
-    } else if (activeNode.children === undefined) {
+    if (activeNode.children === null) {
       activeNode.children = [node]
     } else {
       activeNode.children.push(node)
     }
   }
+  return node
+}
+
+/**
+ * @template Type
+ * @param {(cleanup: Cleanup) => Type} fn
+ */
+export function createRoot(fn) {
+  const node = createNode()
   try {
     activeNode = node
     return fn(() => clean(node, true))
   } catch (error) {
     handleError(error)
   } finally {
-    activeNode = prevNode
+    activeNode = node.parent
   }
 }
 
@@ -90,7 +102,7 @@ export function provide(key, value) {
   if (activeNode === null) {
     throw new Error("provide(key, value): activeNode is null!")
   }
-  if (activeNode.context === undefined) {
+  if (activeNode.context === null) {
     activeNode.context = {}
   }
   activeNode.context[key] = value
@@ -125,7 +137,7 @@ export function inject(key, value) {
 function lookup(node, key) {
   return node == null
     ? undefined
-    : node.context !== undefined && key in node.context
+    : node.context !== null && key in node.context
     ? node.context[key]
     : lookup(node.parent, key)
 }
@@ -146,7 +158,7 @@ function lookup(node, key) {
  * @param {Type} [value]
  * @returns {Signal<Type | undefined>}
  */
-export function signal(value) {
+export function createSignal(value) {
   return {
     get value() {
       sub(this)
@@ -166,7 +178,7 @@ export function signal(value) {
  * @param {Signal<Type>} signal
  * @returns {ReadonlySignal<Type>}
  */
-export function readonly(signal) {
+export function createReadonly(signal) {
   return {
     get value() {
       return signal.value
@@ -193,65 +205,12 @@ export function readonly(signal) {
  * @param {Type} [value]
  * @returns {ReadonlySignal<Type | undefined>}
  */
-export function memo(fn, value) {
-  const mSignal = signal(value)
-  effect(() => {
-    mSignal.value = fn(untrack(() => mSignal.value))
+export function createMemo(fn, value) {
+  const signal = createSignal(value)
+  createEffect(() => {
+    signal.value = fn(untrack(() => signal.value))
   })
-  return readonly(mSignal)
-}
-
-/**
- * @template Type
- * @param {() => Promise<Type>} fn
- * @returns {ReadonlySignal<Type | undefined>}
- */
-export function fromPromise(fn) {
-  const pSignal = signal()
-  effect(() => {
-    fn().then((value) => pSignal.value = value)
-  })
-  return readonly(pSignal)
-}
-
-/**
- * @template Type
- * @overload
- * @param {() => Type} fn
- * @returns {ReadonlySignal<Type | undefined>}
- */
-/**
- * @template Type
- * @overload
- * @param {() => Type} fn
- * @param {Type} value
- * @returns {ReadonlySignal<Type>}
- */
-/**
- * @template Type
- * @overload
- * @param {() => Type} fn
- * @param {Type} value
- * @param {number} timeout
- * @returns {ReadonlySignal<Type>}
- */
-/**
- * @template Type
- * @param {() => Type} fn
- * @param {Type} [value]
- * @param {number} [timeout]
- * @returns {ReadonlySignal<Type | undefined>}
- */
-export function deferred(fn, value, timeout) {
-  const dSignal = signal(value)
-  effect((handle) => {
-    const value = fn()
-    cancelIdleCallback(handle)
-    return requestIdleCallback(() => dSignal.value = value, {
-      timeout,
-    })
-  })
-  return readonly(dSignal)
+  return createReadonly(signal)
 }
 
 /**
@@ -280,21 +239,10 @@ export function untrack(fn) {
  * @param {Type} value
  * @returns {void}
  */
-export function effect(fn, value) {
-  /** @type {Node} */
-  const node = Object.create(null)
+export function createEffect(fn, value) {
+  const node = createNode()
   node.fn = fn
   node.value = value
-  if (activeNode) {
-    node.parent = activeNode
-    if (activeNode.child === undefined) {
-      activeNode.child = node
-    } else if (activeNode.children === undefined) {
-      activeNode.children = [node]
-    } else {
-      activeNode.children.push(node)
-    }
-  }
   if (isRunning) {
     effectQueue.add(node)
   } else {
@@ -307,20 +255,12 @@ export function effect(fn, value) {
  * @param {boolean} dispose
  */
 export function clean(node, dispose) {
-  if (node.signal) {
-    unsub(node.signal, node)
-    node.signal = undefined
-  }
   if (node.signals?.length) {
     let signal = node.signals.pop()
     while (signal) {
       unsub(signal, node)
       signal = node.signals.pop()
     }
-  }
-  if (node.child) {
-    clean(node.child, node.child.fn ? true : dispose)
-    node.child = undefined
   }
   if (node.children?.length) {
     let childNode = node.children.pop()
@@ -329,10 +269,6 @@ export function clean(node, dispose) {
       childNode = node.children.pop()
     }
   }
-  if (node.cleanup) {
-    node.cleanup()
-    node.cleanup = undefined
-  }
   if (node.cleanups?.length) {
     let cleanup = node.cleanups.pop()
     while (cleanup) {
@@ -340,26 +276,22 @@ export function clean(node, dispose) {
       cleanup = node.cleanups.pop()
     }
   }
-  delete node.context
+  node.context = null
   if (dispose) {
-    delete node.value
-    delete node.signal
-    delete node.signals
-    delete node.parent
-    delete node.child
-    delete node.children
-    delete node.fn
-    delete node.cleanup
-    delete node.cleanups
+    node.value = undefined
+    node.signals = null
+    node.children = null
+    node.fn = null
+    node.cleanups = null
   }
 }
 
 /**
  * @param {Node} node
  */
-export function update(node) {
+function update(node) {
   clean(node, false)
-  if (node.fn === undefined) {
+  if (node.fn === null) {
     return
   }
   const prevNode = activeNode
@@ -380,9 +312,7 @@ export function onCleanup(fn) {
   if (activeNode === null) {
     throw new Error("onCleanup(fn): activeNode is null!")
   }
-  if (activeNode.cleanup === undefined) {
-    activeNode.cleanup = fn
-  } else if (activeNode.cleanups === undefined) {
+  if (activeNode.cleanups === null) {
     activeNode.cleanups = [fn]
   } else {
     activeNode.cleanups.push(fn)
@@ -396,7 +326,7 @@ export function catchError(fn) {
   if (activeNode === null) {
     throw new Error(`catchError(fn): activeNode is null!`)
   }
-  if (activeNode.context === undefined) {
+  if (activeNode.context === null) {
     activeNode.context = {}
   }
   if (activeNode.context[errorKey]) {
@@ -429,14 +359,10 @@ export function sub(signal) {
       effectMap.set(signal, effects = new Set())
     }
     effects.add(activeNode)
-    if (activeNode.signal === undefined) {
-      activeNode.signal = signal
-    } else if (activeNode.signal !== signal) {
-      if (activeNode.signals === undefined) {
-        activeNode.signals = [signal]
-      } else if (!activeNode.signals.includes(signal)) {
-        activeNode.signals.push(signal)
-      }
+    if (activeNode.signals === null) {
+      activeNode.signals = [signal]
+    } else if (!activeNode.signals.includes(signal)) {
+      activeNode.signals.push(signal)
     }
   }
 }
@@ -479,7 +405,7 @@ function batch() {
  * @param {any} data
  * @returns {data is { value: any }}
  */
-export function resolvable(data) {
+export function isResolvable(data) {
   return data && typeof data === "object" && Reflect.has(data, "value")
 }
 
@@ -489,5 +415,5 @@ export function resolvable(data) {
  * @returns {Resolved<Type>}
  */
 export function resolve(data) {
-  return resolvable(data) ? data.value : data
+  return isResolvable(data) ? data.value : data
 }

@@ -1,4 +1,4 @@
-import { signal } from "space/signal"
+import { createSignal } from "space/signal"
 import html, { Show } from "space/dom"
 
 const code = `
@@ -15,7 +15,7 @@ function SimpleCounter() {
 }`.trim()
 
 export default function Counter() {
-  const counter = signal(0), show = signal(false)
+  const counter = createSignal(0), show = createSignal(false)
   return html`
     <article>
       <h4>

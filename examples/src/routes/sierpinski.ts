@@ -1,15 +1,22 @@
-import { effect, inject, memo, onCleanup, provide, signal } from "space/signal"
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  inject,
+  onCleanup,
+  provide,
+} from "space/signal"
 import html from "space/dom"
 
 type DotProps = { x: number; y: number; target: number }
 
 const Dot = ({ x, y, target }: DotProps) => {
   const counter = inject<{ value: number }>("counter")!
-  const hover = signal(false)
-  const text = memo(() => {
+  const hover = createSignal(false)
+  const text = createMemo(() => {
     return hover.value ? "*" + counter.value + "*" : counter.value + ""
   })
-  const bgColor = memo(() => hover.value ? "lightpink" : "white")
+  const bgColor = createMemo(() => hover.value ? "lightpink" : "white")
   const css = `
     width: ${target}px;
     height: ${target}px;
@@ -62,16 +69,16 @@ const Triangle = ({ x, y, target, size }: TriangleProps) => {
 
 export default function Sierpinski() {
   let id: number
-  const elapsed = signal(0)
-  const count = signal(0)
-  const scale = memo(() => {
+  const elapsed = createSignal(0)
+  const count = createSignal(0)
+  const scale = createMemo(() => {
     const e = (elapsed.value / 1000) % 10
     return (1 + (e > 5 ? 10 - e : e) / 10) / 2
   }, 1)
 
   provide("counter", count)
 
-  effect(() => {
+  createEffect(() => {
     id = setInterval(() => count.value = (count.value % 10) + 1, 1000)
     const start = Date.now()
     const frame = () => {
@@ -86,7 +93,7 @@ export default function Sierpinski() {
     console.log("Sierpinski is dead")
   })
 
-  const transform = memo(() => `scale(${scale.value}) translateZ(0.1px)`)
+  const transform = createMemo(() => `scale(${scale.value}) translateZ(0.1px)`)
 
   return html`
     <div class="sierpinski-wrapper" style:transform=${transform}>

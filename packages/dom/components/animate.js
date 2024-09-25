@@ -1,4 +1,4 @@
-import { effect } from "space/signal"
+import { createEffect } from "space/signal"
 
 /**
  * @param {{
@@ -10,7 +10,7 @@ import { effect } from "space/signal"
  * }} props
  */
 export function Animate(props) {
-  effect(() => {
+  createEffect(() => {
     props.on?.()
     props.signal?.value
     props.children.animate(props.keyframes, props.options)

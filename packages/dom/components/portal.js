@@ -1,4 +1,4 @@
-import { effect, onCleanup, signal } from "space/signal"
+import { createEffect, createSignal, onCleanup } from "space/signal"
 import { mount } from "../renderer.js"
 
 /**
@@ -13,8 +13,8 @@ import { mount } from "../renderer.js"
  * @param {{ selector?: string, mount?: Element, children?: any }} props
  */
 export function Portal(props) {
-  const live = signal(true)
-  effect(() => {
+  const isLive = createSignal(true)
+  createEffect(() => {
     const target = props.selector
       ? document.querySelector(props.selector)
       : props.mount
@@ -23,7 +23,7 @@ export function Portal(props) {
     if (target === null) {
       throw new Error(`Portal target is null!`)
     }
-    mount(target, () => live.value && props.children)
+    mount(target, () => isLive.value && props.children)
   })
-  onCleanup(() => live.value = false)
+  onCleanup(() => isLive.value = false)
 }

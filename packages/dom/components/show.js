@@ -1,10 +1,10 @@
-import { memo } from "space/signal"
+import { createMemo } from "space/signal"
 
 /**
  * @param {{ when: boolean | "true" | "false", children?: any, fallback?: any }} props
  */
 export function Show(props) {
-  return memo(() => {
+  return createMemo(() => {
     if (props.when + "" === "true") {
       return props.children
     }

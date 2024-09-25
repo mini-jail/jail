@@ -1,4 +1,4 @@
-import { memo, signal } from "space/signal"
+import { createMemo, createSignal } from "space/signal"
 import html, { DOMEvent, For } from "space/dom"
 
 type ToDoItem = {
@@ -7,7 +7,7 @@ type ToDoItem = {
   text: string
 }
 
-const list = signal<ToDoItem[]>([
+const list = createSignal<ToDoItem[]>([
   { id: 0, done: true, text: "eat cornflakes without soymilk" },
   { id: 1, done: false, text: "buy soymilk" },
 ])
@@ -44,7 +44,7 @@ const Item = (props: ToDoItem) => {
 }
 
 export default function ToDo() {
-  const text = signal("")
+  const text = createSignal("")
   const addItem = () => {
     list.value = list.value.concat({
       id: Date.now(),
@@ -56,8 +56,8 @@ export default function ToDo() {
   const onInput = (ev: DOMEvent<HTMLInputElement>) => {
     text.value = ev.target.value
   }
-  const length = memo(() => list.value.length, 0)
-  const done = memo(() => {
+  const length = createMemo(() => list.value.length, 0)
+  const done = createMemo(() => {
     return list.value.filter((item) => item.done).length
   }, 0)
 

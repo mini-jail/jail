@@ -1,4 +1,4 @@
-import { effect } from "space/signal"
+import { createEffect } from "space/signal"
 import html, { Animate, mount, path, Route, Router } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
@@ -9,7 +9,7 @@ import ToDo from "./routes/todo.ts"
 import NotFound from "./routes/notfound.ts"
 
 function App() {
-  effect(() => {
+  createEffect(() => {
     document.title = `space${path.value}`
   })
 
@@ -30,9 +30,9 @@ function App() {
         <a onClick=${dispose} title="this will destroy the app">dispose</a>
       </nav>
     </header>
-    <${Animate} 
+    <${Animate}
       signal=${path}
-      keyframes=${keyframes} 
+      keyframes=${keyframes}
       options=${{ delay: 50, duration: 250, fill: "both" }}
     >
       <main>
