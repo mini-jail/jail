@@ -357,10 +357,12 @@ export function mount(rootElement, code, before) {
     let children = []
     onCleanup(() => {
       before?.remove()
-      removeNodes(children)
+      while (children?.length) {
+        children.pop()?.remove()
+      }
     })
     createEffect(() => {
-      const nextNodes = nodesFrom([], code())
+      const nextNodes = createNodesFrom([], code())
       reconcile(
         rootElement ?? before?.parentElement ?? null,
         before ?? null,
@@ -393,21 +395,13 @@ function reconcile(rootElement, anchor, currentNodes, nextNodes) {
         currentNodes.splice(j, 1)
         return true
       }
-      return false
     })
     if (nextNodes[i] !== child) {
       rootElement?.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
     }
   })
-  removeNodes(currentNodes)
-}
-
-/**
- * @param {ChildNode[]} [nodes]
- */
-function removeNodes(nodes) {
-  while (nodes?.length) {
-    nodes.pop()?.remove()
+  while (currentNodes?.length) {
+    currentNodes.pop()?.remove()
   }
 }
 
@@ -416,7 +410,7 @@ function removeNodes(nodes) {
  * @param  {...any} elements
  * @returns {Node[]}
  */
-function nodesFrom(array, ...elements) {
+function createNodesFrom(array, ...elements) {
   for (const elt of elements) {
     if (elt == null || typeof elt === "boolean") {
       continue
@@ -425,11 +419,11 @@ function nodesFrom(array, ...elements) {
     } else if (typeof elt === "string" || typeof elt === "number") {
       array.push(new Text(elt + ""))
     } else if (typeof elt === "function") {
-      nodesFrom(array, elt())
+      createNodesFrom(array, elt())
     } else if (Symbol.iterator in elt) {
-      nodesFrom(array, ...elt)
+      createNodesFrom(array, ...elt)
     } else if (isResolvable(elt)) {
-      nodesFrom(array, elt.value)
+      createNodesFrom(array, elt.value)
     }
   }
   return array
@@ -439,7 +433,7 @@ function nodesFrom(array, ...elements) {
  * @param {unknown} child
  */
 export function createChildren(child) {
-  return createMemo(() => nodesFrom([], child), [])
+  return createMemo(() => createNodesFrom([], child), [])
 }
 
 /**

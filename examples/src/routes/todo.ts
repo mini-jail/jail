@@ -7,9 +7,11 @@ type ToDoItem = {
   text: string
 }
 
+let itemID = 0
+
 const list = createSignal<ToDoItem[]>([
-  { id: 0, done: true, text: "eat cornflakes without soymilk" },
-  { id: 1, done: false, text: "buy soymilk" },
+  { id: itemID++, done: true, text: "eat cornflakes without soymilk" },
+  { id: itemID++, done: false, text: "buy soymilk" },
 ])
 
 const Item = (props: ToDoItem) => {
@@ -25,16 +27,17 @@ const Item = (props: ToDoItem) => {
     }
   }
   return html`
-    <div class="todo-item">
-      <div 
-        class="todo-item-text" onClick=${toggleItem}
+    <div class="todo-item" id="${"item_" + props.id}">
+      <div
+        class="todo-item-text"
+        onClick=${toggleItem}
         style="${props.done ? "color: grey; font-style: italic;" : null}"
       >
         ${props.text}
       </div>
-      <div 
-        style:display=${props.done ? null : "none"} 
-        class="todo-item-delete" 
+      <div
+        style:display=${props.done ? null : "none"}
+        class="todo-item-delete"
         onClick=${deleteItem}
       >
         delete
@@ -47,7 +50,7 @@ export default function ToDo() {
   const text = createSignal("")
   const addItem = () => {
     list.value = list.value.concat({
-      id: Date.now(),
+      id: itemID++,
       done: false,
       text: text.value,
     })
@@ -69,9 +72,12 @@ export default function ToDo() {
       </h4>
       <div class="todo-app-container">
         <form onSubmit.prevent=${addItem}>
-          <input 
-            type="text" placeholder="...milk?"
-            required class="todo_input" value=${text}
+          <input
+            type="text"
+            placeholder="...milk?"
+            required
+            class="todo_input"
+            value=${text}
             onInput=${onInput}
           />
         </form>

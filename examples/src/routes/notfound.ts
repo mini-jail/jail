@@ -3,9 +3,12 @@ import { createEffect, onCleanup } from "space/signal"
 
 export default function NotFound() {
   const { backgroundColor } = document.body.style
-  createEffect(() => document.body.style.backgroundColor = "indianred")
-  onCleanup(() => document.body.style.backgroundColor = backgroundColor)
-
+  createEffect(() => {
+    document.body.style.backgroundColor = "indianred"
+  })
+  onCleanup(() => {
+    document.body.style.backgroundColor = backgroundColor
+  })
   return html`
     <article>
       <h4>

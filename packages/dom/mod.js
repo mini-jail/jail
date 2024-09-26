@@ -14,10 +14,10 @@
 /**
  * @template Type
  * @typedef {{
- *   name: string
- *   arg: string | null
- *   modifiers: { [field: string]: true | undefined } | null
- *   value: Type
+ *   readonly name: string
+ *   readonly arg: string | null
+ *   readonly modifiers: { readonly [field: string]: true | undefined } | null
+ *   readonly value: Type
  * }} Binding
  */
 /**

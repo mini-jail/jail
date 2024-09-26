@@ -26,7 +26,7 @@
  * @typedef {Type extends Resolvable ? Type["value"] : Type} Resolved
  */
 /**
- * @typedef {{ value: unknown }} Resolvable
+ * @typedef {{ value: any }} Resolvable
  */
 /**
  * @type {WeakMap<Signal, Set<Node>>}
@@ -43,17 +43,10 @@ let isRunning = false
  */
 let activeNode = null
 
-export function getNode() {
-  if (activeNode === null) {
-    throw new Error("getNode(): activeNode is null!")
-  }
-  return activeNode
-}
-
 /**
  * @returns {Node}
  */
-export function createNode() {
+function createNode() {
   /**
    * @type {Node}
    */
@@ -78,14 +71,25 @@ export function createNode() {
 }
 
 /**
+ * @returns {Node}
+ */
+export function getNode() {
+  if (activeNode === null) {
+    throw new Error("getNode(): activeNode is null!")
+  }
+  return activeNode
+}
+
+/**
  * @template Type
  * @param {(cleanup: Cleanup) => Type} fn
+ * @returns {Type | undefined}
  */
 export function createRoot(fn) {
   const node = createNode()
   try {
     activeNode = node
-    return fn(() => clean(node, true))
+    return fn(() => cleanNode(node, true))
   } catch (error) {
     handleError(error)
   } finally {
@@ -97,6 +101,7 @@ export function createRoot(fn) {
  * @template Type
  * @param {string | symbol} key
  * @param {Type} value
+ * @returns {void}
  */
 export function provide(key, value) {
   if (activeNode === null) {
@@ -125,17 +130,19 @@ export function provide(key, value) {
  * @template Type
  * @param {string | symbol} key
  * @param {Type} [value]
+ * @returns {Type | undefined}
  */
 export function inject(key, value) {
   return lookup(activeNode, key) ?? value
 }
 
 /**
- * @param {Node | undefined | null} node
+ * @param {Node | null} node
  * @param {string | symbol} key
+ * @returns {any}
  */
 function lookup(node, key) {
-  return node == null
+  return node === null
     ? undefined
     : node.context !== null && key in node.context
     ? node.context[key]
@@ -161,27 +168,25 @@ function lookup(node, key) {
 export function createSignal(value) {
   return {
     get value() {
-      sub(this)
+      if (activeNode?.fn) {
+        let effects = effectMap.get(this)
+        if (effects === undefined) {
+          effectMap.set(this, effects = new Set())
+        }
+        effects.add(activeNode)
+        if (activeNode.signals === null) {
+          activeNode.signals = [this]
+        } else if (!activeNode.signals.includes(this)) {
+          activeNode.signals.push(this)
+        }
+      }
       return value
     },
     set value(newValue) {
       if (value !== newValue) {
         value = newValue
-        pub(this)
+        effectMap.get(this)?.forEach(queueNode)
       }
-    },
-  }
-}
-
-/**
- * @template Type
- * @param {Signal<Type>} signal
- * @returns {ReadonlySignal<Type>}
- */
-export function createReadonly(signal) {
-  return {
-    get value() {
-      return signal.value
     },
   }
 }
@@ -210,7 +215,11 @@ export function createMemo(fn, value) {
   createEffect(() => {
     signal.value = fn(untrack(() => signal.value))
   })
-  return createReadonly(signal)
+  return {
+    get value() {
+      return signal.value
+    },
+  }
 }
 
 /**
@@ -227,6 +236,11 @@ export function untrack(fn) {
 }
 
 /**
+ * @overload
+ * @param {() => void} fn
+ * @returns {void}
+ */
+/**
  * @template Type
  * @overload
  * @param {(value: Type | undefined) => Type} fn
@@ -239,33 +253,34 @@ export function untrack(fn) {
  * @param {Type} value
  * @returns {void}
  */
+/**
+ * @param {(value: any) => any} fn
+ * @param {any} [value]
+ * @returns {void}
+ */
 export function createEffect(fn, value) {
   const node = createNode()
   node.fn = fn
   node.value = value
-  if (isRunning) {
-    effectQueue.add(node)
-  } else {
-    queueMicrotask(() => update(node))
-  }
+  queueNode(node)
 }
 
 /**
  * @param {Node} node
  * @param {boolean} dispose
  */
-export function clean(node, dispose) {
+function cleanNode(node, dispose) {
   if (node.signals?.length) {
     let signal = node.signals.pop()
     while (signal) {
-      unsub(signal, node)
+      effectMap.get(signal)?.delete(node)
       signal = node.signals.pop()
     }
   }
   if (node.children?.length) {
     let childNode = node.children.pop()
     while (childNode) {
-      clean(childNode, childNode.fn ? true : dispose)
+      cleanNode(childNode, childNode.fn ? true : dispose)
       childNode = node.children.pop()
     }
   }
@@ -289,8 +304,8 @@ export function clean(node, dispose) {
 /**
  * @param {Node} node
  */
-function update(node) {
-  clean(node, false)
+function updateNode(node) {
+  cleanNode(node, false)
   if (node.fn === null) {
     return
   }
@@ -350,42 +365,9 @@ function handleError(error) {
 }
 
 /**
- * @param {Signal} signal
- */
-export function sub(signal) {
-  if (activeNode?.fn) {
-    let effects = effectMap.get(signal)
-    if (effects === undefined) {
-      effectMap.set(signal, effects = new Set())
-    }
-    effects.add(activeNode)
-    if (activeNode.signals === null) {
-      activeNode.signals = [signal]
-    } else if (!activeNode.signals.includes(signal)) {
-      activeNode.signals.push(signal)
-    }
-  }
-}
-
-/**
- * @param {Signal} signal
  * @param {Node} node
  */
-export function unsub(signal, node) {
-  effectMap.get(signal)?.delete(node)
-}
-
-/**
- * @param {Signal} signal
- */
-export function pub(signal) {
-  effectMap.get(signal)?.forEach((node) => queue(node))
-}
-
-/**
- * @param {Node} node
- */
-function queue(node) {
+function queueNode(node) {
   effectQueue.add(node)
   if (isRunning === false) {
     isRunning = true
@@ -395,7 +377,7 @@ function queue(node) {
 
 function batch() {
   for (const effect of effectQueue) {
-    update(effect)
+    updateNode(effect)
   }
   effectQueue.clear()
   isRunning = false
@@ -403,7 +385,7 @@ function batch() {
 
 /**
  * @param {any} data
- * @returns {data is { value: any }}
+ * @returns {data is Resolvable}
  */
 export function isResolvable(data) {
   return data && typeof data === "object" && Reflect.has(data, "value")

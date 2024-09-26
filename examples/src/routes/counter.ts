@@ -2,11 +2,11 @@ import { createSignal } from "space/signal"
 import html, { Show } from "space/dom"
 
 const code = `
-import { signal } from "space/signal"
+import { createSignal } from "space/signal"
 import html from "space/dom"
 
 function SimpleCounter() {
-  const counter = signal(0)
+  const counter = createSignal(0)
   return html\`
     <button onClick=\${() => counter.value--}>-</button>
     <span>current value: \${counter}</span>
