@@ -2,8 +2,8 @@
  * @template [Type = unknown]
  * @typedef {{
  *   value: Type | undefined
- *   parent: Node | null
- *   children: Node[] | null
+ *   parentNode: Node | null
+ *   childNodes: Node[] | null
  *   signals: Signal[] | null
  *   context: Record<string | symbol, any> | null
  *   cleanups: Cleanup[] | null
@@ -51,20 +51,20 @@ function createNode() {
    * @type {Node}
    */
   const node = {
-    children: null,
-    cleanups: null,
-    context: null,
-    fn: null,
-    parent: null,
-    signals: null,
     value: undefined,
+    parentNode: null,
+    childNodes: null,
+    signals: null,
+    context: null,
+    cleanups: null,
+    fn: null,
   }
   if (activeNode) {
-    node.parent = activeNode
-    if (activeNode.children === null) {
-      activeNode.children = [node]
+    node.parentNode = activeNode
+    if (activeNode.childNodes === null) {
+      activeNode.childNodes = [node]
     } else {
-      activeNode.children.push(node)
+      activeNode.childNodes.push(node)
     }
   }
   return node
@@ -93,7 +93,7 @@ export function createRoot(fn) {
   } catch (error) {
     handleError(error)
   } finally {
-    activeNode = node.parent
+    activeNode = node.parentNode
   }
 }
 
@@ -146,7 +146,7 @@ function lookup(node, key) {
     ? undefined
     : node.context !== null && key in node.context
     ? node.context[key]
-    : lookup(node.parent, key)
+    : lookup(node.parentNode, key)
 }
 
 /**
@@ -277,11 +277,11 @@ function cleanNode(node, dispose) {
       signal = node.signals.pop()
     }
   }
-  if (node.children?.length) {
-    let childNode = node.children.pop()
+  if (node.childNodes?.length) {
+    let childNode = node.childNodes.pop()
     while (childNode) {
       cleanNode(childNode, childNode.fn ? true : dispose)
-      childNode = node.children.pop()
+      childNode = node.childNodes.pop()
     }
   }
   if (node.cleanups?.length) {
@@ -294,10 +294,11 @@ function cleanNode(node, dispose) {
   node.context = null
   if (dispose) {
     node.value = undefined
+    node.parentNode = null
+    node.childNodes = null
     node.signals = null
-    node.children = null
-    node.fn = null
     node.cleanups = null
+    node.fn = null
   }
 }
 
