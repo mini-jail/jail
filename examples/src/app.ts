@@ -56,3 +56,13 @@ function App() {
 
 mount(document.body, App)
 
+let activeElement = null
+
+function createElement(
+  type,
+  attributeCallback
+) {
+  let attr = { type }
+  let parentElement = activeElement
+  attributeCallback(attr)
+}
