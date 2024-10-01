@@ -7,7 +7,7 @@
  *   signals: Signal[] | null
  *   context: Record<string | symbol, any> | null
  *   cleanups: Cleanup[] | null
- *   fn: ((value: Type) =>  Type)  | null
+ *   onupdate: ((value: Type) =>  Type)  | null
  * }} Node
  */
 /**
@@ -57,7 +57,7 @@ function createNode() {
     signals: null,
     context: null,
     cleanups: null,
-    fn: null,
+    onupdate: null,
   }
   if (activeNode) {
     node.parentNode = activeNode
@@ -168,7 +168,7 @@ function lookup(node, key) {
 export function createSignal(value) {
   return {
     get value() {
-      if (activeNode?.fn) {
+      if (activeNode?.onupdate) {
         let effects = effectMap.get(this)
         if (effects === undefined) {
           effectMap.set(this, effects = new Set())
@@ -260,8 +260,8 @@ export function untrack(fn) {
  */
 export function createEffect(fn, value) {
   const node = createNode()
-  node.fn = fn
   node.value = value
+  node.onupdate = fn
   queueNode(node)
 }
 
@@ -280,7 +280,7 @@ function cleanNode(node, dispose) {
   if (node.childNodes?.length) {
     let childNode = node.childNodes.pop()
     while (childNode) {
-      cleanNode(childNode, childNode.fn ? true : dispose)
+      cleanNode(childNode, childNode.onupdate ? true : dispose)
       childNode = node.childNodes.pop()
     }
   }
@@ -298,7 +298,7 @@ function cleanNode(node, dispose) {
     node.childNodes = null
     node.signals = null
     node.cleanups = null
-    node.fn = null
+    node.onupdate = null
   }
 }
 
@@ -307,13 +307,13 @@ function cleanNode(node, dispose) {
  */
 function updateNode(node) {
   cleanNode(node, false)
-  if (node.fn === null) {
+  if (node.onupdate === null) {
     return
   }
   const prevNode = activeNode
   try {
     activeNode = node
-    node.value = node.fn(node.value)
+    node.value = node.onupdate(node.value)
   } catch (error) {
     handleError(error)
   } finally {
