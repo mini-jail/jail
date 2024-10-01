@@ -1,10 +1,4 @@
-import {
-  createEffect,
-  createRoot,
-  createSignal,
-  onCleanup,
-  resolve,
-} from "space/signal"
+import { createEffect } from "space/signal"
 import html, { Animate, mount, path, Route, Router } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
@@ -55,14 +49,3 @@ function App() {
 }
 
 mount(document.body, App)
-
-let activeElement = null
-
-function createElement(
-  type,
-  attributeCallback
-) {
-  let attr = { type }
-  let parentElement = activeElement
-  attributeCallback(attr)
-}
