@@ -2,12 +2,12 @@ import html from "space/dom"
 import { createEffect, onCleanup } from "space/signal"
 
 export default function NotFound() {
-  const { backgroundColor } = document.body.style
   createEffect(() => {
+    const { backgroundColor } = document.body.style
     document.body.style.backgroundColor = "indianred"
-  })
-  onCleanup(() => {
-    document.body.style.backgroundColor = backgroundColor
+    onCleanup(() => {
+      document.body.style.backgroundColor = backgroundColor
+    })
   })
   return html`
     <article>

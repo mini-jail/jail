@@ -1,6 +1,6 @@
 import {
+  createComputed,
   createEffect,
-  createMemo,
   createRoot,
   createSignal,
   inject,
@@ -110,7 +110,7 @@ export function* Router(props) {
   provide(routesKey, routes)
   routeTypeHandlerMap[props.type]()
   yield props.children
-  yield createMemo(() => {
+  yield createComputed(() => {
     const nextRoute = path.value
     return createRoot(() => {
       for (const route of routes) {

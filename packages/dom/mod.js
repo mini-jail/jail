@@ -42,7 +42,6 @@ import { For } from "./components/for.js"
 import { Portal } from "./components/portal.js"
 import { getParams, path, Route, Router } from "./components/router.js"
 import { Show } from "./components/show.js"
-import { Match, Switch } from "./components/switch-match.js"
 
 export {
   Animate,
@@ -53,7 +52,6 @@ export {
   getParams,
   getTree,
   html,
-  Match,
   mount,
   path,
   Portal,
@@ -61,6 +59,5 @@ export {
   Router,
   Show,
   svg,
-  Switch,
 }
 export default html

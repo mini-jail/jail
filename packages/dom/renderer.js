@@ -1,6 +1,6 @@
 import {
+  createComputed,
   createEffect,
-  createMemo,
   createRoot,
   isResolvable,
   onCleanup,
@@ -433,7 +433,7 @@ function createNodesFrom(array, ...elements) {
  * @param {unknown} child
  */
 export function createChildren(child) {
-  return createMemo(() => createNodesFrom([], child), [])
+  return createComputed(() => createNodesFrom([], child), [])
 }
 
 /**

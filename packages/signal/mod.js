@@ -210,7 +210,7 @@ export function createSignal(value) {
  * @param {Type} [value]
  * @returns {ReadonlySignal<Type | undefined>}
  */
-export function createMemo(fn, value) {
+export function createComputed(fn, value) {
   const signal = createSignal(value)
   createEffect(() => {
     signal.value = fn(untrack(() => signal.value))

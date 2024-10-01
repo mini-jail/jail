@@ -1,4 +1,4 @@
-import { createMemo, createSignal } from "space/signal"
+import { createComputed, createSignal } from "space/signal"
 import html, { DOMEvent, For } from "space/dom"
 
 type ToDoItem = {
@@ -59,8 +59,8 @@ export default function ToDo() {
   const onInput = (ev: DOMEvent<HTMLInputElement>) => {
     text.value = ev.target.value
   }
-  const length = createMemo(() => list.value.length, 0)
-  const done = createMemo(() => {
+  const length = createComputed(() => list.value.length, 0)
+  const done = createComputed(() => {
     return list.value.filter((item) => item.done).length
   }, 0)
 

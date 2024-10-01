@@ -1,4 +1,4 @@
-import { createMemo, createRoot } from "space/signal"
+import { createComputed, createRoot } from "space/signal"
 
 /**
  * @template [Type = any]
@@ -9,7 +9,7 @@ import { createMemo, createRoot } from "space/signal"
  * }} props
  */
 export function For(props) {
-  return createMemo(() => {
+  return createComputed(() => {
     const array = Array.from(props.each)
     if (array.length === 0) {
       return props.fallback
