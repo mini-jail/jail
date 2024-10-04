@@ -89,7 +89,11 @@ function createComponent(component, tree, values, svg) {
       const value = typeof type === "number" ? values[type] ?? type : type
       if (name === "...") {
         for (const key in value) {
-          defineProperty(props, key, value[key])
+          if (key === "children") {
+            children.push(value)
+          } else {
+            defineProperty(props, key, value[key])
+          }
         }
       } else if (name === "children") {
         children.push(value)
@@ -101,16 +105,10 @@ function createComponent(component, tree, values, svg) {
   if (tree.children !== null) {
     if (Array.isArray(tree.children)) {
       for (const child of tree.children) {
-        const result = renderDOM(child, values, svg)
-        if (result != null) {
-          children.push(result)
-        }
+        children.push(renderDOM(child, values, svg))
       }
     } else {
-      const result = renderDOM(tree.children, values, svg)
-      if (result != null) {
-        children.push(result)
-      }
+      children.push(renderDOM(tree.children, values, svg))
     }
   }
   if (children.length) {
@@ -414,7 +412,7 @@ export function createChildren(child) {
       while (currentNodes?.length) {
         currentNodes.pop()?.remove()
       }
-      return nextNodes
+      return nextNodes.length === 0 ? null : nextNodes
     },
     null,
   )
