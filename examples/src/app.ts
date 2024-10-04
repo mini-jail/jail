@@ -27,6 +27,7 @@ function App() {
         <a href="/sierpinski">sierpinski</a>
         <a href="/todo">todo</a>
         <a href="/about">about</a>
+        <a @click=${unmount}>unmount</a>
       </nav>
     </header>
     <${Animate}
@@ -48,4 +49,4 @@ function App() {
   `
 }
 
-mount(document.body, App)
+const unmount = mount(document.body, App)

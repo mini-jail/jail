@@ -14,6 +14,7 @@
 /**
  * @template Type
  * @typedef {{
+ *   readonly type: "property" | "attribute" | "event" | "auto"
  *   readonly name: string
  *   readonly arg: string | null
  *   readonly modifiers: { readonly [field: string]: true | undefined } | null

@@ -262,7 +262,11 @@ export function createEffect(fn, value) {
   const node = createNode()
   node.value = value
   node.onupdate = fn
-  queueNode(node)
+  if (isRunning) {
+    effectQueue.add(node)
+  } else {
+    queueMicrotask(() => updateNode(node))
+  }
 }
 
 /**
@@ -372,16 +376,14 @@ function queueNode(node) {
   effectQueue.add(node)
   if (isRunning === false) {
     isRunning = true
-    queueMicrotask(batch)
+    queueMicrotask(() => {
+      for (const effect of effectQueue) {
+        updateNode(effect)
+      }
+      effectQueue.clear()
+      isRunning = false
+    })
   }
-}
-
-function batch() {
-  for (const effect of effectQueue) {
-    updateNode(effect)
-  }
-  effectQueue.clear()
-  isRunning = false
 }
 
 /**

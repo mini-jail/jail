@@ -29,17 +29,15 @@ const Item = (props: ToDoItem) => {
   return html`
     <div class="todo-item" id="${"item_" + props.id}">
       <div
+        @click=${toggleItem}
         class="todo-item-text"
-        onClick=${toggleItem}
-        style="${props.done ? "color: grey; font-style: italic;" : null}"
-      >
+        style="${props.done ? "color: grey; font-style: italic;" : null}">
         ${props.text}
       </div>
       <div
-        style:display=${props.done ? null : "none"}
+        @click=${deleteItem}
         class="todo-item-delete"
-        onClick=${deleteItem}
-      >
+        style:display=${props.done ? null : "none"}>
         delete
       </div>
     </div>
@@ -71,14 +69,14 @@ export default function ToDo() {
         <sub>(no-one ever have done that, i promise!)</sub>
       </h4>
       <div class="todo-app-container">
-        <form onSubmit.prevent=${addItem}>
+        <form @submit.prevent=${addItem}>
           <input
             type="text"
             placeholder="...milk?"
             required
             class="todo_input"
-            value=${text}
-            onInput=${onInput}
+            .value=${text}
+            @input=${onInput}
           />
         </form>
         <div class="todo-items">

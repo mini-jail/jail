@@ -8,33 +8,30 @@ import {
 } from "space/signal"
 import { getTree } from "./compiler.js"
 
-/**
- * @type {Record<string, boolean | undefined>}
- */
-const listeners = {}
-const nameRE = /(?:d-)?(?<name>[^.:]+)(?::(?<arg>[^.:]+))?(?:.(?<mods>\S+)*)?/
+const bindingTypes = { ".": "property", ":": "attribute", "@": "event" }
+const nameRE = /(?<t>[.:@])?(?<n>[^.:]+)(?::(?<a>[^.:]+))?(?:.(?<m>\S+)*)?/
 
 /**
- * @param {import("./mod.js").Child | import("./mod.js").Child[] | undefined | null} node
+ * @param {import("./mod.js").Child | import("./mod.js").Child[] | undefined | null} child
  * @param  {any[]} values
  * @param {boolean} svg
  */
-function renderDOM(node, values, svg) {
-  if (node == null) {
+function renderDOM(child, values, svg) {
+  if (child == null) {
     return
-  } else if (Array.isArray(node)) {
-    switch (node.length) {
+  } else if (Array.isArray(child)) {
+    switch (child.length) {
       case 0:
         return
       case 1:
-        return renderDOM(node[0], values, svg)
+        return renderDOM(child[0], values, svg)
       default:
-        return node.map((node) => renderDOM(node, values, svg))
+        return child.map((child) => renderDOM(child, values, svg))
     }
-  } else if (typeof node === "string") {
-    return node
-  } else if (typeof node === "number") {
-    const value = values[node]
+  } else if (typeof child === "string") {
+    return child
+  } else if (typeof child === "number") {
+    const value = values[child]
     if (isResolvableChild(value)) {
       const before = new Text()
       mount(null, () => value, before)
@@ -42,37 +39,37 @@ function renderDOM(node, values, svg) {
     }
     return value
   }
-  return createElement(node, values, svg)
+  return createElement(child, values, svg)
 }
 
 /**
- * @param {import("./mod.js").Tree} node
+ * @param {import("./mod.js").Tree} tree
  * @param {any[]} values
  * @param {boolean} svg
  */
-function createElement(node, values, svg) {
-  const type = typeof node.type === "number" ? values[node.type] : node.type
+function createElement(tree, values, svg) {
+  const type = typeof tree.type === "number" ? values[tree.type] : tree.type
   if (typeof type === "function") {
-    return createRoot(() => createComponent(type, node, values, svg))
+    return createRoot(() => createComponent(type, tree, values, svg))
   }
-  if (node.type === "svg") {
+  if (tree.type === "svg") {
     svg = true
-  } else if (node.type === "foreignObject") {
+  } else if (tree.type === "foreignObject") {
     svg = false
   }
   const elt = svg
     ? document.createElementNS("http://www.w3.org/2000/svg", type)
     : document.createElement(type)
-  if (node.props) {
-    setProperties(elt, node.props, values, svg)
+  if (tree.props) {
+    setProperties(elt, tree.props, values, svg)
   }
-  if (node.children !== null) {
-    if (Array.isArray(node.children)) {
-      for (const child of node.children) {
+  if (tree.children !== null) {
+    if (Array.isArray(tree.children)) {
+      for (const child of tree.children) {
         addChild(elt, child, values, svg)
       }
     } else {
-      addChild(elt, node.children, values, svg)
+      addChild(elt, tree.children, values, svg)
     }
   }
   return elt
@@ -80,15 +77,15 @@ function createElement(node, values, svg) {
 
 /**
  * @param {import("./mod.js").Component<any>} component
- * @param {import("./mod.js").Tree} node
+ * @param {import("./mod.js").Tree} tree
  * @param {any[]} values
  * @param {boolean} svg
  */
-function createComponent(component, node, values, svg) {
+function createComponent(component, tree, values, svg) {
   const props = {}, children = []
-  if (node.props) {
-    for (const name in node.props) {
-      const type = node.props[name]
+  if (tree.props) {
+    for (const name in tree.props) {
+      const type = tree.props[name]
       const value = typeof type === "number" ? values[type] ?? type : type
       if (name === "...") {
         for (const key in value) {
@@ -101,16 +98,16 @@ function createComponent(component, node, values, svg) {
       }
     }
   }
-  if (node.children !== null) {
-    if (Array.isArray(node.children)) {
-      for (const child of node.children) {
+  if (tree.children !== null) {
+    if (Array.isArray(tree.children)) {
+      for (const child of tree.children) {
         const result = renderDOM(child, values, svg)
         if (result != null) {
           children.push(result)
         }
       }
     } else {
-      const result = renderDOM(node.children, values, svg)
+      const result = renderDOM(tree.children, values, svg)
       if (result != null) {
         children.push(result)
       }
@@ -150,9 +147,10 @@ function createBinding(key, value) {
     throw new TypeError(`"${key}" does't match "${nameRE}"`)
   }
   return {
-    name: groups.name,
-    arg: groups.arg || null,
-    modifiers: groups.mods?.split(".").reduce((mods, key) => {
+    type: bindingTypes[groups.t] ?? "auto",
+    name: groups.n,
+    arg: groups.a ?? null,
+    modifiers: groups.m?.split(".").reduce((mods, key) => {
       mods[key] = true
       return mods
     }, {}) ?? null,
@@ -179,91 +177,88 @@ function setProperties(elt, props, values, svg) {
     } else {
       const binding = createBinding(name, value)
       if (isResolvable(value)) {
-        createEffect(() => setAttribute(elt, binding))
+        createEffect(() => setProperty(elt, binding))
       } else {
-        setAttribute(elt, binding)
+        setProperty(elt, binding)
       }
     }
   }
 }
 
 /**
- * @param {HTMLElement} elt
- * @param {import("./mod.js").Binding<any>} binding
+ * @type {{ [name: string]: (elt: HTMLElement, binding: import("space/dom").Binding<any>) => void }}
  */
-function setAttribute(elt, binding) {
-  let name = binding.name
-  const value = binding.value, argument = binding.arg
-  if (name === "style") {
-    if (argument) {
-      // <div style:color="red" />
-      elt.style[argument] = value ?? null
+const customProperties = {
+  style(elt, { arg, value }) {
+    if (arg) {
+      elt.style[arg] = value ?? null
     } else if (value != null && typeof value === "object") {
-      // <div style=${{ color: "red" }} />
       Object.assign(elt.style, value)
     } else {
-      // <div style="color: red" />
       elt.style.cssText = value + ""
     }
-    return
-  }
-  if (name === "textContent") {
+  },
+  textContent(elt, binding) {
     if (elt["__textContent"] === undefined) {
       elt["__textContent"] = new Text()
       elt.prepend(elt["__textContent"])
     }
-    elt["__textContent"].data = value + ""
+    elt["__textContent"].data = binding.value + ""
+  },
+}
+
+/**
+ * @param {HTMLElement} elt
+ * @param {import("./mod.js").Binding<any>} binding
+ */
+function setProperty(elt, binding) {
+  const { modifiers, name, type, value } = binding
+  if (name in customProperties) {
+    return customProperties[name](elt, binding)
+  }
+  if (type === "property") {
+    elt[name] = value
     return
   }
-  // <div on:click[.capture, .passive]=${() => } />
-  if (name === "on" && argument) {
-    return elt.addEventListener(argument, value, {
-      capture: binding.modifiers?.capture,
-      passive: binding.modifiers?.passive,
-      once: binding.modifiers?.once,
+  if (type === "attribute") {
+    return setOrRemoveAttribute(elt, name, value)
+  }
+  if (type === "event") {
+    let listener = value
+    if (modifiers?.stop) {
+      const listenerCopy = value
+      listener = (event) => {
+        event.stopPropagation()
+        listenerCopy.call(elt, event)
+      }
+    }
+    if (modifiers?.prevent) {
+      const listenerCopy = value
+      listener = (event) => {
+        event.preventDefault()
+        listenerCopy.call(elt, event)
+      }
+    }
+    return elt.addEventListener(name, listener, {
+      capture: modifiers?.capture,
+      passive: modifiers?.passive,
+      once: modifiers?.once,
     })
   }
-  // <div onClick[.capture, .passive, .once, .prevent, .stop]=${() => } />
-  if (name.startsWith("on")) {
-    name = name.slice(2).toLowerCase()
-    const eventOptions = {
-        capture: binding.modifiers?.capture,
-        passive: binding.modifiers?.passive,
-      },
-      bindOptions = {
-        once: binding.modifiers?.once,
-        prevent: binding.modifiers?.prevent,
-        stop: binding.modifiers?.stop,
-      }
-    elt["__events"] = elt["__events"] ?? {}
-    elt["__events"][name] = value
-    const id = JSON.stringify({ name, eventOptions })
-    if (listeners[id] === undefined) {
-      listeners[id] = true
-      addEventListener(
-        name,
-        eventListener.bind(bindOptions),
-        eventOptions,
-      )
-    }
-    return
-  }
-  let isProp = name in elt
-  if (binding.modifiers?.prop) {
-    isProp = true
-  }
-  if (binding.modifiers?.attr) {
-    isProp = false
-  }
-  if (binding.modifiers?.camel) {
-    name = name.replace(/-([a-z])/g, (_match, str) => str.toUpperCase())
-  }
-  if (binding.modifiers?.kebab) {
-    name = name.replace(/([A-Z])/g, "-$1").toLowerCase()
-  }
-  if (isProp) {
+  if (name in elt) {
     elt[name] = value
-  } else if (value != null) {
+  } else {
+    setOrRemoveAttribute(elt, name, value)
+  }
+}
+
+/**
+ * @param {Element} elt
+ * @param {string} name
+ * @param {any} value
+ */
+function setOrRemoveAttribute(elt, name, value) {
+  if (value != null) {
     elt.setAttribute(name, String(value))
   } else {
     elt.removeAttribute(name)
@@ -354,109 +349,75 @@ export function svg(statics, ...values) {
  */
 export function mount(rootElement, code, before) {
   return createRoot((dispose) => {
-    let children = []
+    const children = createChildren(code)
+    const parentNode = rootElement ?? before?.parentElement
     onCleanup(() => {
       before?.remove()
-      while (children?.length) {
-        children.pop()?.remove()
-      }
+      children.value?.forEach((child) => child.remove())
     })
     createEffect(() => {
-      const nextNodes = createNodesFrom([], code())
-      reconcile(
-        rootElement ?? before?.parentElement ?? null,
-        before ?? null,
-        children,
-        nextNodes,
-      )
-      children = nextNodes
+      children.value?.forEach((child) => {
+        if (child !== before?.previousSibling) {
+          parentNode?.insertBefore(child, before ?? null)
+        }
+      })
     })
     return dispose
   })
 }
 
 /**
- * @param {ParentNode | null} rootElement
- * @param {ChildNode | null} anchor
- * @param {(ChildNode & { data?: string })[] | undefined} currentNodes
- * @param {(Node & { data?: string })[] | undefined} nextNodes
- */
-function reconcile(rootElement, anchor, currentNodes, nextNodes) {
-  nextNodes?.forEach((nextNode, i) => {
-    const child = currentNodes?.[i]
-    currentNodes?.some((currentNode, j) => {
-      if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
-        currentNode.data = nextNode.data
-      } else if (currentNode.nodeType === 8 && nextNode.nodeType === 8) {
-        currentNode.data = nextNode.data
-      }
-      if (currentNode.isEqualNode(nextNode)) {
-        nextNodes[i] = currentNode
-        currentNodes.splice(j, 1)
-        return true
-      }
-    })
-    if (nextNodes[i] !== child) {
-      rootElement?.insertBefore(nextNodes[i], child?.nextSibling ?? anchor)
-    }
-  })
-  while (currentNodes?.length) {
-    currentNodes.pop()?.remove()
-  }
-}
-
-/**
- * @param {Node[]} array
+ * @param {(Node & { remove(): void })[]} nodeArray
  * @param  {...any} elements
- * @returns {Node[]}
+ * @returns {(Node & { remove(): void })[]}
  */
-function createNodesFrom(array, ...elements) {
+function createNodesFrom(nodeArray, ...elements) {
   for (const elt of elements) {
     if (elt == null || typeof elt === "boolean") {
       continue
     } else if (elt instanceof Node) {
-      array.push(elt)
+      // @ts-expect-error elt has remove()
+      nodeArray.push(elt)
     } else if (typeof elt === "string" || typeof elt === "number") {
-      array.push(new Text(elt + ""))
+      nodeArray.push(new Text(elt + ""))
     } else if (typeof elt === "function") {
-      createNodesFrom(array, elt())
+      createNodesFrom(nodeArray, elt())
     } else if (Symbol.iterator in elt) {
-      createNodesFrom(array, ...elt)
+      createNodesFrom(nodeArray, ...elt)
     } else if (isResolvable(elt)) {
-      createNodesFrom(array, elt.value)
+      createNodesFrom(nodeArray, elt.value)
     }
   }
-  return array
+  return nodeArray
 }
 
 /**
  * @param {unknown} child
+ * @returns {{ readonly value: (Node & { remove(): void })[] | null }}
  */
 export function createChildren(child) {
-  return createComputed(() => createNodesFrom([], child), [])
-}
-
-/**
- * @this {{ stop?: boolean, prevent?: boolean, once?: boolean }}
- * @param {import("./mod.js").DOMEvent<any>} event
- */
-function eventListener(event) {
-  let elt = event.target
-  if (this.stop) {
-    event.stopPropagation()
-  }
-  if (this.prevent) {
-    event.preventDefault()
-  }
-  while (elt !== null) {
-    if (elt?.["__events"]?.[event.type]) {
-      elt["__events"][event.type].call(elt, event)
-      if (this.once) {
-        elt["__events"][event.type] = undefined
+  return createComputed(
+    /** @param {any[] | null} currentNodes */ (currentNodes) => {
+      const nextNodes = createNodesFrom([], child)
+      nextNodes?.forEach((nextNode, i) => {
+        currentNodes?.some((currentNode, j) => {
+          if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
+            currentNode.data = nextNode["data"]
+          }
+          if (currentNode.isEqualNode(nextNode)) {
+            nextNodes[i] = currentNode
+            currentNodes.splice(j, 1)
+            return true
+          }
+        })
+      })
+      while (currentNodes?.length) {
+        currentNodes.pop()?.remove()
       }
-    }
-    elt = elt.parentNode
-  }
+      return nextNodes
+    },
+    null,
+  )
 }
 
 /**

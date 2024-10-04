@@ -31,10 +31,11 @@ const Dot = ({ x, y, target }: DotProps) => {
       textContent=${text}
       style=${css}
       style:backgroundColor=${bgColor}
+      
       class="sierpinski-dot"
-      onMouseover=${() => hover.value = true}
-      onMouseout=${() => hover.value = false}
-    ></div>
+      @mouseover=${() => hover.value = true}
+      @mouseout=${() => hover.value = false}>
+    </div>
   `
 }
 
