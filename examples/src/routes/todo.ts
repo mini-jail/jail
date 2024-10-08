@@ -1,4 +1,4 @@
-import { createComputed, createSignal } from "space/signal"
+import { computed, state } from "space/signal"
 import html, { DOMEvent, For } from "space/dom"
 
 type ToDoItem = {
@@ -9,7 +9,7 @@ type ToDoItem = {
 
 let itemID = 0
 
-const list = createSignal<ToDoItem[]>([
+const list = state<ToDoItem[]>([
   { id: itemID++, done: true, text: "eat cornflakes without soymilk" },
   { id: itemID++, done: false, text: "buy soymilk" },
 ])
@@ -45,7 +45,7 @@ const Item = (props: ToDoItem) => {
 }
 
 export default function ToDo() {
-  const text = createSignal("")
+  const text = state("")
   const addItem = () => {
     list.value = list.value.concat({
       id: itemID++,
@@ -57,10 +57,10 @@ export default function ToDo() {
   const onInput = (ev: DOMEvent<HTMLInputElement>) => {
     text.value = ev.target.value
   }
-  const length = createComputed(() => list.value.length, 0)
-  const done = createComputed(() => {
+  const length = computed(() => list.value.length)
+  const done = computed(() => {
     return list.value.filter((item) => item.done).length
-  }, 0)
+  })
 
   return html`
     <article>

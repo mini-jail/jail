@@ -1,10 +1,10 @@
-import { createComputed } from "space/signal"
+import { computed } from "space/signal"
 
 /**
  * @param {{ when: boolean | "true" | "false", children?: any, fallback?: any }} props
  */
 export function Show(props) {
-  return createComputed(() => {
+  return computed(() => {
     if (props.when + "" === "true") {
       return props.children
     }

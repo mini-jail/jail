@@ -1,4 +1,5 @@
-import { createEffect } from "space/signal"
+import { effect, state } from "space/signal"
+import { createApp } from "space/smpl"
 import html, { Animate, mount, path, Route, Router } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
@@ -9,7 +10,7 @@ import ToDo from "./routes/todo.ts"
 import NotFound from "./routes/notfound.ts"
 
 function App() {
-  createEffect(() => {
+  effect(() => {
     document.title = `space${path.value}`
   })
 
@@ -31,7 +32,7 @@ function App() {
       </nav>
     </header>
     <${Animate}
-      signal=${path}
+      state=${path}
       keyframes=${keyframes}
       options=${{ delay: 50, duration: 250, fill: "both" }}
     >
@@ -50,3 +51,9 @@ function App() {
 }
 
 const unmount = mount(document.body, App)
+/*
+createApp({
+  count: state(0),
+  counter: `<div class="counter">{{ count }}</div>`,
+}).mount()
+ */

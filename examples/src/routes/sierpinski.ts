@@ -1,10 +1,10 @@
 import {
-  createComputed,
-  createEffect,
-  createSignal,
+  computed,
+  effect,
   inject,
   onCleanup,
   provide,
+  state,
 } from "space/signal"
 import html from "space/dom"
 
@@ -12,11 +12,11 @@ type DotProps = { x: number; y: number; target: number }
 
 const Dot = ({ x, y, target }: DotProps) => {
   const counter = inject<{ value: number }>("counter")!
-  const hover = createSignal(false)
-  const text = createComputed(() => {
+  const hover = state(false)
+  const text = computed(() => {
     return hover.value ? "*" + counter.value + "*" : counter.value + ""
   })
-  const bgColor = createComputed(() => hover.value ? "lightpink" : "white")
+  const bgColor = computed(() => hover.value ? "lightpink" : "white")
   const css = `
     width: ${target}px;
     height: ${target}px;
@@ -70,16 +70,16 @@ const Triangle = ({ x, y, target, size }: TriangleProps) => {
 
 export default function Sierpinski() {
   let id: number
-  const elapsed = createSignal(0)
-  const count = createSignal(0)
-  const scale = createComputed(() => {
+  const elapsed = state(0)
+  const count = state(0)
+  const scale = computed(() => {
     const e = (elapsed.value / 1000) % 10
     return (1 + (e > 5 ? 10 - e : e) / 10) / 2
-  }, 1)
+  })
 
   provide("counter", count)
 
-  createEffect(() => {
+  effect(() => {
     id = setInterval(() => count.value = (count.value % 10) + 1, 1000)
     const start = Date.now()
     const frame = () => {
@@ -94,9 +94,7 @@ export default function Sierpinski() {
     console.log("Sierpinski is dead")
   })
 
-  const transform = createComputed(() =>
-    `scale(${scale.value}) translateZ(0.1px)`
-  )
+  const transform = computed(() => `scale(${scale.value}) translateX(0.1px)`)
 
   return html`
     <div class="sierpinski-wrapper" style:transform=${transform}>

@@ -1,8 +1,8 @@
 import html from "space/dom"
-import { createEffect, onCleanup } from "space/signal"
+import { effect, onCleanup } from "space/signal"
 
 export default function NotFound() {
-  createEffect(() => {
+  effect(() => {
     const { backgroundColor } = document.body.style
     document.body.style.backgroundColor = "indianred"
     onCleanup(() => {

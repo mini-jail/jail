@@ -1,7 +1,7 @@
 import {
-  createComputed,
-  createEffect,
+  computed,
   createRoot,
+  effect,
   isResolvable,
   onCleanup,
   resolve,
@@ -175,7 +175,7 @@ function setProperties(elt, props, values, svg) {
     } else {
       const binding = createBinding(name, value)
       if (isResolvable(value)) {
-        createEffect(() => setProperty(elt, binding))
+        effect(() => setProperty(elt, binding))
       } else {
         setProperty(elt, binding)
       }
@@ -353,7 +353,7 @@ export function mount(rootElement, code, before) {
       before?.remove()
       children.value?.forEach((child) => child.remove())
     })
-    createEffect(() => {
+    effect(() => {
       children.value?.forEach((child) => {
         if (child !== before?.previousSibling) {
           parentNode?.insertBefore(child, before ?? null)
@@ -365,9 +365,9 @@ export function mount(rootElement, code, before) {
 }
 
 /**
- * @param {(Node & { remove(): void })[]} nodeArray
+ * @param {ChildNode[]} nodeArray
  * @param  {...any} elements
- * @returns {(Node & { remove(): void })[]}
+ * @returns {ChildNode[]}
  */
 function createNodesFrom(nodeArray, ...elements) {
   for (const elt of elements) {
@@ -391,31 +391,28 @@ function createNodesFrom(nodeArray, ...elements) {
 
 /**
  * @param {unknown} child
- * @returns {{ readonly value: (Node & { remove(): void })[] | null }}
+ * @returns {{ readonly value: ChildNode[] | undefined }}
  */
 export function createChildren(child) {
-  return createComputed(
-    /** @param {any[] | null} currentNodes */ (currentNodes) => {
-      const nextNodes = createNodesFrom([], child)
-      nextNodes?.forEach((nextNode, i) => {
-        currentNodes?.some((currentNode, j) => {
-          if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
-            currentNode.data = nextNode["data"]
-          }
-          if (currentNode.isEqualNode(nextNode)) {
-            nextNodes[i] = currentNode
-            currentNodes.splice(j, 1)
-            return true
-          }
-        })
+  return computed((currentNodes) => {
+    const nextNodes = createNodesFrom([], child)
+    nextNodes?.forEach((nextNode, i) => {
+      currentNodes?.some((currentNode, j) => {
+        if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
+          currentNode["data"] = nextNode["data"]
+        }
+        if (currentNode.isEqualNode(nextNode)) {
+          nextNodes[i] = currentNode
+          currentNodes.splice(j, 1)
+          return true
+        }
       })
-      while (currentNodes?.length) {
-        currentNodes.pop()?.remove()
-      }
-      return nextNodes.length === 0 ? null : nextNodes
-    },
-    null,
-  )
+    })
+    while (currentNodes?.length) {
+      currentNodes.pop()?.remove()
+    }
+    return nextNodes.length === 0 ? undefined : nextNodes
+  })
 }
 
 /**

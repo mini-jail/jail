@@ -1,8 +1,8 @@
-import { createSignal } from "space/signal"
+import { state } from "space/signal"
 import html from "space/dom"
 
 export default function SimpleCounter() {
-  const counter = createSignal(0)
+  const counter = state(0)
   return html`
     <button @click=${() => counter.value--}>-</button>
     <span>current value: ${counter}</span>

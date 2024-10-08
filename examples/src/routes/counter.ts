@@ -1,12 +1,12 @@
-import { createSignal } from "space/signal"
+import { State } from "space/signal"
 import html, { Show } from "space/dom"
 
 const code = `
-import { createSignal } from "space/signal"
+import { state } from "space/signal"
 import html from "space/dom"
 
 function SimpleCounter() {
-  const counter = createSignal(0)
+  const counter = state(0)
   return html\`
     <button @click=\${() => counter.value--}>-</button>
     <span>current value: \${counter}</span>
@@ -15,8 +15,8 @@ function SimpleCounter() {
 }`.trim()
 
 export default function Counter() {
-  const counter = createSignal(0)
-  const show = createSignal(false)
+  const counter = new State(0)
+  const show = new State(false)
   return html`
     <article>
       <h4>

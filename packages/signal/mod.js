@@ -1,25 +1,5 @@
 /**
- * @template [Type = unknown]
- * @typedef {{
- *   value: Type | undefined
- *   parentNode: Node | null
- *   childNodes: Node[] | null
- *   signals: Signal[] | null
- *   context: Record<string | symbol, any> | null
- *   cleanups: Cleanup[] | null
- *   onupdate: ((value: Type) =>  Type)  | null
- * }} Node
- */
-/**
  * @typedef {() => void} Cleanup
- */
-/**
- * @template [Type = unknown]
- * @typedef {{ value: Type }} Signal
- */
-/**
- * @template [Type = unknown]
- * @typedef {{ readonly value: Type }} ReadonlySignal
  */
 /**
  * @template Type
@@ -29,7 +9,7 @@
  * @typedef {{ value: any }} Resolvable
  */
 /**
- * @type {WeakMap<Signal, Set<Node>>}
+ * @type {WeakMap<State, Set<Node>>}
  */
 const effectMap = new WeakMap()
 /**
@@ -42,33 +22,6 @@ let isRunning = false
  * @type {Node | null}
  */
 let activeNode = null
-
-/**
- * @returns {Node}
- */
-function createNode() {
-  /**
-   * @type {Node}
-   */
-  const node = {
-    value: undefined,
-    parentNode: null,
-    childNodes: null,
-    signals: null,
-    context: null,
-    cleanups: null,
-    onupdate: null,
-  }
-  if (activeNode) {
-    node.parentNode = activeNode
-    if (activeNode.childNodes === null) {
-      activeNode.childNodes = [node]
-    } else {
-      activeNode.childNodes.push(node)
-    }
-  }
-  return node
-}
 
 /**
  * @returns {Node}
@@ -86,7 +39,7 @@ export function getNode() {
  * @returns {Type | undefined}
  */
 export function createRoot(fn) {
-  const node = createNode()
+  const node = new Node()
   try {
     activeNode = node
     return fn(() => cleanNode(node, true))
@@ -151,117 +104,46 @@ function lookup(node, key) {
 
 /**
  * @template Type
- * @overload
- * @returns {Signal<Type | undefined>}
- */
-/**
- * @template Type
- * @overload
- * @param {Type} value
- * @returns {Signal<Type>}
- */
-/**
- * @template Type
- * @param {Type} [value]
- * @returns {Signal<Type | undefined>}
- */
-export function createSignal(value) {
-  return {
-    get value() {
-      if (activeNode?.onupdate) {
-        let effects = effectMap.get(this)
-        if (effects === undefined) {
-          effectMap.set(this, effects = new Set())
-        }
-        effects.add(activeNode)
-        if (activeNode.signals === null) {
-          activeNode.signals = [this]
-        } else if (!activeNode.signals.includes(this)) {
-          activeNode.signals.push(this)
-        }
-      }
-      return value
-    },
-    set value(newValue) {
-      if (value !== newValue) {
-        value = newValue
-        effectMap.get(this)?.forEach(queueNode)
-      }
-    },
-  }
-}
-
-/**
- * @template Type
- * @overload
- * @param {(value: Type | undefined) => Type} fn
- * @returns {ReadonlySignal<Type | undefined>}
- */
-/**
- * @template Type
- * @overload
- * @param {(value: Type) => Type} fn
- * @param {Type} value
- * @returns {ReadonlySignal<Type>}
- */
-/**
- * @template Type
- * @param {(value: Type | undefined) => Type} fn
- * @param {Type} [value]
- * @returns {ReadonlySignal<Type | undefined>}
- */
-export function createComputed(fn, value) {
-  const signal = createSignal(value)
-  createEffect(() => {
-    signal.value = fn(untrack(() => signal.value))
-  })
-  return {
-    get value() {
-      return signal.value
-    },
-  }
-}
-
-/**
- * @template Type
  * @param {() => Type} fn
  * @returns {Type}
  */
 export function untrack(fn) {
   const node = activeNode
   activeNode = null
-  const result = fn()
-  activeNode = node
-  return result
+  try {
+    return fn()
+  } finally {
+    activeNode = node
+  }
 }
 
 /**
  * @overload
- * @param {() => void} fn
+ * @param {() => void} update
  * @returns {void}
  */
 /**
  * @template Type
  * @overload
- * @param {(value: Type | undefined) => Type} fn
+ * @param {(value: Type | undefined) => Type} update
  * @returns {void}
  */
 /**
  * @template Type
  * @overload
- * @param {(value: Type) => Type} fn
+ * @param {(value: Type) => Type} update
  * @param {Type} value
  * @returns {void}
  */
 /**
- * @param {(value: any) => any} fn
+ * @param {(value: any) => any} update
  * @param {any} [value]
  * @returns {void}
  */
-export function createEffect(fn, value) {
-  const node = createNode()
+export function effect(update, value) {
+  const node = new Node()
   node.value = value
-  node.onupdate = fn
+  node.onupdate = update
   if (isRunning) {
     effectQueue.add(node)
   } else {
@@ -274,11 +156,11 @@ export function createEffect(fn, value) {
  * @param {boolean} dispose
  */
 function cleanNode(node, dispose) {
-  if (node.signals?.length) {
-    let signal = node.signals.pop()
-    while (signal) {
-      effectMap.get(signal)?.delete(node)
-      signal = node.signals.pop()
+  if (node.states?.length) {
+    let state = node.states.pop()
+    while (state) {
+      effectMap.get(state)?.delete(node)
+      state = node.states.pop()
     }
   }
   if (node.childNodes?.length) {
@@ -300,7 +182,7 @@ function cleanNode(node, dispose) {
     node.value = undefined
     node.parentNode = null
     node.childNodes = null
-    node.signals = null
+    node.states = null
     node.cleanups = null
     node.onupdate = null
   }
@@ -326,16 +208,16 @@ function updateNode(node) {
 }
 
 /**
- * @param {Cleanup} fn
+ * @param {Cleanup} cleanup
  */
-export function onCleanup(fn) {
+export function onCleanup(cleanup) {
   if (activeNode === null) {
-    throw new Error("onCleanup(fn): activeNode is null!")
+    throw new Error("onCleanup(cleanup): activeNode is null!")
   }
   if (activeNode.cleanups === null) {
-    activeNode.cleanups = [fn]
+    activeNode.cleanups = [cleanup]
   } else {
-    activeNode.cleanups.push(fn)
+    activeNode.cleanups.push(cleanup)
   }
 }
 
@@ -401,4 +283,133 @@ export function isResolvable(data) {
  */
 export function resolve(data) {
   return isResolvable(data) ? data.value : data
+}
+
+/**
+ * @template Type
+ */
+class Node {
+  /** @type {Type | undefined} */
+  value
+  /** @type {Node | null} */
+  parentNode = null
+  /** @type {Node[] | null} */
+  childNodes = null
+  /** @type {State[] | null} */
+  states = null
+  /** @type {{ [key: string |  symbol]: any } | null} */
+  context = null
+  /** @type {Cleanup[] | null} */
+  cleanups = null
+  /** @type {((value: Type) =>  Type)  | null} */
+  onupdate = null
+  constructor() {
+    if (activeNode) {
+      this.parentNode = activeNode
+      if (activeNode.childNodes === null) {
+        activeNode.childNodes = [this]
+      } else {
+        activeNode.childNodes.push(this)
+      }
+    }
+  }
+}
+
+/**
+ * @template Type
+ */
+export class State {
+  /** @type {Type} */
+  #value
+  /** @type {(currentValue: Type | undefined, nextValue: Type | undefined) => boolean} */
+  equals = (currentValue, nextValue) => currentValue === nextValue
+  /**
+   * @param {Type} [value]
+   */
+  constructor(value) {
+    this.#value = /** @type {Type} */ (value)
+  }
+  get value() {
+    if (activeNode?.onupdate) {
+      let effects = effectMap.get(this)
+      if (effects === undefined) {
+        effectMap.set(this, effects = new Set())
+      }
+      effects.add(activeNode)
+      if (activeNode.states === null) {
+        activeNode.states = [this]
+      } else if (!activeNode.states.includes(this)) {
+        activeNode.states.push(this)
+      }
+    }
+    return this.#value
+  }
+  set value(value) {
+    if (this.equals(this.#value, value) === false) {
+      this.#value = value
+      effectMap.get(this)?.forEach(queueNode)
+    }
+  }
+  get() {
+    return this.value
+  }
+  /**
+   * @param {Type} value
+   */
+  set(value) {
+    this.value = value
+  }
+  peek() {
+    return this.#value
+  }
+  [Symbol.toPrimitive]() {
+    return this.value
+  }
+  [Symbol.toStringTag]() {
+    return String(this.value)
+  }
+}
+
+/**
+ * @template Type
+ */
+export class Computed {
+  /** @type {State<Type>} */
+  #state = new State()
+  /**
+   * @param {(value: Type | undefined) => Type} fn
+   */
+  constructor(fn) {
+    effect(() => {
+      this.#state.value = fn(this.#state.peek())
+    })
+  }
+  get value() {
+    return this.#state.value
+  }
+  peek() {
+    return this.#state.peek()
+  }
+  [Symbol.toPrimitive]() {
+    return this.value
+  }
+  [Symbol.toStringTag]() {
+    return String(this.value)
+  }
+}
+
+/**
+ * @template Type
+ * @param {Type} [value]
+ */
+export function state(value) {
+  return new State(value)
+}
+
+/**
+ * @template Type
+ * @param {(value: Type | undefined) => Type} fn
+ */
+export function computed(fn) {
+  return new Computed(fn)
 }

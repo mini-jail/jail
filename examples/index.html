@@ -3,10 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>space</title>
+    <title>space/{{ count.value }}</title>
     <link href="/app.css" rel="stylesheet" />
     <link rel="icon" href="/favicon.svg" />
     <script type="module" src="/app.bundle.js"></script>
   </head>
-  <body></body>
+  <body>
+    <!-- <h2 :class="count" .id="count">Value: {{ count }}</h2>
+    <div>
+      <button @click="count.value++">increment</button>
+      <button @click="count.value--">decrement</button>
+      <button @click="count.value = 0">reset</button>
+    </div>
+    <div $show="count.value === 3">hidden content</div>
+    <template $template="counter"></template>
+    <template $if="count.value === 10">
+      <p>only if count.value equals 10</p>
+    </template>
+    <template $for="(item, index) of Array(10).fill('love')">
+      <p>{{ index }}: {{ item }}</p>
+      <div>
+        <template $if="true">hehe</template>
+      </div>
+    </template> -->
+  </body>
 </html>
