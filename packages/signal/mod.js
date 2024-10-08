@@ -365,6 +365,9 @@ export class State {
   [Symbol.toStringTag]() {
     return String(this.value)
   }
+  [Symbol.toPrimitive]() {
+    return this.value
+  }
 }
 
 /**
@@ -389,6 +392,9 @@ export class Computed {
   }
   [Symbol.toStringTag]() {
     return String(this.value)
+  }
+  [Symbol.toPrimitive]() {
+    return this.value
   }
 }
 
