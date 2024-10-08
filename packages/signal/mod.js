@@ -362,9 +362,6 @@ export class State {
   peek() {
     return this.#value
   }
-  [Symbol.toPrimitive]() {
-    return this.value
-  }
   [Symbol.toStringTag]() {
     return String(this.value)
   }
@@ -389,9 +386,6 @@ export class Computed {
   }
   peek() {
     return this.#state.peek()
-  }
-  [Symbol.toPrimitive]() {
-    return this.value
   }
   [Symbol.toStringTag]() {
     return String(this.value)

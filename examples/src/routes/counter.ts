@@ -1,4 +1,4 @@
-import { State } from "space/signal"
+import { state } from "space/signal"
 import html, { Show } from "space/dom"
 
 const code = `
@@ -15,8 +15,8 @@ function SimpleCounter() {
 }`.trim()
 
 export default function Counter() {
-  const counter = new State(0)
-  const show = new State(false)
+  const counter = state(0)
+  const show = state(false)
   return html`
     <article>
       <h4>

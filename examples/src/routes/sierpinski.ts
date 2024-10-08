@@ -4,6 +4,7 @@ import {
   inject,
   onCleanup,
   provide,
+  type State,
   state,
 } from "space/signal"
 import html from "space/dom"
@@ -11,7 +12,7 @@ import html from "space/dom"
 type DotProps = { x: number; y: number; target: number }
 
 const Dot = ({ x, y, target }: DotProps) => {
-  const counter = inject<{ value: number }>("counter")!
+  const counter = inject<State<number>>("counter")!
   const hover = state(false)
   const text = computed(() => {
     return hover.value ? "*" + counter.value + "*" : counter.value + ""
@@ -31,7 +32,6 @@ const Dot = ({ x, y, target }: DotProps) => {
       textContent=${text}
       style=${css}
       style:backgroundColor=${bgColor}
-      
       class="sierpinski-dot"
       @mouseover=${() => hover.value = true}
       @mouseout=${() => hover.value = false}>
