@@ -94,7 +94,7 @@ export default function Sierpinski() {
     console.log("Sierpinski is dead")
   })
 
-  const transform = computed(() => `scale(${scale.value}) translateX(0.1px)`)
+  const transform = computed(() => `scale(${scale.value}) translateZ(0.1px)`)
 
   return html`
     <div class="sierpinski-wrapper" style:transform=${transform}>
