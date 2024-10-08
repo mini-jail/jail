@@ -5,10 +5,10 @@ import {
   inject,
   onCleanup,
   provide,
-  State,
+  state,
 } from "space/signal"
 
-export const path = new State("")
+export const path = state("")
 const paramsKey = Symbol("Params")
 const routesKey = Symbol("Routes")
 

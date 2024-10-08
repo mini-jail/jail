@@ -51,8 +51,8 @@ function App() {
 }
 
 const unmount = mount(document.body, App)
-/*
-createApp({
+
+/* createApp({
   count: state(0),
   counter: `<div class="counter">{{ count }}</div>`,
 }).mount()
