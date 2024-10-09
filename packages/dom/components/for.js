@@ -1,11 +1,11 @@
 import { computed, createRoot } from "space/signal"
 
 /**
- * @template [Type = any]
+ * @template Type
  * @param {{
  *   each: Iterable<Type>,
- *   children: (item: Type, index: number) => any,
- *   fallback?: any
+ *   children: (item: Type, index: number) => Type,
+ *   fallback?: Type
  * }} props
  */
 export function For(props) {

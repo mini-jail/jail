@@ -1,7 +1,8 @@
 import { computed } from "space/signal"
 
 /**
- * @param {{ when: boolean | "true" | "false", children?: any, fallback?: any }} props
+ * @template Type
+ * @param {{ when: boolean | "true" | "false", children?: Type, fallback?: Type }} props
  */
 export function Show(props) {
   return computed(() => {

@@ -2,12 +2,14 @@ import { effect, onCleanup, state } from "space/signal"
 import { mount } from "../renderer.js"
 
 /**
+ * @template Type
  * @overload
- * @param {{ selector: string, children?: any }} props
+ * @param {{ selector: string, children?: Type }} props
  */
 /**
+ * @template Type
  * @overload
- * @param {{ mount: Element, children?: any }} props
+ * @param {{ mount: Element, children?: Type }} props
  */
 /**
  * @param {{ selector?: string, mount?: Element, children?: any }} props

@@ -1,9 +1,10 @@
 import { effect, State } from "space/signal"
 
 /**
+ * @template {Element} Type
  * @param {{
  *   keyframes: Keyframe[],
- *   children: Element,
+ *   children: Type,
  *   options: KeyframeAnimationOptions
  *   state: State
  * }} props
