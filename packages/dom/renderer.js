@@ -1,4 +1,5 @@
 import {
+  Computed,
   computed,
   createRoot,
   effect,
@@ -391,12 +392,12 @@ function createNodesFrom(nodeArray, ...elements) {
 
 /**
  * @param {unknown} child
- * @returns {{ readonly value: ChildNode[] | undefined }}
+ * @returns {Computed<ChildNode[] | undefined>}
  */
 export function createChildren(child) {
   return computed((currentNodes) => {
     const nextNodes = createNodesFrom([], child)
-    nextNodes?.forEach((nextNode, i) => {
+    nextNodes.forEach((nextNode, i) => {
       currentNodes?.some((currentNode, j) => {
         if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
           currentNode["data"] = nextNode["data"]

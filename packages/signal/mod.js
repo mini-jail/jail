@@ -129,20 +129,11 @@ export function untrack(fn) {
  * @returns {void}
  */
 /**
- * @template Type
- * @overload
- * @param {(value: Type) => Type} update
- * @param {Type} value
- * @returns {void}
- */
-/**
  * @param {(value: any) => any} update
- * @param {any} [value]
  * @returns {void}
  */
-export function effect(update, value) {
+export function effect(update) {
   const node = new Node()
-  node.value = value
   node.onupdate = update
   if (isRunning) {
     effectQueue.add(node)
@@ -285,14 +276,11 @@ export function resolve(data) {
   return isResolvable(data) ? data.value : data
 }
 
-/**
- * @template Type
- */
 class Node {
-  /** @type {Type | undefined} */
+  /** @type {unknown | undefined} */
   value
   /** @type {Node | null} */
-  parentNode = null
+  parentNode = activeNode
   /** @type {Node[] | null} */
   childNodes = null
   /** @type {State[] | null} */
@@ -301,11 +289,10 @@ class Node {
   context = null
   /** @type {Cleanup[] | null} */
   cleanups = null
-  /** @type {((value: Type) =>  Type)  | null} */
+  /** @type {((value: unknown) =>  unknown)  | null} */
   onupdate = null
   constructor() {
     if (activeNode) {
-      this.parentNode = activeNode
       if (activeNode.childNodes === null) {
         activeNode.childNodes = [this]
       } else {

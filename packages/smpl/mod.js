@@ -37,7 +37,7 @@ import { computed, createRoot, effect, onCleanup } from "space/signal"
 const fnCache = {}
 const attrRegExp = /[.:@$](?<name>[^.:]+)(?::(?<arg>[^.:]+))?(?:.(?<mod>\S+)*)?/
 const placeholderRegExp = /{{\s*([^]+?)\s*}}/g
-const forRegExp = /\(\s*(?<var>[^]+?)\s*\) of (?<exp>[^]+)/g
+const forRegExp = /\(\s*(?<var>[^]+?)\s*\) of (?<exp>[^]+)/
 const attrTypes = {
   ".": "property",
   ":": "attribute",

@@ -1,5 +1,5 @@
-import { effect, state } from "space/signal"
-import { createApp } from "space/smpl"
+import { effect } from "space/signal"
+//import { createApp } from "space/smpl"
 import html, { Animate, mount, path, Route, Router } from "space/dom"
 import Home from "./routes/home.ts"
 import Counter from "./routes/counter.ts"
@@ -55,5 +55,4 @@ const unmount = mount(document.body, App)
 /* createApp({
   count: state(0),
   counter: `<div class="counter">{{ count }}</div>`,
-}).mount()
- */
+}).mount() */
