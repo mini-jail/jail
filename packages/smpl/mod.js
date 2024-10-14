@@ -26,10 +26,7 @@ import { computed, createRoot, effect, onCleanup } from "space/signal"
  * }} Data
  */
 /**
- * @typedef {{ [name: string | number | symbol]: unknown }} Injections
- */
-/**
- * @typedef {($data: Data, $injections?: Injections) => void} Handler
+ * @typedef {(...args: object[]) => void} Handler
  */
 /**
  * @type {{ [fnBody: string]: Handler }}
@@ -37,7 +34,6 @@ import { computed, createRoot, effect, onCleanup } from "space/signal"
 const fnCache = {}
 const attrRegExp = /[.:@$](?<name>[^.:]+)(?::(?<arg>[^.:]+))?(?:.(?<mod>\S+)*)?/
 const placeholderRegExp = /{{\s*([^]+?)\s*}}/g
-const forRegExp = /\(\s*(?<var>[^]+?)\s*\) of (?<exp>[^]+)/
 const attrTypes = {
   ".": "property",
   ":": "attribute",
@@ -69,28 +65,27 @@ const directives = {
     const template = /** @type {HTMLTemplateElement} */ (elt)
     const fragment = template.content.cloneNode(true)
     const parent = template.parentElement
-    const groups = forRegExp.exec(binding.exp)?.groups
-    if (groups === undefined) {
-      throw SyntaxError(binding.exp)
-    }
+    let data
     const getter = () => {
       try {
-        return Array.from(evaluate(binding.data, groups.exp))
+        data = binding.data
+        return Array.from(evaluate(binding.exp, data))
       } catch (error) {
         console.error(error)
         return []
       }
     }
     const children = computed((children) => {
-      const nextChildren = getter().map((item, index) => {
+      const nextChildren = getter().map((value, index, array) => {
         const copy = /** @type {DocumentFragment} */ (fragment.cloneNode(true))
-        walk(copy, binding.data, { item, index })
+        walk(copy, data, { value, index, array })
         return Array.from(copy.childNodes)
       }).flat(1)
       reconcile(parent, template, children, nextChildren)
       return nextChildren
     })
     onCleanup(() => {
+      data = undefined
       children.value?.forEach((child) => child.remove())
     })
   },
@@ -99,7 +94,7 @@ const directives = {
     const fragment = template.content.cloneNode(true)
     const parent = template.parentElement
     const children = computed((children) => {
-      let nextChildren
+      let nextChildren = null
       if (binding.value) {
         const copy = /** @type {DocumentFragment} */ (fragment.cloneNode(true))
         walk(copy, binding.data)
@@ -115,24 +110,22 @@ const directives = {
 }
 
 /**
- * @param {Data} data
  * @param {string} exp
- * @param {Injections} [injections]
+ * @param {...object} args
  */
-export function evaluate(data, exp, injections) {
-  return execute(data, `return(${exp})`, injections)
+function evaluate(exp, ...args) {
+  return execute(`return(${exp})`, ...args)
 }
 
 /**
- * @param {Data} data
  * @param {string} exp
- * @param {Injections} [injections]
+ * @param {...object} args
  * @returns {any}
  */
-export function execute(data, exp, injections) {
+function execute(exp, ...args) {
   const fn = fnCache[exp] ?? (fnCache[exp] = toFunction(exp))
   try {
-    return fn(data, injections)
+    return fn(...args)
   } catch (error) {
     console.error(error, exp)
   }
@@ -145,9 +138,8 @@ export function execute(data, exp, injections) {
 function toFunction(exp) {
   try {
     return /** @type {Handler} */ (new Function(
-      "__data__",
-      "__injections__",
-      `with(Object.assign({}, __data__, __injections__)){${exp}}`,
+      "...args",
+      `with(Object.assign({}, ...args)){${exp}}`,
     ))
   } catch (error) {
     console.error(error, exp)
@@ -157,10 +149,10 @@ function toFunction(exp) {
 
 /**
  * @param {Element} elt
- * @param {Data} data
+ * @param {...object} data
  * @returns {Binding[]}
  */
-function getBindings(elt, data) {
+function getBindings(elt, ...data) {
   return Array.from(elt.attributes).reduce((attrs, { name, value }) => {
     if (/^[$@.:]/.test(name)) {
       elt.removeAttribute(name)
@@ -168,7 +160,9 @@ function getBindings(elt, data) {
       attrs.push({
         type: attrTypes[name[0]],
         name: /** @type {string} */ (options?.name),
-        data,
+        get data() {
+          return Object.assign({}, ...data)
+        },
         exp: value,
         arg: options?.arg ?? null,
         modifiers: options?.mod?.split(".").reduce((mods, key) => {
@@ -176,7 +170,7 @@ function getBindings(elt, data) {
           return mods
         }, {}) ?? null,
         get value() {
-          return evaluate(this.data, this.exp, { $el: elt })
+          return evaluate(this.exp, this.data, { $el: elt })
         },
       })
     }
@@ -186,10 +180,9 @@ function getBindings(elt, data) {
 
 /**
  * @param {Node} node
- * @param {Data} data
- * @param {Injections} [injections]
+ * @param {...object} data
  */
-function walk(node, data, injections) {
+function walk(node, ...data) {
   const type = node.nodeType
   if (type === 8) {
     return
@@ -200,7 +193,7 @@ function walk(node, data, injections) {
     if (placeholderRegExp.test(dataCopy)) {
       effect(() => {
         text.data = dataCopy.replace(placeholderRegExp, (_match, exp) => {
-          return String(evaluate(data, exp, injections))
+          return String(evaluate(exp, ...data))
         })
       })
     }
@@ -211,7 +204,7 @@ function walk(node, data, injections) {
     if (elt.hasAttribute("$ignore")) {
       return
     }
-    for (const binding of getBindings(elt, data)) {
+    for (const binding of getBindings(elt, ...data)) {
       if (binding.type === "attribute") {
         effect(() => {
           const value = binding.value
@@ -235,7 +228,7 @@ function walk(node, data, injections) {
             if (binding.modifiers?.stop) {
               event.stopPropagation()
             }
-            evaluate(binding.data, binding.exp, { $el: elt, $ev: event })
+            evaluate(binding.exp, binding.data, { $el: elt, $ev: event })
           },
           {
             capture: binding.modifiers?.capture,
@@ -251,7 +244,7 @@ function walk(node, data, injections) {
   }
   let child = node.firstChild
   while (child) {
-    walk(child, data, injections)
+    walk(child, ...data)
     child = child.nextSibling
   }
 }

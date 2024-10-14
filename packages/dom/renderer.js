@@ -1,12 +1,4 @@
-import {
-  Computed,
-  computed,
-  createRoot,
-  effect,
-  isResolvable,
-  onCleanup,
-  resolve,
-} from "space/signal"
+import { Computed, computed, createRoot, effect, onCleanup } from "space/signal"
 import { getTree } from "./compiler.js"
 
 const bindingTypes = { ".": "property", ":": "attribute", "@": "event" }
@@ -375,8 +367,7 @@ function createNodesFrom(nodeArray, ...elements) {
     if (elt == null || typeof elt === "boolean") {
       continue
     } else if (elt instanceof Node) {
-      // @ts-expect-error elt has remove()
-      nodeArray.push(elt)
+      nodeArray.push(/** @type {ChildNode} */ (elt))
     } else if (typeof elt === "string" || typeof elt === "number") {
       nodeArray.push(new Text(elt + ""))
     } else if (typeof elt === "function") {
@@ -431,4 +422,21 @@ function isResolvableChild(data) {
       return Symbol.iterator in data || "value" in data
   }
   return false
+}
+
+/**
+ * @param {any} data
+ * @returns {data is { value: any }}
+ */
+export function isResolvable(data) {
+  return data && typeof data === "object" && Reflect.has(data, "value")
+}
+
+/**
+ * @template Type
+ * @param {Type} data
+ * @returns {Type extends { value: any } ? Type["value"] : Type}
+ */
+export function resolve(data) {
+  return isResolvable(data) ? data.value : data
 }

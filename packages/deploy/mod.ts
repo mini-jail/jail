@@ -1,5 +1,6 @@
 import { Application, Router } from "https://deno.land/x/oak@v10.2.0/mod.ts"
 import { bundle } from "https://deno.land/x/emit@0.24.0/mod.ts"
+import { minify } from "npm:@putout/minify"
 
 export const DEV = Deno.env.get("APP_DEV") === "true"
 export const PORT = +Deno.env.get("APP_PORT")!
@@ -48,15 +49,16 @@ async function createBundle(): Promise<string> {
       inlineSourceMap: DEV,
     },
   })
+  const finalCode = DEV ? code : minify(code)
   const duration = (performance.now() - timeStart).toFixed()
   const units = ["B", "KB", "MB"]
-  let size = code.length, i = 0
+  let size = finalCode.length, i = 0
   for (i; size > 1000; i++) {
     size /= 1000
   }
   const bytes = size.toFixed()
   console.info(`app built (${duration}ms, ${bytes}${units[i]})`)
-  return code
+  return finalCode
 }
 
 async function runDev() {

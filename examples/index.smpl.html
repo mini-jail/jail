@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>space</title>
+    <link href="/app.css" rel="stylesheet" />
+    <link rel="icon" href="/favicon.svg" />
+    <script src="/index.html.js"></script>
+    <script type="module" src="/app.bundle.js"></script>
+  </head>
+  <body>
+    <h2 :class="'class_' + count" .id="'id_' + count">Value: {{ count }}</h2>
+    <div>
+      <button @click="count.value++">increment</button>
+      <button @click="count.value--">decrement</button>
+      <button @click="count.value = 0">reset</button>
+    </div>
+    <div $show="count.value === 3">hidden content</div>
+    <template $if="count.value === 10">
+      <p>only if count.value equals 10</p>
+    </template>
+    <template $for="Array(+count).fill('love')">
+      <p>{{ index }}: {{ value }}</p>
+      <template $if="!!count.value" :class="'item_' + index">hehe</template>
+    </template>
+  </body>
+</html>

@@ -3,6 +3,8 @@
     "space/signal": "./packages/signal/mod.js",
     "space/dom": "./packages/dom/mod.js",
     "space/smpl": "./packages/smpl/mod.js",
+    "space/element": "./packages/element/mod.js",
+    "space/element-router": "./packages/element-router/mod.js",
     "space/deploy": "./packages/deploy/mod.ts"
   }
 }

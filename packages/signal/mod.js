@@ -2,13 +2,6 @@
  * @typedef {() => void} Cleanup
  */
 /**
- * @template Type
- * @typedef {Type extends Resolvable ? Type["value"] : Type} Resolved
- */
-/**
- * @typedef {{ value: any }} Resolvable
- */
-/**
  * @type {WeakMap<State, Set<Node>>}
  */
 const effectMap = new WeakMap()
@@ -259,37 +252,20 @@ function queueNode(node) {
   }
 }
 
-/**
- * @param {any} data
- * @returns {data is Resolvable}
- */
-export function isResolvable(data) {
-  return data && typeof data === "object" && Reflect.has(data, "value")
-}
-
-/**
- * @template Type
- * @param {Type} data
- * @returns {Resolved<Type>}
- */
-export function resolve(data) {
-  return isResolvable(data) ? data.value : data
-}
-
 class Node {
   /** @type {unknown | undefined} */
   value
-  /** @type {Node | null} */
+  /** @type {Node?} */
   parentNode = activeNode
-  /** @type {Node[] | null} */
+  /** @type {Node[]?} */
   childNodes = null
-  /** @type {State[] | null} */
+  /** @type {State[]?} */
   states = null
-  /** @type {{ [key: string |  symbol]: any } | null} */
+  /** @type {{ [key: string |  symbol]: any }?} */
   context = null
-  /** @type {Cleanup[] | null} */
+  /** @type {Cleanup[]?} */
   cleanups = null
-  /** @type {((value: unknown) =>  unknown)  | null} */
+  /** @type {((value: unknown) =>  unknown)?} */
   onupdate = null
   constructor() {
     if (activeNode) {
