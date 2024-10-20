@@ -1,8 +1,6 @@
-import { createElement } from "space/element"
-import { SierpinskiTriangle, Title } from "../components/mod.ts"
+import { Page, SierpinskiTriangle } from "../components/mod.ts"
 
 export default function Sierpinski() {
-  return createElement("article")
-    .add(Title("sierpinski", "(i mean...why??)"))
+  return Page({ title: "sierpinski", description: "(i mean...why??)" })
     .add(SierpinskiTriangle)
 }

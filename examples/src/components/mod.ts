@@ -8,6 +8,10 @@ interface AnimateProps extends KeyframeAnimationOptions {
   state?: State
   keyframes: Keyframe[]
 }
+interface PageProps {
+  title: string
+  description: string
+}
 
 const counterContext = new Context({ value: 0 })
 
@@ -15,6 +19,19 @@ export function animate(elt: HTMLElement, props: AnimateProps) {
   const { keyframes, state, ...options } = props
   state?.value
   elt.animate(keyframes, options)
+}
+
+export function Page(props: PageProps, ...children: Child[]) {
+  return createElement("article")
+    .add(
+      createElement("h4")
+        .add(
+          props.title,
+          createElement("sub")
+            .add(props.description),
+        ),
+      ...children,
+    )
 }
 
 export function Paragraph(
@@ -31,15 +48,6 @@ export function Paragraph(
 
 export function Anchor(href: string, ...children: Child[]) {
   return createElement("a", { href }, ...children)
-}
-
-export function Title(title: string, description: string) {
-  return createElement(
-    "h4",
-    null,
-    title,
-    createElement("sub", null, description),
-  )
 }
 
 function Dot({ x, y, target }: DotProps) {

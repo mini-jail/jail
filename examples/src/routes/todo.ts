@@ -1,6 +1,6 @@
 import { computed, state } from "space/signal"
 import { createElement } from "space/element"
-import { Title } from "../components/mod.ts"
+import { Page } from "../components/mod.ts"
 
 type ToDoItem = {
   id: number
@@ -69,31 +69,32 @@ export default function ToDo() {
   const onInput = (ev) => text.value = ev.target.value
   const length = computed(() => list.value.length)
   const done = computed(() => list.value.filter((item) => item.done).length)
-  return createElement("article")
-    .add(Title("todo", "(no-one ever have done that, i promise!)"))
-    .add(
-      createElement("div")
-        .attribute("class", "todo-app-container")
-        .add(
-          createElement("form")
-            .on("submit", addItem)
-            .add(
-              createElement("input")
-                .property("type", "text")
-                .property("placeholder", "...milk?")
-                .property("required", true)
-                .property("className", "todo_input")
-                .property("value", text)
-                .on("input", onInput),
-            ),
-          createElement("div")
-            .attribute("class", "todo-items")
-            .add(List),
-          createElement("label")
-            .add("progress: ", done, "/", length),
-          createElement("progress")
-            .property("max", length)
-            .property("value", done),
-        ),
-    )
+  return Page({
+    title: "todo",
+    description: "(no-one ever have done that, i promise!)",
+  }).add(
+    createElement("div")
+      .attribute("class", "todo-app-container")
+      .add(
+        createElement("form")
+          .on("submit", addItem)
+          .add(
+            createElement("input")
+              .property("type", "text")
+              .property("placeholder", "...milk?")
+              .property("required", true)
+              .property("className", "todo_input")
+              .property("value", text)
+              .on("input", onInput),
+          ),
+        createElement("div")
+          .attribute("class", "todo-items")
+          .add(List),
+        createElement("label")
+          .add("progress: ", done, "/", length),
+        createElement("progress")
+          .property("max", length)
+          .property("value", done),
+      ),
+  )
 }

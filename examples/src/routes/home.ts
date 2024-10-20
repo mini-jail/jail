@@ -1,9 +1,7 @@
-import { createElement } from "space/element"
-import { Anchor, Paragraph, Title } from "../components/mod.ts"
+import { Anchor, Page, Paragraph } from "../components/mod.ts"
 
 export default function Home() {
-  return createElement("article")
-    .add(Title("welcome home!", "(sucker)"))
+  return Page({ title: "welcome home!", description: "(sucker)" })
     .add(
       Paragraph`
         just look at my examples like ${Anchor("/counter", "counter")}.

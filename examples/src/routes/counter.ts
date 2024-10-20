@@ -1,6 +1,6 @@
 import { createElement } from "space/element"
 import { state } from "space/signal"
-import { Title } from "../components/mod.ts"
+import { Page } from "../components/mod.ts"
 
 const code = /*js*/ `
 function* SpaceCounter() {
@@ -25,14 +25,8 @@ function ReactCounter() {
 export default function Counter() {
   const counter = state(0)
   const show = state(false)
-  return createElement("article")
+  return Page({ title: "counter example", description: "(...what else?)" })
     .add(
-      Title("counter example", "(...what else?)")
-        .add(
-          createElement("button")
-            .add(() => show.value ? "hide code" : "show code")
-            .on("click", () => show.value = !show.value),
-        ),
       createElement("button")
         .add("-")
         .on("click", () => counter.value--),
@@ -41,6 +35,12 @@ export default function Counter() {
       createElement("button")
         .add("+")
         .on("click", () => counter.value++),
+      createElement("div")
+        .add(
+          createElement("button")
+            .add(() => show.value ? "hide code" : "show code")
+            .on("click", () => show.value = !show.value),
+        ),
       createElement("code")
         .style("display", () => show.value ? "" : "none")
         .add(
