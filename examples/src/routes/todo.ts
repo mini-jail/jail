@@ -1,5 +1,6 @@
 import { computed, state } from "space/signal"
-import html, { DOMEvent, For } from "space/dom"
+import { createElement } from "space/element"
+import { Title } from "../components/mod.ts"
 
 type ToDoItem = {
   id: number
@@ -14,39 +15,50 @@ const list = state<ToDoItem[]>([
   { id: itemID++, done: false, text: "buy soymilk" },
 ])
 
-const Item = (props: ToDoItem) => {
+function* List() {
+  if (list.value.length === 0) {
+    return yield "Nothing to do"
+  }
+  for (const item of list.value) {
+    yield Item(item)
+  }
+}
+
+function Item(props: ToDoItem) {
   const deleteItem = (_ev: Event) => {
     list.value = list.value.filter((item) => item.id !== props.id)
   }
   const toggleItem = (_ev: Event) => {
     const item = list.value.find((item) => item.id === props.id)
-    // can't simply "props.done = !props.done", because this is readonly
     if (item) {
       item.done = !item.done
       list.value = list.value.slice()
     }
   }
-  return html`
-    <div class="todo-item" id="${"item_" + props.id}">
-      <div
-        @click=${toggleItem}
-        class="todo-item-text"
-        style="${props.done ? "color: grey; font-style: italic;" : null}">
-        ${props.text}
-      </div>
-      <div
-        @click=${deleteItem}
-        class="todo-item-delete"
-        style:display=${props.done ? null : "none"}>
-        delete
-      </div>
-    </div>
-  `
+  return createElement("div")
+    .attribute("class", "todo-item")
+    .attribute("id", "item_" + props.id)
+    .add(
+      createElement("div")
+        .attribute("class", "todo-item-text")
+        .styles({
+          color: props.done ? "grey" : null,
+          fontStyle: props.done ? "italic" : null,
+        })
+        .on("click", toggleItem)
+        .add(props.text),
+      createElement("div")
+        .attribute("class", "todo-item-delete")
+        .style("display", props.done ? null : "none")
+        .on("click", deleteItem)
+        .add("delete"),
+    )
 }
 
 export default function ToDo() {
   const text = state("")
-  const addItem = () => {
+  const addItem = (ev) => {
+    ev.preventDefault()
     list.value = list.value.concat({
       id: itemID++,
       done: false,
@@ -54,37 +66,34 @@ export default function ToDo() {
     })
     text.value = ""
   }
-  const onInput = (ev: DOMEvent<HTMLInputElement>) => {
-    text.value = ev.target.value
-  }
+  const onInput = (ev) => text.value = ev.target.value
   const length = computed(() => list.value.length)
-  const done = computed(() => {
-    return list.value.filter((item) => item.done).length
-  })
-
-  return html`
-    <article>
-      <h4>
-        todo
-        <sub>(no-one ever have done that, i promise!)</sub>
-      </h4>
-      <div class="todo-app-container">
-        <form @submit.prevent=${addItem}>
-          <input
-            type="text"
-            placeholder="...milk?"
-            required
-            class="todo_input"
-            .value=${text}
-            @input=${onInput}
-          />
-        </form>
-        <div class="todo-items">
-          <${For} each=${list} fallback="No Items" children=${Item} />
-        </div>
-        <label>progress: ${done}/${length}</label>
-        <progress max=${length} value=${done}></progress>
-      </div>
-    </article>
-  `
+  const done = computed(() => list.value.filter((item) => item.done).length)
+  return createElement("article")
+    .add(Title("todo", "(no-one ever have done that, i promise!)"))
+    .add(
+      createElement("div")
+        .attribute("class", "todo-app-container")
+        .add(
+          createElement("form")
+            .on("submit", addItem)
+            .add(
+              createElement("input")
+                .property("type", "text")
+                .property("placeholder", "...milk?")
+                .property("required", true)
+                .property("className", "todo_input")
+                .property("value", text)
+                .on("input", onInput),
+            ),
+          createElement("div")
+            .attribute("class", "todo-items")
+            .add(List),
+          createElement("label")
+            .add("progress: ", done, "/", length),
+          createElement("progress")
+            .property("max", length)
+            .property("value", done),
+        ),
+    )
 }

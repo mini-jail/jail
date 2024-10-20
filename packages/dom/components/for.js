@@ -1,4 +1,4 @@
-import { computed, createRoot } from "space/signal"
+import { Computed } from "space/signal"
 
 /**
  * @template Type
@@ -9,13 +9,11 @@ import { computed, createRoot } from "space/signal"
  * }} props
  */
 export function For(props) {
-  return computed(() => {
+  return new Computed(() => {
     const array = Array.from(props.each)
     if (array.length === 0) {
       return props.fallback
     }
-    return array.map((item, index) =>
-      createRoot(() => props.children(item, index))
-    )
+    return array.map((item, index) => props.children(item, index))
   })
 }

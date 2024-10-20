@@ -1,10 +1,14 @@
 {
   "imports": {
     "space/signal": "./packages/signal/mod.js",
+    "space/signal/rune": "./packages/signal-rune/mod.js",
+    "space/signal/context": "./packages/signal-context/mod.js",
+    "space/signal/reducer": "./packages/signal-reducer/mod.js",
+    "space/signal/ressource": "./packages/signal-ressource/mod.js",
+    "space/signal/debounced": "./packages/signal-debounced/mod.js",
     "space/dom": "./packages/dom/mod.js",
-    "space/smpl": "./packages/smpl/mod.js",
     "space/element": "./packages/element/mod.js",
-    "space/element-router": "./packages/element-router/mod.js",
+    "space/element/router": "./packages/element-router/mod.js",
     "space/deploy": "./packages/deploy/mod.ts"
   }
 }

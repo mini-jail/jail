@@ -1,18 +1,17 @@
-import html from "space/dom"
+import { createElement } from "space/element"
+import { Anchor, Paragraph, Title } from "../components/mod.ts"
 
 export default function Home() {
-  return html`
-    <article>
-      <h4>
-        welcome home!
-        <sub>(sucker)</sub>
-      </h4>
-      <p>just look at my examples like <a href="/counter">counter</a>.</p>
-      <p>
-        i tend to create examples like <a href="/sierpinski">sierpinski </a>
+  return createElement("article")
+    .add(Title("welcome home!", "(sucker)"))
+    .add(
+      Paragraph`
+        just look at my examples like ${Anchor("/counter", "counter")}.
+      `,
+      Paragraph`
+        i tend to create examples like ${Anchor("/sierpinski", "sierpinski")}
         because i want to test out the performance of my libraries ^^"
-      </p>
-      <p>btw. this whole page is just an example, lol.</p>
-    </article>
-  `
+      `,
+      Paragraph`btw. this whole page is just an example, lol.`,
+    )
 }

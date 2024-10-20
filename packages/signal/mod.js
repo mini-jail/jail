@@ -1,48 +1,272 @@
 /**
- * @typedef {() => void} Cleanup
- */
-/**
- * @type {WeakMap<State, Set<Node>>}
+ * @type {WeakMap<State, Set<Effect>>}
  */
 const effectMap = new WeakMap()
 /**
- * @type {Set<Node>}
+ * @type {Set<Effect>}
  */
 const effectQueue = new Set()
 const errorKey = Symbol("Error")
 let isRunning = false
 /**
- * @type {Node | null}
+ * @type {BasicNode?}
  */
 let activeNode = null
-
 /**
- * @returns {Node}
+ * @template [Type = any]
  */
-export function getNode() {
-  if (activeNode === null) {
-    throw new Error("getNode(): activeNode is null!")
+export class BasicNode {
+  /**
+   * @type {Type | undefined}
+   */
+  value
+  /**
+   * @type {BasicNode?}
+   */
+  parentNode = activeNode
+  /**
+   * @type {BasicNode[]?}
+   */
+  childNodes = null
+  /**
+   * @type {{ [key: string |  symbol]: any }?}
+   */
+  context = null
+  /**
+   * @type {(() => void)[]?}
+   */
+  cleanups = null
+  /**
+   * @type {((value: Type | undefined) => Type)?}
+   */
+  onupdate = null
+  constructor() {
+    if (activeNode) {
+      if (activeNode.childNodes === null) {
+        activeNode.childNodes = [this]
+      } else {
+        activeNode.childNodes.push(this)
+      }
+    }
   }
-  return activeNode
+  /**
+   * @param {boolean} [dispose]
+   */
+  clean(dispose) {
+    if (this.childNodes?.length) {
+      let childNode = this.childNodes.pop()
+      while (childNode) {
+        childNode.clean(childNode.onupdate ? true : dispose)
+        childNode = this.childNodes.pop()
+      }
+    }
+    if (this.cleanups?.length) {
+      let cleanup = this.cleanups.pop()
+      while (cleanup) {
+        cleanup()
+        cleanup = this.cleanups.pop()
+      }
+    }
+    this.context = null
+    if (dispose) {
+      this.value = undefined
+      this.parentNode = null
+      this.childNodes = null
+      this.cleanups = null
+      this.onupdate = null
+    }
+  }
 }
-
+/**
+ * @template [Type = any]
+ * @extends {BasicNode<Type>}
+ */
+export class Root extends BasicNode {
+  /**
+   * @param {() => Type} fn
+   */
+  constructor(fn) {
+    super()
+    activeNode = this
+    try {
+      this.value = fn()
+    } catch (error) {
+      handleError(error)
+    } finally {
+      activeNode = this.parentNode
+    }
+  }
+  /**
+   * @override
+   */
+  clean() {
+    super.clean(true)
+  }
+}
+/**
+ * @template [Type = any]
+ * @extends {BasicNode<Type>}
+ */
+export class Effect extends BasicNode {
+  /**
+   * @type {State[]?}
+   */
+  states = null
+  /**
+   * @param {((value: Type | undefined) => Type)} update
+   */
+  constructor(update) {
+    super()
+    this.onupdate = update
+    if (isRunning) {
+      effectQueue.add(this)
+    } else {
+      queueMicrotask(() => this.update())
+    }
+  }
+  queue() {
+    effectQueue.add(this)
+    if (isRunning === false) {
+      isRunning = true
+      queueMicrotask(() => {
+        for (const effect of effectQueue) {
+          effect.update()
+        }
+        effectQueue.clear()
+        isRunning = false
+      })
+    }
+  }
+  update() {
+    this.clean()
+    if (this.onupdate === null) {
+      return
+    }
+    const prevNode = activeNode
+    try {
+      activeNode = this
+      this.value = this.onupdate(this.value)
+    } catch (error) {
+      handleError(error)
+    } finally {
+      activeNode = prevNode
+    }
+  }
+  /**
+   * @override
+   * @param {boolean} [dispose]
+   */
+  clean(dispose) {
+    if (this.states?.length) {
+      let state = this.states.pop()
+      while (state) {
+        effectMap.get(state)?.delete(this)
+        state = this.states.pop()
+      }
+    }
+    if (dispose) {
+      this.states = null
+    }
+    super.clean(dispose)
+  }
+}
+/**
+ * @template [Type = any]
+ */
+export class State {
+  /**
+   * @private
+   * @type {Type}
+   */
+  _value
+  /**
+   * @param {Type} [value]
+   */
+  constructor(value) {
+    this._value = /** @type {Type} */ (value)
+  }
+  get value() {
+    if (activeNode?.onupdate) {
+      const activeEffect = /** @type {Effect} */ (activeNode)
+      let effects = effectMap.get(this)
+      if (effects === undefined) {
+        effectMap.set(this, effects = new Set())
+      }
+      effects.add(activeEffect)
+      if (activeEffect.states === null) {
+        activeEffect.states = [this]
+      } else if (!activeEffect.states.includes(this)) {
+        activeEffect.states.push(this)
+      }
+    }
+    return this._value
+  }
+  set value(value) {
+    this._value = value
+    effectMap.get(this)?.forEach((effect) => effect.queue())
+  }
+}
+/**
+ * @template [Type = any]
+ * @extends {State<Type>}
+ */
+export class Computed extends State {
+  /**
+   * @param {() => Type} fn
+   */
+  constructor(fn) {
+    super()
+    new Effect(() => {
+      super.value = fn()
+    })
+  }
+  /**
+   * @override
+   */
+  get value() {
+    return super.value
+  }
+}
 /**
  * @template Type
- * @param {(cleanup: Cleanup) => Type} fn
+ * @param {Type} [value]
+ */
+export function state(value) {
+  return new State(value)
+}
+/**
+ * @template Type
+ * @param {() => Type} fn
+ */
+export function computed(fn) {
+  return new Computed(fn)
+}
+/**
+ * @overload
+ * @param {() => void} update
+ * @returns {void}
+ */
+/**
+ * @template Type
+ * @overload
+ * @param {(value: Type | undefined) => Type} update
+ * @returns {void}
+ */
+/**
+ * @param {(value: any) => any} update
+ * @returns {void}
+ */
+export function effect(update) {
+  new Effect(update)
+}
+/**
+ * @template Type
+ * @param {() => Type} fn
  * @returns {Type | undefined}
  */
-export function createRoot(fn) {
-  const node = new Node()
-  try {
-    activeNode = node
-    return fn(() => cleanNode(node, true))
-  } catch (error) {
-    handleError(error)
-  } finally {
-    activeNode = node.parentNode
-  }
+export function root(fn) {
+  return new Root(fn).value
 }
-
 /**
  * @template Type
  * @param {string | symbol} key
@@ -58,7 +282,6 @@ export function provide(key, value) {
   }
   activeNode.context[key] = value
 }
-
 /**
  * @template Type
  * @overload
@@ -81,20 +304,6 @@ export function provide(key, value) {
 export function inject(key, value) {
   return lookup(activeNode, key) ?? value
 }
-
-/**
- * @param {Node | null} node
- * @param {string | symbol} key
- * @returns {any}
- */
-function lookup(node, key) {
-  return node === null
-    ? undefined
-    : node.context !== null && key in node.context
-    ? node.context[key]
-    : lookup(node.parentNode, key)
-}
-
 /**
  * @template Type
  * @param {() => Type} fn
@@ -109,90 +318,8 @@ export function untrack(fn) {
     activeNode = node
   }
 }
-
 /**
- * @overload
- * @param {() => void} update
- * @returns {void}
- */
-/**
- * @template Type
- * @overload
- * @param {(value: Type | undefined) => Type} update
- * @returns {void}
- */
-/**
- * @param {(value: any) => any} update
- * @returns {void}
- */
-export function effect(update) {
-  const node = new Node()
-  node.onupdate = update
-  if (isRunning) {
-    effectQueue.add(node)
-  } else {
-    queueMicrotask(() => updateNode(node))
-  }
-}
-
-/**
- * @param {Node} node
- * @param {boolean} dispose
- */
-function cleanNode(node, dispose) {
-  if (node.states?.length) {
-    let state = node.states.pop()
-    while (state) {
-      effectMap.get(state)?.delete(node)
-      state = node.states.pop()
-    }
-  }
-  if (node.childNodes?.length) {
-    let childNode = node.childNodes.pop()
-    while (childNode) {
-      cleanNode(childNode, childNode.onupdate ? true : dispose)
-      childNode = node.childNodes.pop()
-    }
-  }
-  if (node.cleanups?.length) {
-    let cleanup = node.cleanups.pop()
-    while (cleanup) {
-      cleanup()
-      cleanup = node.cleanups.pop()
-    }
-  }
-  node.context = null
-  if (dispose) {
-    node.value = undefined
-    node.parentNode = null
-    node.childNodes = null
-    node.states = null
-    node.cleanups = null
-    node.onupdate = null
-  }
-}
-
-/**
- * @param {Node} node
- */
-function updateNode(node) {
-  cleanNode(node, false)
-  if (node.onupdate === null) {
-    return
-  }
-  const prevNode = activeNode
-  try {
-    activeNode = node
-    node.value = node.onupdate(node.value)
-  } catch (error) {
-    handleError(error)
-  } finally {
-    activeNode = prevNode
-  }
-}
-
-/**
- * @param {Cleanup} cleanup
+ * @param {() => void} cleanup
  */
 export function onCleanup(cleanup) {
   if (activeNode === null) {
@@ -204,7 +331,6 @@ export function onCleanup(cleanup) {
     activeNode.cleanups.push(cleanup)
   }
 }
-
 /**
  * @param {(error: any) => void} fn
  */
@@ -221,7 +347,18 @@ export function catchError(fn) {
     activeNode.context[errorKey] = [fn]
   }
 }
-
+/**
+ * @param {BasicNode | null} node
+ * @param {string | symbol} key
+ * @returns {any}
+ */
+function lookup(node, key) {
+  return node === null
+    ? undefined
+    : node.context !== null && key in node.context
+    ? node.context[key]
+    : lookup(node.parentNode, key)
+}
 /**
  * @param {any} error
  */
@@ -233,146 +370,4 @@ function handleError(error) {
   for (const errorFn of errorFns) {
     errorFn(error)
   }
-}
-
-/**
- * @param {Node} node
- */
-function queueNode(node) {
-  effectQueue.add(node)
-  if (isRunning === false) {
-    isRunning = true
-    queueMicrotask(() => {
-      for (const effect of effectQueue) {
-        updateNode(effect)
-      }
-      effectQueue.clear()
-      isRunning = false
-    })
-  }
-}
-
-class Node {
-  /** @type {unknown | undefined} */
-  value
-  /** @type {Node?} */
-  parentNode = activeNode
-  /** @type {Node[]?} */
-  childNodes = null
-  /** @type {State[]?} */
-  states = null
-  /** @type {{ [key: string |  symbol]: any }?} */
-  context = null
-  /** @type {Cleanup[]?} */
-  cleanups = null
-  /** @type {((value: unknown) =>  unknown)?} */
-  onupdate = null
-  constructor() {
-    if (activeNode) {
-      if (activeNode.childNodes === null) {
-        activeNode.childNodes = [this]
-      } else {
-        activeNode.childNodes.push(this)
-      }
-    }
-  }
-}
-
-/**
- * @template Type
- */
-export class State {
-  /** @type {Type} */
-  #value
-  /** @type {(currentValue: Type | undefined, nextValue: Type | undefined) => boolean} */
-  equals = (currentValue, nextValue) => currentValue === nextValue
-  /**
-   * @param {Type} [value]
-   */
-  constructor(value) {
-    this.#value = /** @type {Type} */ (value)
-  }
-  get value() {
-    if (activeNode?.onupdate) {
-      let effects = effectMap.get(this)
-      if (effects === undefined) {
-        effectMap.set(this, effects = new Set())
-      }
-      effects.add(activeNode)
-      if (activeNode.states === null) {
-        activeNode.states = [this]
-      } else if (!activeNode.states.includes(this)) {
-        activeNode.states.push(this)
-      }
-    }
-    return this.#value
-  }
-  set value(value) {
-    if (this.equals(this.#value, value) === false) {
-      this.#value = value
-      effectMap.get(this)?.forEach(queueNode)
-    }
-  }
-  get() {
-    return this.value
-  }
-  /**
-   * @param {Type} value
-   */
-  set(value) {
-    this.value = value
-  }
-  peek() {
-    return this.#value
-  }
-  [Symbol.toStringTag]() {
-    return String(this.value)
-  }
-  [Symbol.toPrimitive]() {
-    return this.value
-  }
-}
-
-/**
- * @template Type
- */
-export class Computed {
-  /** @type {State<Type>} */
-  #state = new State()
-  /**
-   * @param {(value: Type | undefined) => Type} fn
-   */
-  constructor(fn) {
-    effect(() => {
-      this.#state.value = fn(this.#state.peek())
-    })
-  }
-  get value() {
-    return this.#state.value
-  }
-  peek() {
-    return this.#state.peek()
-  }
-  [Symbol.toStringTag]() {
-    return String(this.value)
-  }
-  [Symbol.toPrimitive]() {
-    return this.value
-  }
-}
-
-/**
- * @template Type
- * @param {Type} [value]
- */
-export function state(value) {
-  return new State(value)
-}
-
-/**
- * @template Type
- * @param {(value: Type | undefined) => Type} fn
- */
-export function computed(fn) {
-  return new Computed(fn)
 }

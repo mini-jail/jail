@@ -1,4 +1,4 @@
-import { Computed, computed, createRoot, effect, onCleanup } from "space/signal"
+import { Computed, Effect, onCleanup, Root } from "space/signal"
 import { getTree } from "./compiler.js"
 
 const bindingTypes = { ".": "property", ":": "attribute", "@": "event" }
@@ -43,7 +43,7 @@ function renderDOM(child, values, svg) {
 function createElement(tree, values, svg) {
   const type = typeof tree.type === "number" ? values[tree.type] : tree.type
   if (typeof type === "function") {
-    return createRoot(() => createComponent(type, tree, values, svg))
+    return new Root(() => createComponent(type, tree, values, svg)).value
   }
   if (tree.type === "svg") {
     svg = true
@@ -168,7 +168,7 @@ function setProperties(elt, props, values, svg) {
     } else {
       const binding = createBinding(name, value)
       if (isResolvable(value)) {
-        effect(() => setProperty(elt, binding))
+        new Effect(() => setProperty(elt, binding))
       } else {
         setProperty(elt, binding)
       }
@@ -315,7 +315,7 @@ export function svg(statics, ...values) {
  * @overload
  * @param {Element} rootElement
  * @param {() => any} code
- * @returns {import("space/signal").Cleanup}
+ * @returns {() => void}
  */
 /**
  * This is what some *devs* might want.
@@ -323,7 +323,7 @@ export function svg(statics, ...values) {
  * @param {null} rootElement
  * @param {() => any} code
  * @param {ChildNode} before
- * @returns {import("space/signal").Cleanup}
+ * @returns {() => void}
  */
 /**
  * This is what some *devs* might want.
@@ -331,7 +331,7 @@ export function svg(statics, ...values) {
  * @param {Element} rootElement
  * @param {() => any} code
  * @param {ChildNode} before
- * @returns {import("space/signal").Cleanup}
+ * @returns {() => void}
  */
 /**
  * @param {Element | null} rootElement
@@ -339,22 +339,21 @@ export function svg(statics, ...values) {
  * @param {ChildNode} [before]
  */
 export function mount(rootElement, code, before) {
-  return createRoot((dispose) => {
+  return new Root(() => {
     const children = createChildren(code)
     const parentNode = rootElement ?? before?.parentElement
     onCleanup(() => {
       before?.remove()
       children.value?.forEach((child) => child.remove())
     })
-    effect(() => {
+    new Effect(() => {
       children.value?.forEach((child) => {
         if (child !== before?.previousSibling) {
           parentNode?.insertBefore(child, before ?? null)
         }
       })
     })
-    return dispose
-  })
+  }).clean
 }
 
 /**
@@ -386,7 +385,7 @@ function createNodesFrom(nodeArray, ...elements) {
  * @returns {Computed<ChildNode[] | undefined>}
  */
 export function createChildren(child) {
-  return computed((currentNodes) => {
+  return new Computed((currentNodes) => {
     const nextNodes = createNodesFrom([], child)
     nextNodes.forEach((nextNode, i) => {
       currentNodes?.some((currentNode, j) => {

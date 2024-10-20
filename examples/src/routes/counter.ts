@@ -1,41 +1,50 @@
+import { createElement } from "space/element"
 import { state } from "space/signal"
-import html, { Show } from "space/dom"
+import { Title } from "../components/mod.ts"
 
-const code = `
-import { state } from "space/signal"
-import html from "space/dom"
-
-function SimpleCounter() {
+const code = /*js*/ `
+function* SpaceCounter() {
   const counter = state(0)
-  return html\`
-    <button @click=\${() => counter.value--}>-</button>
-    <span>current value: \${counter}</span>
-    <button @click=\${() => counter.value++}>+</button>
-  \`
-}`.trim()
+  yield createElement("button").add("-").on("click", () => counter.value--)
+  yield createElement("span").add("current value: ", counter)
+  yield createElement("button").add("+").on("click", () => counter.value++)
+}
+
+function ReactCounter() {
+  const [state, setState] = useState(0)
+  return (
+    <>
+      <button onClick={() => setState(state - 1)}>-</button>
+      <span>current value: {state}</span>
+      <button onClick={() => setState(state + 1)}>+</button>
+    </>
+  )
+}
+`.trim()
 
 export default function Counter() {
   const counter = state(0)
   const show = state(false)
-  return html`
-    <article>
-      <h4>
-        counter example
-        <sub>(...what else?)</sub>
-        <button @click=${() => show.value = !show.value}>
-          <${Show} when=${show} fallback="show code">
-            hide code
-          <//>
-        </button>
-      </h4>
-      <button @click=${() => counter.value--}>-</button>
-      <span>current value: ${counter}</span>
-      <button @click=${() => counter.value++}>+</button>
-      <${Show} when=${show}>
-        <code>
-          ${code.split("\n").map((line) => html`<pre>${line}</pre>`)}
-        </code>
-      <//>
-    </article>
-  `
+  return createElement("article")
+    .add(
+      Title("counter example", "(...what else?)")
+        .add(
+          createElement("button")
+            .add(() => show.value ? "hide code" : "show code")
+            .on("click", () => show.value = !show.value),
+        ),
+      createElement("button")
+        .add("-")
+        .on("click", () => counter.value--),
+      createElement("span")
+        .add("current value: ", counter),
+      createElement("button")
+        .add("+")
+        .on("click", () => counter.value++),
+      createElement("code")
+        .style("display", () => show.value ? "" : "none")
+        .add(
+          code.split("\n").map((line) => createElement("pre").add(line)),
+        ),
+    )
 }

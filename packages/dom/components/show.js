@@ -1,11 +1,11 @@
-import { computed } from "space/signal"
+import { Computed } from "space/signal"
 
 /**
  * @template Type
  * @param {{ when: boolean | "true" | "false", children?: Type, fallback?: Type }} props
  */
 export function Show(props) {
-  return computed(() => {
+  return new Computed(() => {
     if (props.when + "" === "true") {
       return props.children
     }

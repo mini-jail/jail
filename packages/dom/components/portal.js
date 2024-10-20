@@ -1,4 +1,4 @@
-import { effect, onCleanup, state } from "space/signal"
+import { Effect, onCleanup, State } from "space/signal"
 import { mount } from "../renderer.js"
 
 /**
@@ -15,8 +15,8 @@ import { mount } from "../renderer.js"
  * @param {{ selector?: string, mount?: Element, children?: any }} props
  */
 export function Portal(props) {
-  const isLive = state(true)
-  effect(() => {
+  const isLive = new State(true)
+  new Effect(() => {
     const target = props.selector
       ? document.querySelector(props.selector)
       : props.mount

@@ -1,7 +1,10 @@
-import html from "space/dom"
 import { effect, onCleanup } from "space/signal"
+import { routerContext } from "space/element/router"
+import { createElement } from "space/element"
+import { Paragraph, Title } from "../components/mod.ts"
 
 export default function NotFound() {
+  const { path } = routerContext.inject()
   effect(() => {
     const { backgroundColor } = document.body.style
     document.body.style.backgroundColor = "indianred"
@@ -9,13 +12,9 @@ export default function NotFound() {
       document.body.style.backgroundColor = backgroundColor
     })
   })
-  return html`
-    <article>
-      <h4>
-        Page not found :(
-        <sub>(ha-ha!)</sub>
-      </h4>
-      <p>There is no content for "${location}".</p>
-    </article>
-  `
+  return createElement("article")
+    .add(
+      Title("Page not found :(", "(ha-ha!)"),
+      Paragraph`There is no content for "${path}".`,
+    )
 }

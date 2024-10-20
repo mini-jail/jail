@@ -1,139 +1,120 @@
-import { Computed, createRoot, effect, onCleanup } from "space/signal"
+import { Computed, Effect, onCleanup, Root, State } from "space/signal"
 /**
- * @typedef {typeof attrType | typeof propType | typeof onType | typeof styleType} PropType
+ * @typedef {typeof propType[keyof propType]} PropType
  */
 /**
- * @typedef {{
- *   [style: `${PropName}${typeDelemiter}${styleType}`]: Value<ToString>
- *   [attribute: `${PropName}${typeDelemiter}${attrType}`]: Value<ToString>
- *   [property: `${PropName}${typeDelemiter}${propType}`]: Value<unknown>
- *   [listeners: `${PropName}${typeDelemiter}${onType}`]: EventListener[]
- * }} Properties
- */
-/**
- * @typedef {Exclude<string, typeof typeDelemiter>} PropName
+ * @template {HTMLElement} Element
+ * @template Type
+ * @typedef {(elt: Element, value: Type) => void} Directive
  */
 /**
  * @typedef {"area" | "base" | "br" | "col" | "embed" | "hr" | "img" | "input" | "link" | "meta" | "param" | "source" | "track" | "wbr"} VoidElements
  */
 /**
- * @typedef {{ [Name in `aria${Capitalize<PropName>}`]?: ToString }} AriaProperties
- */
-/**
- * @typedef {{ [Name in `aria-${PropName}`]?: ToString }} AriaAttributes
- */
-/**
- * @typedef {{ [Name in `data-${PropName}`]?: ToString }} DataAttributes
- */
-/**
- * @typedef {{ [name: PropName]: ToString }} GenericAttributes
- */
-/**
- * @typedef {{ toString(): string }} ToString
- */
-/**
- * @typedef {AriaAttributes & DataAttributes & {
- *   id?: ToString
- *   class?: ToString
- *   contenteditable?: ToString | "plaintext-only" | "inherit"
- *   contextmenu?: ToString
- *   is?: ToString
- *   style?: ToString
- *   tabindex?: ToString
- *   about?: ToString
- *   datatype?: ToString
- *   inlist?: any
- *   prefix?: ToString
- *   property?: ToString
- *   resource?: ToString
- *   typeof?: ToString
- *   itemtype?: ToString
- *   itemid?: ToString
- *   itemref?: ToString
- *   part?: ToString
- *   exportparts?: ToString
- *   inputmode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search"
- *   translate?: "yes" | "no"
- * }} HTMLAttributes
- */
-/**
- * @typedef {{
- *   accessKey?: ToString
- *   popover?: boolean | "manual" | "auto"
- *   spellcheck?: boolean
- *   id?: ToString
- *   className?: ToString
- *   slot?: ToString
- *   lang?: ToString
- *   inert?: boolean
- *   translate?: boolean
- *   dir?: "ltr" | "rtl" | "auto"
- *   style?: { [name in CSSRule]?: string }
- *   hidden?: boolean | "hidden" | "until-found"
- *   draggable?: boolean | "false" | "true"
- *   title?: ToString
- *   contentEditable?: boolean | "plaintext-only" | "inherit"
- *   contextMenu?: ToString
- *   tabIndex?: number | ToString
- *   autoCapitalize?: "off" | "none" | "on" | "sentences" | "words" | "characters"
- *   itemProp?: ToString
- *   itemScope?: boolean
- *   itemType?: ToString
- *   itemId?: ToString
- *   itemRef?: ToString
- *   exportParts?: ToString
- *   inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search"
- * }} HTMLProperties
- */
-/**
- * @typedef {PropName & keyof CSSStyleDeclaration} CSSRule
- */
-/**
- * @typedef {{ value: Child | undefined | null }} StateChild
+ * @typedef {{ toString(): string } | State<{ toString(): string }> | (() => { toString(): string })} ToString
  */
 /**
  * @typedef {{ [Symbol.iterator](): Iterable<Child> }} IterableChild
  */
 /**
- * @typedef {(() => Child | undefined | null)} FunctionChild
+ * @typedef {(() => Child)} FunctionChild
  */
 /**
- * @typedef {{ render(): Child | undefined | null }} RenderableChild
+ * @typedef {{ render(): Child }} RenderableChild
  */
 /**
- * @typedef {string | number | Node | Element | StateChild | IterableChild | FunctionChild | RenderableChild} Child
+ * @typedef {State<Child>} StateChild
+ */
+/**
+ * @typedef {{ [key: string]: any }} ObjectChild
+ */
+/**
+ * @typedef {undefined | null | boolean | string | number | Node | Element | StateChild | IterableChild | FunctionChild | RenderableChild | ObjectChild} Child
  */
 /**
  * @template Type
- * @typedef {Type | null | { value: Type | null }} Value
+ * @typedef {Type | null | undefined | { value: Type | null }} Value
  */
 /**
  * @template {{ [name: string]: any }} Type
  * @typedef {{ [Name in keyof Type]: Value<Type[Name]> }} Values
  */
-const typeDelemiter = "@",
-  attrType = "attr",
-  propType = "prop",
-  onType = "on",
-  styleType = "style"
+const propType = /** @type {const} */ ({
+  ATTR: 0,
+  PROP: 1,
+  EVENT: 2,
+  STYLE: 3,
+  DIR: 4,
+})
+class Application {
+  /**
+   * @private
+   * @type {Root?}
+   */
+  _root = null
+  /**
+   * @private
+   * @type {ParentNode}
+   */
+  _element
+  /**
+   * @param {ParentNode} element
+   */
+  constructor(element) {
+    this._element = element
+  }
+  /**
+   * @param {Child} child
+   */
+  render(child) {
+    this.unmount()
+    this._root = new Root(() => mount(this._element, child))
+    return this
+  }
+  unmount() {
+    this._root?.clean()
+    this._root = null
+  }
+}
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
  */
-export class Element {
-  /** @type {TagName} */
-  #tagName
-  /** @type {Properties?} */
-  #props = null
-  /** @type {Child[]?} */
-  #children = null
+class Element {
+  /**
+   * @private
+   * @type {TagName}
+   */
+  _tagName
+  /**
+   * @private
+   * @type {any[]?}
+   */
+  _props = null
+  /**
+   * @private
+   * @type {Child[]?}
+   */
+  _children = null
   /**
    * @param {TagName} tagName
    */
   constructor(tagName) {
-    this.#tagName = tagName
+    this._tagName = tagName
   }
   /**
-   * @template {PropName & keyof GlobalEventHandlersEventMap} Name
+   * @template Type
+   * @param {Directive<HTMLElementTagNameMap[TagName], Type>} directive
+   * @param {Type} value
+   */
+  use(directive, value) {
+    if (this._props === null) {
+      this._props = []
+    }
+    updateProperty(this._props, propType.DIR, directive, value)
+    return this
+  }
+  /**
+   * @template {keyof GlobalEventHandlersEventMap} Name
    * @overload
    * @param {Name} name
    * @param {((event: GlobalEventHandlersEventMap[Name]) => void)} eventListener
@@ -141,67 +122,35 @@ export class Element {
    */
   /**
    * @overload
-   * @param {PropName} name
+   * @param {string} name
    * @param {(event: Event) => void} eventListener
    * @return {this}
    */
+  /**
+   * @param {string} name
+   * @param {EventListener} eventListener
+   * @returns {this}
+   */
   on(name, eventListener) {
-    if (this.#props === null) {
-      this.#props = {}
+    if (this._props === null) {
+      this._props = []
     }
-    const propName = name + typeDelemiter + onType
-    if (this.#props[propName] === undefined) {
-      this.#props[propName] = []
-    }
-    this.#props[propName].push(eventListener)
+    updateProperty(this._props, propType.EVENT, name, eventListener)
     return this
   }
   /**
-   * @template {PropName & keyof HTMLAttributes} Name
-   * @overload
-   * @param {Name} name
-   * @param {Value<HTMLAttributes[Name]>} value
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {PropName & keyof AriaAttributes} name
+   * @param {string} name
    * @param {Value<ToString>} value
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {PropName & keyof DataAttributes} name
-   * @param {Value<ToString>} value
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {PropName} name
-   * @param {Value<ToString>} value
-   * @return {this}
    */
   attribute(name, value) {
-    if (this.#props === null) {
-      this.#props = {}
+    if (this._props === null) {
+      this._props = []
     }
-    this.#props[name + typeDelemiter + attrType] = value
+    updateProperty(this._props, propType.ATTR, name, value)
     return this
   }
   /**
-   * @overload
-   * @param {Values<HTMLAttributes>} attributes
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {Values<DataAttributes>} attributes
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {Values<GenericAttributes>} attributes
-   * @return {this}
+   * @param {Values<{ [name: string]: string }>} attributes
    */
   attributes(attributes) {
     for (const name in attributes) {
@@ -210,28 +159,18 @@ export class Element {
     return this
   }
   /**
-   * @template {keyof HTMLProperties} Name
-   * @overload
-   * @param {Name} name
-   * @param {Value<HTMLProperties[Name]>} value
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {PropName} name
+   * @param {string} name
    * @param {Value<unknown>} value
-   * @return {this}
    */
   property(name, value) {
-    if (this.#props === null) {
-      this.#props = {}
+    if (this._props === null) {
+      this._props = []
     }
-    this.#props[name + typeDelemiter + propType] = value
+    updateProperty(this._props, propType.PROP, name, value)
     return this
   }
   /**
-   * @param {Values<HTMLProperties>} properties
-   * @return {this}
+   * @param {Values<{ [name: string]: unknown }>} properties
    */
   properties(properties) {
     for (const name in properties) {
@@ -240,27 +179,18 @@ export class Element {
     return this
   }
   /**
-   * @overload
-   * @param {CSSRule} name
+   * @param {string} name
    * @param {Value<ToString>} value
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {PropName} name
-   * @param {Value<ToString>} value
-   * @return {this}
    */
   style(name, value) {
-    if (this.#props === null) {
-      this.#props = {}
+    if (this._props === null) {
+      this._props = []
     }
-    this.#props[name + typeDelemiter + styleType] = value
+    updateProperty(this._props, propType.STYLE, name, value)
     return this
   }
   /**
-   * @param {Values<{ [Name in CSSRule]?: ToString }>} styles
-   * @return {this}
+   * @param {Values<{ [name: string]: string }>} styles
    */
   styles(styles) {
     for (const name in styles) {
@@ -270,212 +200,184 @@ export class Element {
   }
   /**
    * @param {...(TagName extends VoidElements ? never : Child)} children
-   * @return {this}
    */
   add(...children) {
-    if (this.#children === null) {
-      this.#children = []
+    if (this._children === null) {
+      this._children = []
     }
-    this.#children.push(...children)
+    this._children.push(...children)
     return this
-  }
-  /**
-   * @param {TagName extends VoidElements ? never : TemplateStringsArray} template
-   * @param  {...TagName extends VoidElements ? never : unknown} values
-   * @returns {this}
-   */
-  text(template, ...values) {
-    return this.add(/** @type {any} */ (text(template, ...values)))
   }
   /**
    * @returns {HTMLElementTagNameMap[TagName]}
    */
   render() {
-    console.log(this.#props)
-    const elt = document.createElement(this.#tagName)
-    let ref = /** @type {WeakRef<HTMLElement>?} */ (new WeakRef(elt))
-    if (this.#props) {
-      for (const key in this.#props) {
-        const [name, type] =
-          /** @type {[string, PropType]} */ (key.split(typeDelemiter))
-        const value = this.#props[key]
-        if (type === onType) {
-          elt.addEventListener(name, (event) => {
-            value.forEach((listener) => listener(event))
-          })
-        } else if (isResolvable(value)) {
-          effect(() => {
-            const eltRef = ref?.deref()
-            if (eltRef === undefined) {
-              ref = null
-              return
-            }
-            setProperty(eltRef, type, name, value.value)
-          })
-        } else {
-          setProperty(elt, type, name, value)
-        }
-        this.#props[key] = null
+    const elt = document.createElement(this._tagName)
+    while (this._props?.length) {
+      const value = this._props.pop()
+      const nameOrDir = this._props.pop()
+      const type = /** @type {PropType} */ (this._props.pop())
+      if (type === propType.EVENT) {
+        elt.addEventListener(nameOrDir, value)
+      } else if (type === propType.DIR) {
+        new Effect(() => nameOrDir(elt, value))
+      } else if (isResolvable(value)) {
+        new Effect(() => setProperty(elt, type, nameOrDir, resolve(value)))
+      } else {
+        setProperty(elt, type, nameOrDir, value)
       }
     }
-    if (this.#children) {
-      elt.append(...this.#children.map(render))
+    if (this._children) {
+      elt.append(...render(false, ...this._children))
     }
-    this.#props = null
-    this.#children = null
+    this._props = null
+    this._children = null
     return elt
   }
 }
-
 /**
- * @template {Exclude<PropType, typeof onType>} Type
+ * @template {PropType} Type
  * @param {HTMLElement} elt
  * @param {Type} type
  * @param {string} name
  * @param {any} value
  */
 function setProperty(elt, type, name, value) {
-  if (type === attrType) {
+  if (type === propType.ATTR) {
     if (value == null) {
       elt.removeAttribute(name)
     } else {
       elt.setAttribute(name, String(value))
     }
-  } else if (type === propType) {
+  } else if (type === propType.PROP) {
     elt[name] = value
-  } else if (type === styleType) {
+  } else if (type === propType.STYLE) {
     elt.style[name] = value ?? null
   }
 }
-
 /**
- * @param {Child} child
- * @returns {Node | string}
+ * @template {PropType} Type
+ * @param {any[]} props
+ * @param {Type} type
+ * @param {string | Directive<any, any>} name
+ * @param {Type extends 2 ? EventListener : unknown} value
  */
-function render(child) {
-  if (typeof child === "string") {
-    return child
+function updateProperty(props, type, name, value) {
+  let i = props.length, _name, _type
+  while (i--) {
+    _name = props[--i]
+    _type = props[--i]
+    if (_name === name && _type === type) {
+      props[i + 2] = value
+      return
+    }
   }
-  if (typeof child === "number") {
-    return child + ""
-  }
-  if (child instanceof Node) {
-    return child
-  }
-  if (child instanceof Element) {
-    return child.render()
-  }
-  const before = new Text()
-  mount(null, () => child, before)
-  return before
+  props.push(type, name, value)
 }
-
 /**
- * @overload
- * @param {Node} targetNode
- * @param {() => Child} child
- * @returns {() => void}
+ * @param {unknown} value
+ * @returns {value is State | Function}
  */
+function isResolvable(value) {
+  return value instanceof State || typeof value === "function"
+}
 /**
- * @overload
- * @param {undefined | null} targetNode
- * @param {() => Child} child
- * @param {ChildNode} before
- * @returns {() => void}
+ * @param {unknown} value
  */
+function resolve(value) {
+  if (typeof value === "function") {
+    return value()
+  }
+  return value instanceof State ? value.value : value
+}
 /**
- * @overload
+ * @param {boolean} immediate
+ * @param  {...Child} children
+ * @returns {Generator<ChildNode | string>}
+ */
+function* render(immediate, ...children) {
+  for (const child of children) {
+    if (child == null || typeof child === "boolean") {
+      continue
+    } else if (typeof child === "string" || typeof child === "number") {
+      yield child + ""
+    } else if (child instanceof Node) {
+      yield /** @type {ChildNode} */ (child)
+    } else if (child instanceof Element) {
+      yield child.render()
+    } else if (isResolvable(child)) {
+      if (immediate) {
+        yield* render(immediate, resolve(child))
+      } else {
+        const before = new Text()
+        mount(null, child, before)
+        yield before
+      }
+    } else if (Symbol.iterator in child) {
+      yield* render(immediate, ...child[Symbol.iterator]())
+    } else {
+      yield String(child)
+    }
+  }
+}
+/**
  * @param {Node | undefined | null} targetNode
- * @param {() => Child} child
+ * @param {Child} child
  * @param {ChildNode | undefined | null} [before]
- * @returns {() => void}
  */
 export function mount(targetNode, child, before) {
-  return createRoot((dispose) => {
-    const children = createChildren(child)
-    onCleanup(() => {
-      before?.remove()
-      children.value?.forEach((child) => child.remove())
-    })
-    effect(() => {
-      const parent = targetNode ?? before?.parentElement
-      children.value?.forEach((child) => {
-        parent?.insertBefore(child, before ?? null)
-      })
-    })
-    return dispose
+  const children = new Computed(() => {
+    const nodes = reconcile(
+      targetNode ?? before?.parentElement,
+      before,
+      children.value,
+      Array.from(render(true, child)),
+    )
+    return nodes
+  })
+  onCleanup(() => {
+    before?.remove()
+    children.value?.forEach((child) => child.remove())
   })
 }
-
 /**
- * @param {unknown} child
- * @returns {Computed<ChildNode[] | undefined>}
+ * @param {Node | null | undefined} parentNode
+ * @param {ChildNode | null | undefined} before
+ * @param {ChildNode[] | null | undefined} children
+ * @param {(ChildNode | string)[] | null | undefined} nodes
+ * @returns {ChildNode[] | null}
  */
-export function createChildren(child) {
-  return new Computed((currentNodes) => {
-    const nextNodes = createNodesFrom([], child)
-    nextNodes.forEach((nextNode, i) => {
-      currentNodes?.some((currentNode, j) => {
-        if (currentNode.nodeType === 3 && nextNode.nodeType === 3) {
-          currentNode["data"] = nextNode["data"]
-        }
-        if (currentNode.isEqualNode(nextNode)) {
-          nextNodes[i] = currentNode
-          currentNodes.splice(j, 1)
-          return true
-        }
-      })
+function reconcile(parentNode, before, children, nodes) {
+  nodes?.forEach((node, i) => {
+    const child = children?.[i]
+    children?.some((child, j) => {
+      let isEqualNode = false
+      if (
+        child.nodeType === 3 &&
+        (typeof node === "string" || node.nodeType === 3)
+      ) {
+        child["data"] = typeof node === "string" ? node : node["data"]
+        isEqualNode = true
+      } else if (typeof node !== "string" && child.isEqualNode(node)) {
+        isEqualNode = true
+      }
+      if (isEqualNode) {
+        nodes[i] = child
+        children.splice(j, 1)
+      }
+      return isEqualNode
     })
-    while (currentNodes?.length) {
-      currentNodes.pop()?.remove()
+    if (child !== nodes[i]) {
+      if (typeof nodes[i] === "string") {
+        nodes[i] = new Text(nodes[i])
+      }
+      parentNode?.insertBefore(nodes[i], child?.nextSibling ?? before ?? null)
     }
-    return nextNodes.length === 0 ? undefined : nextNodes
   })
-}
-
-/**
- * @param {ChildNode[]} nodeArray
- * @param  {...any} elements
- * @returns {ChildNode[]}
- */
-function createNodesFrom(nodeArray, ...elements) {
-  for (const elt of elements) {
-    if (elt == null || typeof elt === "boolean") {
-      continue
-    } else if (elt instanceof Node) {
-      nodeArray.push(/** @type {ChildNode} */ (elt))
-    } else if (elt instanceof Element) {
-      nodeArray.push(elt.render())
-    } else if (typeof elt === "string" || typeof elt === "number") {
-      nodeArray.push(new Text(elt + ""))
-    } else if (typeof elt === "function") {
-      createNodesFrom(nodeArray, elt())
-    } else if (Symbol.iterator in elt) {
-      createNodesFrom(nodeArray, ...elt)
-    } else if (isResolvable(elt)) {
-      createNodesFrom(nodeArray, elt.value)
-    } else if (typeof elt?.render === "function") {
-      createNodesFrom(nodeArray, elt.render())
-    }
+  while (children?.length) {
+    children.pop()?.remove()
   }
-  return nodeArray
-}
-
-/**
- * @param {any} data
- * @returns {data is { value: any }}
- */
-export function isResolvable(data) {
-  return data && typeof data === "object" && Reflect.has(data, "value")
-}
-
-/**
- * @template Type
- * @param {Type} data
- * @returns {Type extends { value: any } ? Type["value"] : Type}
- */
-export function resolve(data) {
-  return isResolvable(data) ? data.value : data
+  return nodes?.length ? /** @type {ChildNode[]} */ (nodes) : null
 }
 
 /**
@@ -484,27 +386,34 @@ export function resolve(data) {
  * @param {TagName} tagName
  * @returns {Element<TagName>}
  */
-export function createElement(type) {
-  return new Element(type)
-}
-
 /**
- * @param {TemplateStringsArray} template
- * @param  {...unknown} values
- * @returns {Text}
+ * @template {keyof HTMLElementTagNameMap} TagName
+ * @overload
+ * @param {TagName} tagName
+ * @param {{ [name: string]: unknown } | null} [props]
+ * @param {...Child} children
+ * @returns {Element<TagName>}
  */
-export function text(template, ...values) {
-  const text = new Text()
-  let ref = /** @type {WeakRef<Text>?} */ (new WeakRef(text))
-  effect(() => {
-    const textRef = ref?.deref()
-    if (textRef === undefined) {
-      ref = null
-      return
-    }
-    textRef.data = template.reduce((result, value, index) => {
-      return result + value + (resolve(values[index]) ?? "")
-    }, "")
-  })
-  return text
+/**
+ * @param {keyof HTMLElementTagNameMap} tagName
+ * @param {{ [name: string]: unknown } | null} [props]
+ * @param {...any} children
+ * @returns {Element<keyof HTMLElementTagNameMap>}
+ */
+export function createElement(tagName, props, ...children) {
+  const elt = new Element(tagName)
+  if (props) {
+    elt.properties(props)
+  }
+  if (children.length) {
+    elt.add(...children)
+  }
+  return elt
+}
+/**
+ * @param {ParentNode} element
+ * @returns {Application}
+ */
+export function createApp(element) {
+  return new Application(element)
 }
