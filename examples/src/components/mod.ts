@@ -1,4 +1,4 @@
-import { type Child, createElement } from "space/element"
+import { type Child, createElement, h } from "space/element"
 import { Context } from "space/signal/context"
 import { computed, effect, onCleanup, State, state } from "space/signal"
 
@@ -47,7 +47,7 @@ export function Paragraph(
 }
 
 export function Anchor(href: string, ...children: Child[]) {
-  return createElement("a", { href }, ...children)
+  return createElement("a").property("href", href).add(...children)
 }
 
 function Dot({ x, y, target }: DotProps) {

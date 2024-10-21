@@ -50,29 +50,29 @@ export class Application {
    * @protected
    * @type {Root?}
    */
-  _root = null
+  root = null
   /**
    * @protected
    * @type {ParentNode}
    */
-  _element
+  element
   /**
    * @param {ParentNode} element
    */
   constructor(element) {
-    this._element = element
+    this.element = element
   }
   /**
    * @param {Child} child
    */
   render(child) {
     this.unmount()
-    this._root = new Root(() => mount(this._element, child))
+    this.root = new Root(() => mount(this.element, child))
     return this
   }
   unmount() {
-    this._root?.clean()
-    this._root = null
+    this.root?.clean()
+    this.root = null
   }
 }
 /**
@@ -83,22 +83,22 @@ export class ElementHTML {
    * @protected
    * @type {TagName}
    */
-  _tagName
+  tagName
   /**
    * @protected
    * @type {any[]?}
    */
-  _props = null
+  props = null
   /**
    * @protected
    * @type {Child[]?}
    */
-  _children = null
+  children = null
   /**
    * @param {TagName} tagName
    */
   constructor(tagName) {
-    this._tagName = tagName
+    this.tagName = tagName
   }
   /**
    * @template Type
@@ -106,10 +106,10 @@ export class ElementHTML {
    * @param {Type} value
    */
   use(directive, value) {
-    if (this._props === null) {
-      this._props = []
+    if (this.props === null) {
+      this.props = []
     }
-    updateProperty(this._props, propType.DIR, directive, value)
+    updateProperty(this.props, propType.DIR, directive, value)
     return this
   }
   /**
@@ -131,10 +131,10 @@ export class ElementHTML {
    * @returns {this}
    */
   on(name, eventListener) {
-    if (this._props === null) {
-      this._props = []
+    if (this.props === null) {
+      this.props = []
     }
-    updateProperty(this._props, propType.EVENT, name, eventListener)
+    updateProperty(this.props, propType.EVENT, name, eventListener)
     return this
   }
   /**
@@ -142,10 +142,10 @@ export class ElementHTML {
    * @param {Value<ToString>} value
    */
   attribute(name, value) {
-    if (this._props === null) {
-      this._props = []
+    if (this.props === null) {
+      this.props = []
     }
-    updateProperty(this._props, propType.ATTR, name, value)
+    updateProperty(this.props, propType.ATTR, name, value)
     return this
   }
   /**
@@ -162,10 +162,10 @@ export class ElementHTML {
    * @param {Value<unknown>} value
    */
   property(name, value) {
-    if (this._props === null) {
-      this._props = []
+    if (this.props === null) {
+      this.props = []
     }
-    updateProperty(this._props, propType.PROP, name, value)
+    updateProperty(this.props, propType.PROP, name, value)
     return this
   }
   /**
@@ -182,10 +182,10 @@ export class ElementHTML {
    * @param {Value<ToString>} value
    */
   style(name, value) {
-    if (this._props === null) {
-      this._props = []
+    if (this.props === null) {
+      this.props = []
     }
-    updateProperty(this._props, propType.STYLE, name, value)
+    updateProperty(this.props, propType.STYLE, name, value)
     return this
   }
   /**
@@ -198,20 +198,20 @@ export class ElementHTML {
     return this
   }
   /**
-   * @param {...(TagName extends VoidElements ? never : Child)} children
+   * @param {...Child} children
    */
   add(...children) {
-    if (this._children === null) {
-      this._children = []
+    if (this.children === null) {
+      this.children = []
     }
-    this._children.push(...children)
+    this.children.push(...children)
     return this
   }
   /**
    * @returns {HTMLElementTagNameMap[TagName]}
    */
   render() {
-    const elt = document.createElement(this._tagName)
+    const elt = document.createElement(this.tagName)
     ElementHTML.consume(elt, this)
     return elt
   }
@@ -221,10 +221,10 @@ export class ElementHTML {
    * @param {ElementHTML} instance
    */
   static consume(elt, instance) {
-    while (instance._props?.length) {
-      const value = instance._props.pop()
-      const nameOrDir = instance._props.pop()
-      const type = /** @type {PropType} */ (instance._props.pop())
+    while (instance.props?.length) {
+      const value = instance.props.pop()
+      const nameOrDir = instance.props.pop()
+      const type = /** @type {PropType} */ (instance.props.pop())
       if (type === propType.EVENT) {
         elt.addEventListener(nameOrDir, value)
       } else if (type === propType.DIR) {
@@ -235,34 +235,11 @@ export class ElementHTML {
         setProperty(elt, type, nameOrDir, value)
       }
     }
-    if (instance._children) {
-      elt.append(...render(false, ...instance._children))
+    if (instance.children !== null) {
+      elt.append(...render(false, ...instance.children))
     }
-    instance._props = null
-    instance._children = null
-    return elt
-  }
-}
-/**
- * @template {keyof SVGElementTagNameMap} TagName
- */
-export class ElementSVG extends ElementHTML {
-  /**
-   * @param {TagName} tagName
-   */
-  constructor(tagName) {
-    super(tagName)
-  }
-  /**
-   * @override
-   * @returns {SVGElementTagNameMap[TagName]}
-   */
-  render() {
-    const elt = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      this._tagName,
-    )
-    ElementSVG.consume(elt, this)
+    instance.props = null
+    instance.children = null
     return elt
   }
 }
@@ -412,6 +389,14 @@ function reconcile(parentNode, before, children, nodes) {
 }
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
+ * @param {TagName} tagName
+ * @returns {ElementHTML<TagName>}
+ */
+export function createElement(tagName) {
+  return new ElementHTML(tagName)
+}
+/**
+ * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
  * @param {TagName} tagName
  * @returns {ElementHTML<TagName>}
@@ -420,50 +405,30 @@ function reconcile(parentNode, before, children, nodes) {
  * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
  * @param {TagName} tagName
- * @param {{ [name: string]: unknown } | null} [props]
- * @param {...Child} children
+ * @param {Values<{ [name: string]: unknown }>} props
  * @returns {ElementHTML<TagName>}
  */
 /**
- * @param {keyof HTMLElementTagNameMap} tagName
- * @param {{ [name: string]: unknown } | null} [props]
- * @param {...any} children
- * @returns {ElementHTML<keyof HTMLElementTagNameMap>}
- */
-export function createElement(tagName, props, ...children) {
-  const elt = new ElementHTML(tagName)
-  if (props) {
-    elt.properties(props)
-  }
-  if (children.length) {
-    elt.add(...children)
-  }
-  return elt
-}
-/**
- * @template {keyof SVGElementTagNameMap} TagName
+ * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
  * @param {TagName} tagName
- * @returns {ElementSVG<TagName>}
+ * @param {Child[]} children
+ * @returns {ElementHTML<TagName>}
  */
 /**
- * @template {keyof SVGElementTagNameMap} TagName
+ * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
  * @param {TagName} tagName
- * @param {Values<{ [name: string]: string }> | null} [attributes]
+ * @param {Values<{ [name: string]: unknown }>?} [props]
  * @param {...Child} children
- * @returns {ElementSVG<TagName>}
+ * @returns {ElementHTML<TagName>}
  */
-/**
- * @param {keyof SVGElementTagNameMap} tagName
- * @param {Values<{ [name: string]: string }> | null} [attributes]
- * @param {...any} children
- * @returns {ElementSVG<keyof SVGElementTagNameMap>}
- */
-export function createElementSVG(tagName, attributes, ...children) {
-  const elt = new ElementSVG(tagName)
-  if (attributes) {
-    elt.attributes(attributes)
+export function h(type, props, ...children) {
+  const elt = new ElementHTML(type)
+  if (Array.isArray(props)) {
+    elt.add(...props)
+  } else if (props) {
+    elt.properties(props)
   }
   if (children.length) {
     elt.add(...children)
