@@ -3,8 +3,7 @@ import { Computed, Effect, onCleanup, Root, State } from "space/signal"
  * @typedef {typeof propType[keyof propType]} PropType
  */
 /**
- * @template {HTMLElement} Element
- * @template Type
+ * @template Element, Type
  * @typedef {(elt: Element, value: Type) => void} Directive
  */
 /**
@@ -46,14 +45,14 @@ const propType = /** @type {const} */ ({
   STYLE: 3,
   DIR: 4,
 })
-class Application {
+export class Application {
   /**
-   * @private
+   * @protected
    * @type {Root?}
    */
   _root = null
   /**
-   * @private
+   * @protected
    * @type {ParentNode}
    */
   _element
@@ -79,19 +78,19 @@ class Application {
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
  */
-class Element {
+export class ElementHTML {
   /**
-   * @private
+   * @protected
    * @type {TagName}
    */
   _tagName
   /**
-   * @private
+   * @protected
    * @type {any[]?}
    */
   _props = null
   /**
-   * @private
+   * @protected
    * @type {Child[]?}
    */
   _children = null
@@ -213,10 +212,19 @@ class Element {
    */
   render() {
     const elt = document.createElement(this._tagName)
-    while (this._props?.length) {
-      const value = this._props.pop()
-      const nameOrDir = this._props.pop()
-      const type = /** @type {PropType} */ (this._props.pop())
+    ElementHTML.consume(elt, this)
+    return elt
+  }
+  /**
+   * @protected
+   * @param {Element} elt
+   * @param {ElementHTML} instance
+   */
+  static consume(elt, instance) {
+    while (instance._props?.length) {
+      const value = instance._props.pop()
+      const nameOrDir = instance._props.pop()
+      const type = /** @type {PropType} */ (instance._props.pop())
       if (type === propType.EVENT) {
         elt.addEventListener(nameOrDir, value)
       } else if (type === propType.DIR) {
@@ -227,17 +235,40 @@ class Element {
         setProperty(elt, type, nameOrDir, value)
       }
     }
-    if (this._children) {
-      elt.append(...render(false, ...this._children))
+    if (instance._children) {
+      elt.append(...render(false, ...instance._children))
     }
-    this._props = null
-    this._children = null
+    instance._props = null
+    instance._children = null
+    return elt
+  }
+}
+/**
+ * @template {keyof SVGElementTagNameMap} TagName
+ */
+export class ElementSVG extends ElementHTML {
+  /**
+   * @param {TagName} tagName
+   */
+  constructor(tagName) {
+    super(tagName)
+  }
+  /**
+   * @override
+   * @returns {SVGElementTagNameMap[TagName]}
+   */
+  render() {
+    const elt = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      this._tagName,
+    )
+    ElementSVG.consume(elt, this)
     return elt
   }
 }
 /**
  * @template {PropType} Type
- * @param {HTMLElement} elt
+ * @param {Element} elt
  * @param {Type} type
  * @param {string} name
  * @param {any} value
@@ -252,7 +283,7 @@ function setProperty(elt, type, name, value) {
   } else if (type === propType.PROP) {
     elt[name] = value
   } else if (type === propType.STYLE) {
-    elt.style[name] = value ?? null
+    elt["style"][name] = value ?? null
   }
 }
 /**
@@ -295,7 +326,7 @@ function resolve(value) {
  * @param  {...Child} children
  * @returns {Generator<ChildNode | string>}
  */
-function* render(immediate, ...children) {
+export function* render(immediate, ...children) {
   for (const child of children) {
     if (child == null || typeof child === "boolean") {
       continue
@@ -303,7 +334,7 @@ function* render(immediate, ...children) {
       yield child + ""
     } else if (child instanceof Node) {
       yield /** @type {ChildNode} */ (child)
-    } else if (child instanceof Element) {
+    } else if (child instanceof ElementHTML) {
       yield child.render()
     } else if (isResolvable(child)) {
       if (immediate) {
@@ -379,12 +410,11 @@ function reconcile(parentNode, before, children, nodes) {
   }
   return nodes?.length ? /** @type {ChildNode[]} */ (nodes) : null
 }
-
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
  * @param {TagName} tagName
- * @returns {Element<TagName>}
+ * @returns {ElementHTML<TagName>}
  */
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
@@ -392,18 +422,48 @@ function reconcile(parentNode, before, children, nodes) {
  * @param {TagName} tagName
  * @param {{ [name: string]: unknown } | null} [props]
  * @param {...Child} children
- * @returns {Element<TagName>}
+ * @returns {ElementHTML<TagName>}
  */
 /**
  * @param {keyof HTMLElementTagNameMap} tagName
  * @param {{ [name: string]: unknown } | null} [props]
  * @param {...any} children
- * @returns {Element<keyof HTMLElementTagNameMap>}
+ * @returns {ElementHTML<keyof HTMLElementTagNameMap>}
  */
 export function createElement(tagName, props, ...children) {
-  const elt = new Element(tagName)
+  const elt = new ElementHTML(tagName)
   if (props) {
     elt.properties(props)
+  }
+  if (children.length) {
+    elt.add(...children)
+  }
+  return elt
+}
+/**
+ * @template {keyof SVGElementTagNameMap} TagName
+ * @overload
+ * @param {TagName} tagName
+ * @returns {ElementSVG<TagName>}
+ */
+/**
+ * @template {keyof SVGElementTagNameMap} TagName
+ * @overload
+ * @param {TagName} tagName
+ * @param {Values<{ [name: string]: string }> | null} [attributes]
+ * @param {...Child} children
+ * @returns {ElementSVG<TagName>}
+ */
+/**
+ * @param {keyof SVGElementTagNameMap} tagName
+ * @param {Values<{ [name: string]: string }> | null} [attributes]
+ * @param {...any} children
+ * @returns {ElementSVG<keyof SVGElementTagNameMap>}
+ */
+export function createElementSVG(tagName, attributes, ...children) {
+  const elt = new ElementSVG(tagName)
+  if (attributes) {
+    elt.attributes(attributes)
   }
   if (children.length) {
     elt.add(...children)
