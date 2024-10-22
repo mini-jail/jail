@@ -78,7 +78,7 @@ function* Triangle({ x, y, target, size }: TriangleProps) {
 }
 
 export function SierpinskiTriangle() {
-  let id: number
+  let id: number, frameId: number
   const elapsed = state(0)
   const count = state(0)
   const scale = computed(() => {
@@ -92,12 +92,13 @@ export function SierpinskiTriangle() {
     const start = Date.now()
     const frame = () => {
       elapsed.value = Date.now() - start
-      requestAnimationFrame(frame)
+      frameId = requestAnimationFrame(frame)
     }
-    requestAnimationFrame(frame)
+    frameId = requestAnimationFrame(frame)
   })
   onCleanup(() => {
     clearInterval(id)
+    cancelAnimationFrame(frameId)
     console.log("Sierpinski is dead")
   })
   return createElement("div")
