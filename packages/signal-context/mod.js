@@ -7,26 +7,26 @@ export class Context {
    * @private
    * @readonly
    */
-  _id = Symbol()
+  id = Symbol()
   /**
    * @private
    * @readonly
    */
-  _defaultValue
+  defaultValue
   /**
    * @param {Type} [defaultValue]
    */
   constructor(defaultValue) {
-    this._defaultValue = /** @type {Type} */ (defaultValue)
+    this.defaultValue = /** @type {Type} */ (defaultValue)
   }
   /**
    * @param {Type} value
    */
   provide(value) {
-    provide(this._id, value)
+    provide(this.id, value)
   }
   inject() {
-    return inject(this._id, this._defaultValue)
+    return inject(this.id, this.defaultValue)
   }
 }
 /**
