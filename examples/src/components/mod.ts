@@ -22,23 +22,16 @@ export function animate(elt: HTMLElement, props: AnimateProps) {
 }
 
 export function Page(props: PageProps, ...children: Child[]) {
-  return createElement("article")
-    .add(
-      createElement("h4")
-        .add(
-          props.title,
-          createElement("sub")
-            .add(props.description),
-        ),
-      ...children,
-    )
+  return h("article", [
+    h("h4", [props.title, h("sub", [props.description]), ...children]),
+  ])
 }
 
 export function Paragraph(
   stringArray: TemplateStringsArray,
   ...children: Child[]
 ) {
-  return createElement("p").add(stringArray.map((string, index) => {
+  return createElement("p").add(...stringArray.map((string, index) => {
     if (children[index] != null) {
       return [string, children[index]]
     }
