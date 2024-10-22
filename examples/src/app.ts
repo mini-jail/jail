@@ -1,4 +1,4 @@
-import { createApp, createElement, h } from "space/element"
+import { createApp, createElement } from "space/element"
 import { path, Router } from "space/element/router"
 import { Anchor, animate } from "./components/mod.ts"
 
@@ -21,6 +21,7 @@ function Header() {
           Anchor("/todo", "todo"),
           Anchor("/about", "about"),
           Anchor("/error", "error"),
+          Anchor("#", "unmount").on("click", () => app.unmount()),
         ),
     )
 }
@@ -49,5 +50,5 @@ function* App() {
     })
 }
 
-createApp(document.body)
-  .render(App)
+const app = createApp(document.body)
+app.render(App)

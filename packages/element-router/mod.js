@@ -3,7 +3,6 @@ import { Context } from "space/signal/context"
 /**
  * @typedef {{
  *   path: string
- *   matcher: RegExp
  *   params?: { [param: string]: string | undefined }
  * }} RouterContext
  */
@@ -81,25 +80,31 @@ export class Router extends State {
    * @private
    * @type {{ matcher: RegExp, child: import("space/element").FunctionChild }[]}
    */
-  _routes = []
+  routes = []
+  /**
+   * @private
+   * @type {import("space/element").FunctionChild?}
+   */
+  fallbackRoute = null
   /**
    * @param {"hash" | "pathname"} type
    */
   constructor(type) {
     super()
     routeTypeHandlerMap[type]()
-    onCleanup(() => this._routes.length = 0)
+    onCleanup(() => this.routes.length = 0)
     new Effect(() => {
       const nextPath = path.value
-      const route = this._routes.find((route) => route.matcher.test(nextPath))
+      const route = this.routes.find((route) => route.matcher.test(nextPath))
       if (route) {
         routerContext.provide({
           path: nextPath,
-          matcher: route.matcher,
           params: route.matcher.exec(nextPath)?.groups,
         })
+        super.value = route.child()
+        return
       }
-      super.value = route?.child()
+      super.value = this.fallbackRoute?.()
     })
   }
   /**
@@ -108,7 +113,7 @@ export class Router extends State {
    * @returns {this}
    */
   route(path, child) {
-    this._routes.push({ matcher: createMatcher(path), child })
+    this.routes.push({ matcher: createMatcher(path), child })
     return this
   }
   /**
@@ -116,9 +121,7 @@ export class Router extends State {
    * @returns {this}
    */
   fallback(child) {
-    queueMicrotask(() => {
-      this._routes.push({ matcher: createMatcher("/[^]*"), child })
-    })
+    this.fallbackRoute = child
     return this
   }
   /**
