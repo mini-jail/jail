@@ -96,12 +96,6 @@ export class Root extends BasicNode {
       activeNode = this.parentNode
     }
   }
-  /**
-   * @override
-   */
-  clean() {
-    super.clean(true)
-  }
 }
 /**
  * @template [Type = any]
