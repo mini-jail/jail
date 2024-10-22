@@ -240,7 +240,6 @@ export class ElementHTML {
     }
     instance.props = null
     instance.children = null
-    return elt
   }
 }
 /**
