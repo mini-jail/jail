@@ -71,7 +71,7 @@ export class Application {
     return this
   }
   unmount() {
-    this.root?.clean()
+    this.root?.clean(true)
     this.root = null
   }
 }
