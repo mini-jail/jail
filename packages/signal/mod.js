@@ -157,7 +157,7 @@ export function root(fn) {
   const node = new Node()
   try {
     activeNode = node
-    return fn(() => cleanNode(node))
+    return fn(() => cleanNode(node, true))
   } catch (error) {
     handleError(error)
   } finally {
