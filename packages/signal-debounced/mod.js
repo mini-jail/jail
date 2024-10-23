@@ -1,4 +1,4 @@
-import { Effect, State } from "space/signal"
+import { effect, State } from "space/signal"
 /**
  * @template Type
  * @extends {State<Type>}
@@ -12,7 +12,7 @@ export class Debounced extends State {
   constructor(fnOrState, timeout) {
     super()
     this.timeout = timeout ?? 0
-    new Effect(/** @param {number | undefined} id */ (id) => {
+    effect(/** @param {number | undefined} id */ (id) => {
       clearTimeout(id)
       const value = resolve(fnOrState)
       if (id === undefined) {

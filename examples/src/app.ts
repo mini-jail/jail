@@ -1,4 +1,4 @@
-import { createApp, createElement } from "space/element"
+import { createApp, createElement, element } from "space/element"
 import { path, Router } from "space/element/router"
 import { Anchor, animate } from "./components/mod.ts"
 
@@ -8,6 +8,7 @@ import Home from "./routes/home.ts"
 import NotFound from "./routes/notfound.ts"
 import Sierpinski from "./routes/sierpinski.ts"
 import ToDo from "./routes/todo.ts"
+import { computed, effect, state } from "space/signal"
 
 function Header() {
   return createElement("header")
@@ -48,6 +49,15 @@ function* App() {
         { opacity: 1, transform: "unset" },
       ],
     })
+}
+
+function* AltApp() {
+  const counter = state(0)
+  const double = computed(() => counter.value * 2)
+
+  yield element("button", { "@click": () => counter.value++ }, "+")
+  yield element("div", { className: counter }, counter, double)
+  yield element("button", { "@click": () => counter.value-- }, "-")
 }
 
 const app = createApp(document.body)

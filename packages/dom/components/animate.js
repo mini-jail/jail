@@ -1,4 +1,4 @@
-import { Effect, State } from "space/signal"
+import { effect, State } from "space/signal"
 
 /**
  * @template {Element} Type
@@ -10,7 +10,7 @@ import { Effect, State } from "space/signal"
  * }} props
  */
 export function Animate(props) {
-  new Effect(() => {
+  effect(() => {
     props.state?.value
     props.children.animate(props.keyframes, props.options)
   })

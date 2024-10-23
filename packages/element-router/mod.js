@@ -1,4 +1,4 @@
-import { Effect, onCleanup, State } from "space/signal"
+import { effect, onCleanup, State } from "space/signal"
 import { Context } from "space/signal/context"
 /**
  * @typedef {{
@@ -13,7 +13,7 @@ export const path = new State("")
 export const routerContext = new Context()
 const routeTypeHandlerMap = {
   hash() {
-    new Effect(() => {
+    effect(() => {
       path.value = hash()
       addEventListener("hashchange", hashChangeListener)
     })
@@ -39,7 +39,7 @@ const routeTypeHandlerMap = {
         elt = elt?.parentElement
       }
     }
-    new Effect(() => {
+    effect(() => {
       path.value = location.pathname
       addEventListener("click", clickListener)
       addEventListener("popstate", popStateListener)
@@ -93,7 +93,7 @@ export class Router extends State {
     super()
     routeTypeHandlerMap[type]()
     onCleanup(() => this.routes.length = 0)
-    new Effect(() => {
+    effect(() => {
       const nextPath = path.value
       const route = this.routes.find((route) => route.matcher.test(nextPath))
       if (route) {

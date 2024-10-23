@@ -1,4 +1,4 @@
-import { Effect, State } from "space/signal"
+import { effect, State } from "space/signal"
 /**
  * @template Type
  * @extends {State<Type | undefined>}
@@ -7,29 +7,29 @@ export class Ressource extends State {
   /**
    * @private
    */
-  _error = new State(/** @type {Error?} */ (null))
+  errorState = new State(/** @type {Error?} */ (null))
   /**
    * @private
    */
-  _loading = new State(false)
+  loadingState = new State(false)
   /**
    * @param {() => Promise<Type>} fn
    */
   constructor(fn) {
     super()
-    new Effect(() => {
-      this._loading.value = true
+    effect(() => {
+      this.loadingState.value = true
       fn()
         .then((value) => {
-          this._error.value = null
+          this.errorState.value = null
           super.value = value
         })
         .catch((error) => {
           super.value = undefined
-          this._error.value = error
+          this.errorState.value = error
         })
         .finally(() => {
-          this._loading.value = false
+          this.loadingState.value = false
         })
     })
   }
@@ -37,16 +37,16 @@ export class Ressource extends State {
    * @override
    */
   get value() {
-    if (this._loading.value || this._error.value !== null) {
+    if (this.loadingState.value || this.errorState.value !== null) {
       return undefined
     }
     return super.value
   }
   get error() {
-    return this._error.value
+    return this.errorState.value
   }
   get isLoading() {
-    return this._loading.value
+    return this.loadingState.value
   }
 }
 /**

@@ -37,7 +37,7 @@
  * @typedef {(this: Type, event: DOMEvent<Type>) => void} DOMEventListener
  */
 import { compile, createTree, getTree } from "./compiler.js"
-import { createChildren, html, mount, svg } from "./renderer.js"
+import { html, mount, svg } from "./renderer.js"
 import { Animate } from "./components/animate.js"
 import { For } from "./components/for.js"
 import { Portal } from "./components/portal.js"
@@ -47,7 +47,6 @@ import { Show } from "./components/show.js"
 export {
   Animate,
   compile,
-  createChildren,
   createTree,
   For,
   getParams,

@@ -1,4 +1,4 @@
-import { Computed, Effect, onCleanup, Root, State } from "space/signal"
+import { computed, effect, onCleanup, root, State } from "space/signal"
 /**
  * @typedef {typeof propType[keyof propType]} PropType
  */
@@ -48,9 +48,9 @@ const propType = /** @type {const} */ ({
 export class Application {
   /**
    * @protected
-   * @type {Root?}
+   * @type {(() => void)?}
    */
-  root = null
+  cleanup = null
   /**
    * @protected
    * @type {ParentNode}
@@ -67,12 +67,11 @@ export class Application {
    */
   render(child) {
     this.unmount()
-    this.root = new Root(() => mount(this.element, child))
+    this.cleanup = mount(this.element, child) ?? null
     return this
   }
   unmount() {
-    this.root?.clean(true)
-    this.root = null
+    this.cleanup?.()
   }
 }
 /**
@@ -212,34 +211,26 @@ export class ElementHTML {
    */
   render() {
     const elt = document.createElement(this.tagName)
-    ElementHTML.consume(elt, this)
-    return elt
-  }
-  /**
-   * @protected
-   * @param {Element} elt
-   * @param {ElementHTML} instance
-   */
-  static consume(elt, instance) {
-    while (instance.props?.length) {
-      const value = instance.props.pop()
-      const nameOrDir = instance.props.pop()
-      const type = /** @type {PropType} */ (instance.props.pop())
+    while (this.props?.length) {
+      const value = this.props.pop()
+      const nameOrDir = this.props.pop()
+      const type = /** @type {PropType} */ (this.props.pop())
       if (type === propType.EVENT) {
         elt.addEventListener(nameOrDir, value)
       } else if (type === propType.DIR) {
-        new Effect(() => nameOrDir(elt, value))
+        effect(() => nameOrDir(elt, value))
       } else if (isResolvable(value)) {
-        new Effect(() => setProperty(elt, type, nameOrDir, resolve(value)))
+        effect(() => setProperty(elt, type, nameOrDir, resolve(value)))
       } else {
         setProperty(elt, type, nameOrDir, value)
       }
     }
-    if (instance.children !== null) {
-      elt.append(...render(false, ...instance.children))
+    if (this.children !== null) {
+      elt.append(...render(false, this.children))
     }
-    instance.props = null
-    instance.children = null
+    this.props = null
+    this.children = null
+    return elt
   }
 }
 /**
@@ -286,20 +277,21 @@ function updateProperty(props, type, name, value) {
  * @returns {value is State | Function}
  */
 function isResolvable(value) {
-  return value instanceof State || typeof value === "function"
+  return value instanceof State ||
+    (typeof value === "function" && value.length === 0)
 }
 /**
  * @param {unknown} value
  */
 function resolve(value) {
-  if (typeof value === "function") {
+  if (typeof value === "function" && value.length === 0) {
     return value()
   }
   return value instanceof State ? value.value : value
 }
 /**
  * @param {boolean} immediate
- * @param  {...Child} children
+ * @param  {...any} children
  * @returns {Generator<ChildNode | string>}
  */
 export function* render(immediate, ...children) {
@@ -321,7 +313,7 @@ export function* render(immediate, ...children) {
         yield before
       }
     } else if (Symbol.iterator in child) {
-      yield* render(immediate, ...child[Symbol.iterator]())
+      yield* render(immediate, ...child)
     } else {
       yield String(child)
     }
@@ -331,20 +323,29 @@ export function* render(immediate, ...children) {
  * @param {Node | undefined | null} targetNode
  * @param {Child} child
  * @param {ChildNode | undefined | null} [before]
+ * @returns {(() => void) | void}
  */
 export function mount(targetNode, child, before) {
-  const children = new Computed(() => {
-    const nodes = reconcile(
-      targetNode ?? before?.parentElement,
-      before,
-      children.value,
-      Array.from(render(true, child)),
-    )
-    return nodes
-  })
-  onCleanup(() => {
-    before?.remove()
-    children.value?.forEach((child) => child.remove())
+  return root((cleanup) => {
+    /**
+     * @type {ChildNode[]?}
+     */
+    let children = null
+    effect(() => {
+      children = reconcile(
+        targetNode ?? before?.parentElement,
+        before,
+        children,
+        Array.from(render(true, resolve(child))),
+      )
+    })
+    onCleanup(() => {
+      before?.remove()
+      while (children?.length) {
+        children.pop()?.remove()
+      }
+    })
+    return cleanup
   })
 }
 /**
@@ -440,4 +441,59 @@ export function h(type, props, ...children) {
  */
 export function createApp(element) {
   return new Application(element)
+}
+/**
+ * @template {keyof HTMLElementTagNameMap} TagName
+ * @param {TagName} tagName
+ * @param {{ [name: string]: any }?} [props]
+ * @param  {...any} children
+ */
+export function element(tagName, props, ...children) {
+  const elt = document.createElement(tagName)
+  if (props) {
+    for (const name in props) {
+      const prefix = name[0]
+      if (prefix === "@") {
+        elt.addEventListener(name.slice(1), props[name])
+      } else if (prefix === ".") {
+        const prop = name.slice(1)
+        if (isResolvable(props[name])) {
+          effect(() => {
+            elt[prop] = resolve(props[name])
+          })
+        } else {
+          elt[prop] = props[name]
+        }
+      } else if (prefix === ":") {
+        const prop = name.slice(1)
+        if (isResolvable(props[name])) {
+          effect(() => {
+            elt.setAttribute(prop, String(resolve(props[name])))
+          })
+        } else {
+          elt.setAttribute(prop, String(props[name]))
+        }
+      } else if (name in elt) {
+        if (isResolvable(props[name])) {
+          effect(() => {
+            elt[name] = resolve(props[name])
+          })
+        } else {
+          elt[name] = props[name]
+        }
+      } else {
+        if (isResolvable(props[name])) {
+          effect(() => {
+            elt.setAttribute(name, String(resolve(props[name])))
+          })
+        } else {
+          elt.setAttribute(name, String(props[name]))
+        }
+      }
+    }
+  }
+  if (children.length) {
+    elt.append(...render(false, children))
+  }
+  return elt
 }

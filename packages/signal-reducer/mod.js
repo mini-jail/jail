@@ -7,14 +7,14 @@ export class Reducer extends State {
   /**
    * @private
    */
-  _reducer
+  reducer
   /**
    * @param {(value: Type, action: Action) => Type} reducer
    * @param {Type} [value]
    */
   constructor(reducer, value) {
     super(value)
-    this._reducer = reducer
+    this.reducer = reducer
   }
   /**
    * @override
@@ -26,7 +26,7 @@ export class Reducer extends State {
    * @param {Action} action
    */
   dispatch(action) {
-    super.value = this._reducer(this.value, action)
+    super.value = this.reducer(this.value, action)
   }
 }
 /**

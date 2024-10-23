@@ -1,4 +1,4 @@
-import { Computed } from "space/signal"
+import { computed } from "space/signal"
 
 /**
  * @template Type
@@ -9,7 +9,7 @@ import { Computed } from "space/signal"
  * }} props
  */
 export function For(props) {
-  return new Computed(() => {
+  return computed(() => {
     const array = Array.from(props.each)
     if (array.length === 0) {
       return props.fallback
