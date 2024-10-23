@@ -1,7 +1,7 @@
 /**
  * @type {WeakMap<State, Set<Node>>}
  */
-const effectMap = new WeakMap()
+const stateMap = new WeakMap()
 /**
  * @type {Set<Node>}
  */
@@ -71,11 +71,11 @@ export class State {
   }
   get value() {
     if (activeNode?.onupdate) {
-      let effects = effectMap.get(this)
-      if (effects === undefined) {
-        effectMap.set(this, effects = new Set())
+      let nodes = stateMap.get(this)
+      if (nodes === undefined) {
+        stateMap.set(this, nodes = new Set())
       }
-      effects.add(activeNode)
+      nodes.add(activeNode)
       if (activeNode.states === null) {
         activeNode.states = [this]
       } else if (!activeNode.states.includes(this)) {
@@ -86,7 +86,7 @@ export class State {
   }
   set value(value) {
     this.internalValue = value
-    effectMap.get(this)?.forEach(addNodeToQueue)
+    stateMap.get(this)?.forEach(addNodeToQueue)
   }
 }
 /**
@@ -308,7 +308,7 @@ function cleanNode(node, dispose) {
   if (node.states?.length) {
     let state = node.states.pop()
     while (state) {
-      effectMap.get(state)?.delete(node)
+      stateMap.get(state)?.delete(node)
       state = node.states.pop()
     }
   }
