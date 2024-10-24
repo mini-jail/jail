@@ -154,14 +154,15 @@ export function effect(update) {
  * @returns {Type | undefined}
  */
 export function root(fn) {
-  const node = new Node()
+  const prevNode = activeNode
   try {
+    const node = new Node()
     activeNode = node
     return fn(() => cleanNode(node, true))
   } catch (error) {
     handleError(error)
   } finally {
-    activeNode = node.parentNode
+    activeNode = prevNode
   }
 }
 /**
