@@ -180,19 +180,19 @@ export function* render(...children) {
 /**
  * @overload
  * @param {Node} targetNode
- * @param {unknown} child
+ * @param {Child} child
  * @returns {() => void}
  */
 /**
  * @overload
  * @param {Node | null} targetNode
- * @param {unknown} child
+ * @param {Child} child
  * @param {ChildNode} [before]
  * @returns {() => void}
  */
 /**
  * @param {Node | null} targetNode
- * @param {unknown} child
+ * @param {Child} child
  * @param {ChildNode} [before]
  * @returns {(() => void) | void}
  */
@@ -301,7 +301,7 @@ function assign(elt, attributes, ...children) {
       } else if (name === "children") {
         children.push(value, ...args)
       } else if (name.startsWith("on:")) {
-        addListenener(elt, name, /** @type {any} */ (value), args)
+        addListenener(elt, name, value, args)
       } else if (resolvable(value)) {
         effect(() => setAttribute(elt, name, resolve(value)))
       } else {
