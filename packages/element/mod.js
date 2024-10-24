@@ -122,7 +122,8 @@ import { effect, onCleanup, root, State } from "space/signal"
  * } Attribute
  */
 /**
- * @typedef {EventListener & { [name: string]: boolean }} ModifiedEventListener
+ * @template Target
+ * @typedef {((this: Target, event: Event & { target: Target }) => void) & { [name: string]: boolean }} ModifiedEventListener
  */
 /**
  * @typedef {null | ?undefined | string | number | boolean | Node | { value: Child } | (() => Child) | { [Symbol.iterator](): Iterable<Child> }} Child
@@ -132,7 +133,7 @@ import { effect, onCleanup, root, State } from "space/signal"
  */
 const listenerMap = {}
 /**
- * @type {WeakMap<EventTarget, { [type: string]: Set<ModifiedEventListener> }>}
+ * @type {WeakMap<EventTarget, { [type: string]: Set<ModifiedEventListener<EventTarget>> }>}
  */
 const targetListeners = new WeakMap()
 /**
@@ -171,7 +172,7 @@ export function* render(...children) {
     } else if (child[Symbol.iterator]) {
       yield* render(...child[Symbol.iterator]())
     } else {
-      console.info(`unknown child type "${String(child)}"`)
+      console.info("unknown child type", child)
     }
   }
 }
@@ -313,7 +314,7 @@ function assign(elt, attributes, ...children) {
   }
 }
 /**
- * @param {Event} event
+ * @param {object} event
  */
 function eventListener(event) {
   let target = event.target
@@ -331,7 +332,7 @@ function eventListener(event) {
           if (listener.stopImmediate) {
             event.stopImmediatePropagation()
           }
-          listener(event)
+          listener.call(target, event)
         } catch (error) {
           console.error(listener, error)
         } finally {
@@ -351,7 +352,7 @@ function eventListener(event) {
 /**
  * @param {EventTarget} target
  * @param {string} name
- * @param {ModifiedEventListener} listener
+ * @param {ModifiedEventListener<EventTarget>} listener
  * @param {any[] | undefined | null} [args]
  */
 function addListenener(target, name, listener, args) {
