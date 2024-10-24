@@ -15,14 +15,11 @@ let activeNode = null
 /**
  * @template [Type = any]
  */
-export class Node {
+class Node {
   /**
    * @type {Type | undefined}
    */
   value
-  /**
-   * @type {Node?}
-   */
   parentNode = activeNode
   /**
    * @type {Node[]?}
