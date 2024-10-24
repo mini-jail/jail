@@ -11,7 +11,7 @@ import ToDo from "./routes/todo.ts"
 
 function Header() {
   return create("header", null, [
-    create("h3", null, "space", path),
+    create("h3", [["children", "space", path]]),
     create("nav", null, [
       create("a", [["href", "/"]], "home"),
       create("a", [["href", "/counter"]], "counter"),

@@ -8,27 +8,27 @@ import { effect, onCleanup, root, State } from "space/signal"
  * @typedef {?Type | State<?Type> | (() => ?Type)} $
  */
 /**
- * @typedef {"prop" | "attr"} Modifier
- */
-/**
  * @typedef {"prevent" | "stop" | "stopImmediate" | "once"} EventModifier
  */
 /**
  * @typedef {[
  *   name: `aria-${string}`,
  *   value: $<string | number | boolean>,
+ *   ...args: never[]
  * ]} AriaAttribute
  */
 /**
  * @typedef {[
  *   name: `aria${Capitalize<string>}`,
  *   value: $<string | number | boolean>,
+ *   ...args: never[]
  * ]} AriaProperty
  */
 /**
  * @typedef {[
  *   name: `style:${keyof CSSStyleDeclaration & string}`,
  *   value: $<string>,
+ *   ...args: never[]
  * ]} StyleAttribute
  */
 /**
@@ -40,24 +40,45 @@ import { effect, onCleanup, root, State } from "space/signal"
  */
 /**
  * @typedef {[
- *   name: "id" | "class" | "className" | "slot",
+ *   name: "id" | "class" | "className" | "slot" | "lang" | "nonce" | "role" | "title",
  *   value: $<string>,
- *   ...args: Modifier[],
+ *   ...args: never[]
  * ]} StringAttribute
  */
 /**
  * @typedef {[
- *   name: string,
- *   value: $<string | number | boolean>,
- *   ...args: Modifier[],
- * ]} UnknownAttribute
+ *   name: "hidden" | "inert" | "spellcheck" | "translate",
+ *   value: $<boolean | "true" | "false">,
+ *   ...args: never[]
+ * ]} BooleanAttribute
+ */
+/**
+ * @typedef {[
+ *   name: "tabIndex" | "tabindex",
+ *   value: $<number | string>,
+ *   ...args: never[]
+ * ]} NumberAttribute
+ */
+/**
+ * @typedef {[
+ *   name: `attr:${string}`,
+ *   value: $<object>,
+ *   ...args: never[]
+ * ]} PrefixedAttribute
+ */
+/**
+ * @typedef {[
+ *   name: `prop:${string}`,
+ *   value: $<object>,
+ *   ...args: never[]
+ * ]} PrefixedProperty
  */
 /**
  * @template Element
  * @typedef {[
  *   type: `on:${keyof GlobalEventHandlersEventMap}`,
  *   listener: (event: Event & { target: Element }) => void,
- *   ...args: EventModifier[]
+ *   ...args: EventModifier[],
  * ]} GlobalEventAttribute
  */
 /**
@@ -65,7 +86,7 @@ import { effect, onCleanup, root, State } from "space/signal"
  * @typedef {[
  *   type: `on:${string}`,
  *   listener: (event: Event & { target: Element }) => void,
- *   ...args: EventModifier[]
+ *   ...args: EventModifier[],
  * ]} EventAttribute
  */
 /**
@@ -73,11 +94,21 @@ import { effect, onCleanup, root, State } from "space/signal"
  * @typedef {[
  *   directive: Directive<Element, Type>,
  *   value: Type,
+ *   ...args: never[]
  * ]} DirectiveAttribute
  */
 /**
+ * @typedef {[
+ *   name: string,
+ *   value: $<object>,
+ *   ...args: never[]
+ * ]} UnknownAttribute
+ */
+/**
  * @template {keyof HTMLElementTagNameMap} TagName
- * @typedef {StringAttribute|
+ * @typedef {StringAttribute |
+ *           BooleanAttribute |
+ *           NumberAttribute |
  *           AriaAttribute |
  *           AriaProperty |
  *           StyleAttribute |
@@ -85,6 +116,8 @@ import { effect, onCleanup, root, State } from "space/signal"
  *           GlobalEventAttribute<HTMLElementTagNameMap[TagName]> |
  *           EventAttribute<HTMLElementTagNameMap[TagName]> |
  *           DirectiveAttribute<HTMLElementTagNameMap[TagName], object> |
+ *           PrefixedAttribute |
+ *           PrefixedProperty |
  *           UnknownAttribute
  * } Attribute
  */
@@ -241,7 +274,7 @@ function reconcile(parentNode, before, children, nodes) {
  * @returns {Generator<ChildNode | string>}
  */
 /**
- * @param {keyof HTMLElementTagNameMap | ((...args: any[]) => any)} type
+ * @param {string | ((...args: any[]) => any)} type
  * @param {...any} args
  */
 export function create(type, ...args) {
@@ -250,34 +283,33 @@ export function create(type, ...args) {
   }
   const elt = document.createElement(type)
   if (args.length) {
-    const [attributes, ...children] = args
-    if (attributes) {
-      setAttributes(elt, attributes, children)
-    }
-    if (children.length) {
-      elt.append(...render(...children))
-    }
+    assign(elt, ...args)
   }
   return elt
 }
 /**
  * @param {HTMLElement} elt
- * @param {Attribute<any>[]} attributes
- * @param {any[]} children
+ * @param {Attribute<any>[]?} [attributes]
+ * @param {...Child} children
  */
-function setAttributes(elt, attributes, children) {
-  for (const [name, value, ...args] of attributes) {
-    if (typeof name === "function") {
-      effect(() => name(elt, value))
-    } else if (name === "children") {
-      children.push(value, ...args)
-    } else if (name.startsWith("on:")) {
-      addListenener(elt, name, /** @type {any} */ (value), args)
-    } else if (resolvable(value)) {
-      effect(() => setAttribute(elt, name, resolve(value), args))
-    } else {
-      setAttribute(elt, name, value, args)
+function assign(elt, attributes, ...children) {
+  if (attributes) {
+    for (const [name, value, ...args] of attributes) {
+      if (typeof name === "function") {
+        effect(() => name(elt, value))
+      } else if (name === "children") {
+        children.push(value, ...args)
+      } else if (name.startsWith("on:")) {
+        addListenener(elt, name, /** @type {any} */ (value), args)
+      } else if (resolvable(value)) {
+        effect(() => setAttribute(elt, name, resolve(value)))
+      } else {
+        setAttribute(elt, name, value)
+      }
     }
+  }
+  if (children.length) {
+    elt.append(...render(...children))
   }
 }
 /**
@@ -289,18 +321,23 @@ function eventListener(event) {
     const listeners = targetListeners.get(target)?.[event.type]
     if (listeners) {
       for (const listener of listeners) {
-        if (listener.prevent) {
-          event.preventDefault()
-        }
-        if (listener.stop) {
-          event.stopPropagation()
-        }
-        if (listener.stopImmediate) {
-          event.stopImmediatePropagation()
-        }
-        listener(event)
-        if (listener.once) {
-          listeners.delete(listener)
+        try {
+          if (listener.prevent) {
+            event.preventDefault()
+          }
+          if (listener.stop) {
+            event.stopPropagation()
+          }
+          if (listener.stopImmediate) {
+            event.stopImmediatePropagation()
+          }
+          listener(event)
+        } catch (error) {
+          console.error(listener, error)
+        } finally {
+          if (listener.once) {
+            listeners.delete(listener)
+          }
         }
         if (listener.stopImmediate) {
           return
@@ -312,16 +349,16 @@ function eventListener(event) {
 }
 
 /**
- * @param {HTMLElement} elt
+ * @param {EventTarget} target
  * @param {string} name
  * @param {ModifiedEventListener} listener
  * @param {any[] | undefined | null} [args]
  */
-function addListenener(elt, name, listener, args) {
+function addListenener(target, name, listener, args) {
   const type = name.slice(3)
-  let listeners = targetListeners.get(elt)
+  let listeners = targetListeners.get(target)
   if (listeners === undefined) {
-    targetListeners.set(elt, listeners = {})
+    targetListeners.set(target, listeners = {})
   }
   if (listeners[type] === undefined) {
     listeners[type] = new Set()
@@ -341,14 +378,20 @@ function addListenener(elt, name, listener, args) {
  * @param {HTMLElement} elt
  * @param {string} name
  * @param {any} value
- * @param {any[] | null | undefined} [args]
  */
-function setAttribute(elt, name, value, args) {
+function setAttribute(elt, name, value) {
   if (name.startsWith("style:")) {
     elt.style[name.slice(6)] = value ?? null
     return
   }
-  const isProp = hasArg(args, "prop") || name in elt
+  let isProp = Reflect.has(elt, name)
+  if (name.startsWith("attr:")) {
+    isProp = false
+    name = name.slice(5)
+  } else if (name.startsWith("prop:")) {
+    isProp = true
+    name = name.slice(5)
+  }
   if (isProp) {
     elt[name] = value
   } else {
