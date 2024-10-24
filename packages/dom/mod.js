@@ -12,16 +12,6 @@
  * @typedef {string | number | Tree} Child
  */
 /**
- * @template Type
- * @typedef {{
- *   readonly type: "property" | "attribute" | "event" | "auto"
- *   readonly name: string
- *   readonly arg: string | null
- *   readonly modifiers: { readonly [field: string]: true | undefined } | null
- *   readonly value: Type
- * }} Binding
- */
-/**
  * @template {Props} Type
  * @typedef {(props: Type) => any} Component
  */

@@ -1,4 +1,4 @@
-import { type Child, createElement, h } from "space/element"
+import { type Child, create } from "space/element"
 import { Context } from "space/signal/context"
 import { computed, effect, onCleanup, State, state } from "space/signal"
 
@@ -22,25 +22,26 @@ export function animate(elt: HTMLElement, props: AnimateProps) {
 }
 
 export function Page(props: PageProps, ...children: Child[]) {
-  return h("article", [
-    h("h4", [props.title, h("sub", [props.description]), ...children]),
+  return create("article", null, [
+    create("h4", null, props.title, create("sub", null, props.description)),
+    ...children,
   ])
 }
 
 export function Paragraph(
   stringArray: TemplateStringsArray,
-  ...children: Child[]
+  ...children: unknown[]
 ) {
-  return createElement("p").add(...stringArray.map((string, index) => {
+  return create("p", null, [stringArray.map((string, index) => {
     if (children[index] != null) {
       return [string, children[index]]
     }
     return string
-  }))
+  })])
 }
 
 export function Anchor(href: string, ...children: Child[]) {
-  return createElement("a").property("href", href).add(...children)
+  return create("a", [["href", href]], ...children)
 }
 
 function Dot({ x, y, target }: DotProps) {
@@ -58,16 +59,18 @@ function Dot({ x, y, target }: DotProps) {
     font-size: ${(target / 2.5)}px;
     border-radius: ${target}px;
   `
-  return createElement("div")
-    .add(text)
-    .attribute("class", "sierpinski-dot")
-    .style("cssText", cssText)
-    .style("backgroundColor", () => hover.value ? "lightpink" : "white")
-    .on("mouseover", () => hover.value = true)
-    .on("mouseout", () => hover.value = false)
+  return create("div", [
+    ["class", "sierpinski-dot"],
+    ["style:cssText", cssText],
+    ["style:backgroundColor", () => hover.value ? "lightpink" : "white"],
+    ["on:mouseover", () => hover.value = true],
+    ["on:mouseout", () => hover.value = false],
+  ], text)
 }
 
-function* Triangle({ x, y, target, size }: TriangleProps) {
+function* Triangle(
+  { x, y, target, size }: TriangleProps,
+): Generator<HTMLDivElement> {
   if (target <= size) {
     return yield Dot({ x, y, target })
   }
@@ -101,8 +104,8 @@ export function SierpinskiTriangle() {
     cancelAnimationFrame(frameId)
     console.log("Sierpinski is dead")
   })
-  return createElement("div")
-    .attribute("class", "sierpinski-wrapper")
-    .style("transform", () => `scale(${scale.value}) translateZ(0.1px)`)
-    .add(Triangle({ x: 0, y: 0, target: 750, size: 25 }))
+  return create("div", [
+    ["class", "sierpinski-wrapper"],
+    ["style:transform", () => `scale(${scale.value}) translateZ(0.1px)`],
+  ], ...Triangle({ x: 0, y: 0, target: 750, size: 25 }))
 }

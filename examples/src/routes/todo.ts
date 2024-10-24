@@ -1,5 +1,5 @@
 import { computed, state } from "space/signal"
-import { createElement } from "space/element"
+import { create } from "space/element"
 import { Page } from "../components/mod.ts"
 
 type ToDoItem = {
@@ -25,40 +25,34 @@ function* List() {
 }
 
 function Item(props: ToDoItem) {
-  const deleteItem = (_ev: Event) => {
+  const deleteItem = () => {
     list.value = list.value.filter((item) => item.id !== props.id)
   }
-  const toggleItem = (_ev: Event) => {
+  const toggleItem = () => {
     const item = list.value.find((item) => item.id === props.id)
     if (item) {
       item.done = !item.done
       list.value = list.value.slice()
     }
   }
-  return createElement("div")
-    .attribute("class", "todo-item")
-    .attribute("id", "item_" + props.id)
-    .add(
-      createElement("div")
-        .attribute("class", "todo-item-text")
-        .styles({
-          color: props.done ? "grey" : null,
-          fontStyle: props.done ? "italic" : null,
-        })
-        .on("click", toggleItem)
-        .add(props.text),
-      createElement("div")
-        .attribute("class", "todo-item-delete")
-        .style("display", props.done ? null : "none")
-        .on("click", deleteItem)
-        .add("delete"),
-    )
+  return create("div", [["class", "todo-item"], ["id", "item_" + props.id]], [
+    create("div", [
+      ["class", "todo-item-text"],
+      ["style:color", props.done ? "grey" : null],
+      ["style:fontStyle", props.done ? "italic" : null],
+      ["on:click", toggleItem],
+    ], props.text),
+    create("div", [
+      ["class", "todo-item-delete"],
+      ["style:display", props.done ? null : "none"],
+      ["on:click", deleteItem],
+    ], "delete"),
+  ])
 }
 
 export default function ToDo() {
   const text = state("")
-  const addItem = (ev) => {
-    ev.preventDefault()
+  const addItem = () => {
     list.value = list.value.concat({
       id: itemID++,
       done: false,
@@ -66,35 +60,28 @@ export default function ToDo() {
     })
     text.value = ""
   }
-  const onInput = (ev) => text.value = ev.target.value
   const length = computed(() => list.value.length)
   const done = computed(() => list.value.filter((item) => item.done).length)
-  return Page({
-    title: "todo",
-    description: "(no-one ever have done that, i promise!)",
-  }).add(
-    createElement("div")
-      .attribute("class", "todo-app-container")
-      .add(
-        createElement("form")
-          .on("submit", addItem)
-          .add(
-            createElement("input")
-              .property("type", "text")
-              .property("placeholder", "...milk?")
-              .property("required", true)
-              .property("className", "todo_input")
-              .property("value", text)
-              .on("input", onInput),
-          ),
-        createElement("div")
-          .attribute("class", "todo-items")
-          .add(List),
-        createElement("label")
-          .add("progress: ", done, "/", length),
-        createElement("progress")
-          .property("max", length)
-          .property("value", done),
-      ),
+
+  return Page(
+    {
+      title: "todo",
+      description: "(no-one ever have done that, i promise!)",
+    },
+    create("div", [["class", "todo-app-container"]], [
+      create("form", [["on:submit", addItem, "prevent"]], [
+        create("input", [
+          ["type", "text"],
+          ["placeholder", "...milk?"],
+          ["required", true],
+          ["class", "todo_input"],
+          ["value", text],
+          ["on:input", ({ target: { value } }) => text.value = value],
+        ]),
+      ]),
+      create("div", [["class", "todo-items"]], List),
+      create("label", null, "progress: ", done, "/", length),
+      create("progress", [["max", length], ["value", done]]),
+    ]),
   )
 }

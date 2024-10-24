@@ -1,22 +1,22 @@
-import { createElement } from "space/element"
+import { create } from "space/element"
 import { state } from "space/signal"
 import { Page } from "../components/mod.ts"
 
 const code = /*js*/ `
 function* SpaceCounter() {
   const counter = state(0)
-  yield createElement("button").add("-").on("click", () => counter.value--)
-  yield createElement("span").add("current value: ", counter)
-  yield createElement("button").add("+").on("click", () => counter.value++)
+  yield create("button", [["on:click", () => counter.value--]], "-")
+  yield ["current value: ", counter]
+  yield create("button", [["on:click", () => counter.value++]], "+")
 }
 
 function ReactCounter() {
-  const [state, setState] = useState(0)
+  const [counter, setCounter] = useState(0)
   return (
     <>
-      <button onClick={() => setState(state - 1)}>-</button>
-      <span>current value: {state}</span>
-      <button onClick={() => setState(state + 1)}>+</button>
+      <button onClick={() => setCounter(counter - 1)}>-</button>
+      current value: {counter}
+      <button onClick={() => setCounter(counter + 1)}>+</button>
     </>
   )
 }
@@ -25,26 +25,17 @@ function ReactCounter() {
 export default function Counter() {
   const counter = state(0)
   const show = state(false)
-  return Page({ title: "counter example", description: "(...what else?)" })
-    .add(
-      createElement("button")
-        .add("-")
-        .on("click", () => counter.value--),
-      createElement("span")
-        .add("current value: ", counter),
-      createElement("button")
-        .add("+")
-        .on("click", () => counter.value++),
-      createElement("div")
-        .add(
-          createElement("button")
-            .add(() => show.value ? "hide code" : "show code")
-            .on("click", () => show.value = !show.value),
-        ),
-      createElement("code")
-        .style("display", () => show.value ? "" : "none")
-        .add(
-          code.split("\n").map((line) => createElement("pre").add(line)),
-        ),
-    )
+  return Page({ title: "counter example", description: "(...what else?)" }, [
+    create("button", [["on:click", () => counter.value--]], "-"),
+    create("span", null, "current value: ", counter),
+    create("button", [["on:click", () => counter.value++]], "+"),
+    create("div", null, [
+      create("button", [["on:click", () => show.value = !show.value]], [
+        () => show.value ? "hide code" : "show code",
+      ]),
+    ]),
+    create("code", [["style:display", () => show.value ? "" : "none"]], [
+      code.split("\n").map((line) => create("pre", null, line)),
+    ]),
+  ])
 }

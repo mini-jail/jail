@@ -10,6 +10,7 @@ import { computed } from "space/signal"
  */
 export function For(props) {
   return computed(() => {
+    console.log(props.children)
     const array = Array.from(props.each)
     if (array.length === 0) {
       return props.fallback

@@ -1,10 +1,9 @@
-import { createElement } from "space/element"
+import { create } from "space/element"
 import { Page } from "../components/mod.ts"
 
 export default function About() {
-  return Page({ title: "about", description: "(signal? me? idk...)" })
-    .add(
-      createElement("h5")
-        .add("special thx to...actually me!"),
-    )
+  return Page(
+    { title: "about", description: "(signal? me? idk...)" },
+    create("h5", null, "special thx to...actually me!"),
+  )
 }

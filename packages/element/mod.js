@@ -1,300 +1,129 @@
-import { computed, effect, onCleanup, root, State } from "space/signal"
-/**
- * @typedef {typeof propType[keyof propType]} PropType
- */
+import { effect, onCleanup, root, State } from "space/signal"
 /**
  * @template Element, Type
  * @typedef {(elt: Element, value: Type) => void} Directive
  */
 /**
- * @typedef {"area" | "base" | "br" | "col" | "embed" | "hr" | "img" | "input" | "link" | "meta" | "param" | "source" | "track" | "wbr"} VoidElements
- */
-/**
- * @typedef {{ toString(): string } | State<{ toString(): string }> | (() => { toString(): string })} ToString
- */
-/**
- * @typedef {{ [Symbol.iterator](): Iterable<Child> }} IterableChild
- */
-/**
- * @typedef {(() => Child)} FunctionChild
- */
-/**
- * @typedef {{ render(): Child }} RenderableChild
- */
-/**
- * @typedef {State<Child>} StateChild
- */
-/**
- * @typedef {{ [key: string]: any }} ObjectChild
- */
-/**
- * @typedef {undefined | null | boolean | string | number | Node | Element | StateChild | IterableChild | FunctionChild | RenderableChild | ObjectChild} Child
- */
-/**
  * @template Type
- * @typedef {Type | null | undefined | { value: Type | null }} Value
+ * @typedef {?Type | State<?Type> | (() => ?Type)} $
  */
 /**
- * @template {{ [name: string]: any }} Type
- * @typedef {{ [Name in keyof Type]: Value<Type[Name]> }} Values
+ * @typedef {"prop" | "attr"} Modifier
  */
-const propType = /** @type {const} */ ({
-  ATTR: 0,
-  PROP: 1,
-  EVENT: 2,
-  STYLE: 3,
-  DIR: 4,
-})
-export class Application {
-  /**
-   * @protected
-   * @type {(() => void)?}
-   */
-  cleanup = null
-  /**
-   * @protected
-   * @type {ParentNode}
-   */
-  element
-  /**
-   * @param {ParentNode} element
-   */
-  constructor(element) {
-    this.element = element
-  }
-  /**
-   * @param {Child} child
-   */
-  render(child) {
-    this.unmount()
-    this.cleanup = mount(this.element, child) ?? null
-    return this
-  }
-  unmount() {
-    this.cleanup?.()
-  }
-}
+/**
+ * @typedef {"prevent" | "stop" | "stopImmediate" | "once"} EventModifier
+ */
+/**
+ * @typedef {[
+ *   name: `aria-${string}`,
+ *   value: $<string | number | boolean>,
+ * ]} AriaAttribute
+ */
+/**
+ * @typedef {[
+ *   name: `aria${Capitalize<string>}`,
+ *   value: $<string | number | boolean>,
+ * ]} AriaProperty
+ */
+/**
+ * @typedef {[
+ *   name: `style:${keyof CSSStyleDeclaration & string}`,
+ *   value: $<string>,
+ * ]} StyleAttribute
+ */
+/**
+ * @typedef {[
+ *   name: "children",
+ *   child: Child,
+ *   ...children: Child[],
+ * ]} ChildrenAttribute
+ */
+/**
+ * @typedef {[
+ *   name: "id" | "class" | "className" | "slot",
+ *   value: $<string>,
+ *   ...args: Modifier[],
+ * ]} StringAttribute
+ */
+/**
+ * @typedef {[
+ *   name: string,
+ *   value: $<string | number | boolean>,
+ *   ...args: Modifier[],
+ * ]} UnknownAttribute
+ */
+/**
+ * @template Element
+ * @typedef {[
+ *   type: `on:${keyof GlobalEventHandlersEventMap}`,
+ *   listener: (event: Event & { target: Element }) => void,
+ *   ...args: EventModifier[]
+ * ]} GlobalEventAttribute
+ */
+/**
+ * @template Element
+ * @typedef {[
+ *   type: `on:${string}`,
+ *   listener: (event: Event & { target: Element }) => void,
+ *   ...args: EventModifier[]
+ * ]} EventAttribute
+ */
+/**
+ * @template Element, Type
+ * @typedef {[
+ *   directive: Directive<Element, Type>,
+ *   value: Type,
+ * ]} DirectiveAttribute
+ */
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
+ * @typedef {StringAttribute|
+ *           AriaAttribute |
+ *           AriaProperty |
+ *           StyleAttribute |
+ *           ChildrenAttribute |
+ *           GlobalEventAttribute<HTMLElementTagNameMap[TagName]> |
+ *           EventAttribute<HTMLElementTagNameMap[TagName]> |
+ *           DirectiveAttribute<HTMLElementTagNameMap[TagName], object> |
+ *           UnknownAttribute
+ * } Attribute
  */
-export class ElementHTML {
-  /**
-   * @protected
-   * @type {TagName}
-   */
-  tagName
-  /**
-   * @protected
-   * @type {any[]?}
-   */
-  props = null
-  /**
-   * @protected
-   * @type {Child[]?}
-   */
-  children = null
-  /**
-   * @param {TagName} tagName
-   */
-  constructor(tagName) {
-    this.tagName = tagName
-  }
-  /**
-   * @template Type
-   * @param {Directive<HTMLElementTagNameMap[TagName], Type>} directive
-   * @param {Type} value
-   */
-  use(directive, value) {
-    if (this.props === null) {
-      this.props = []
-    }
-    updateProperty(this.props, propType.DIR, directive, value)
-    return this
-  }
-  /**
-   * @template {keyof GlobalEventHandlersEventMap} Name
-   * @overload
-   * @param {Name} name
-   * @param {((event: GlobalEventHandlersEventMap[Name]) => void)} eventListener
-   * @return {this}
-   */
-  /**
-   * @overload
-   * @param {string} name
-   * @param {(event: Event) => void} eventListener
-   * @return {this}
-   */
-  /**
-   * @param {string} name
-   * @param {EventListener} eventListener
-   * @returns {this}
-   */
-  on(name, eventListener) {
-    if (this.props === null) {
-      this.props = []
-    }
-    updateProperty(this.props, propType.EVENT, name, eventListener)
-    return this
-  }
-  /**
-   * @param {string} name
-   * @param {Value<ToString>} value
-   */
-  attribute(name, value) {
-    if (this.props === null) {
-      this.props = []
-    }
-    updateProperty(this.props, propType.ATTR, name, value)
-    return this
-  }
-  /**
-   * @param {Values<{ [name: string]: string }>} attributes
-   */
-  attributes(attributes) {
-    for (const name in attributes) {
-      this.attribute(name, attributes[name])
-    }
-    return this
-  }
-  /**
-   * @param {string} name
-   * @param {Value<unknown>} value
-   */
-  property(name, value) {
-    if (this.props === null) {
-      this.props = []
-    }
-    updateProperty(this.props, propType.PROP, name, value)
-    return this
-  }
-  /**
-   * @param {Values<{ [name: string]: unknown }>} properties
-   */
-  properties(properties) {
-    for (const name in properties) {
-      this.property(name, properties[name])
-    }
-    return this
-  }
-  /**
-   * @param {string} name
-   * @param {Value<ToString>} value
-   */
-  style(name, value) {
-    if (this.props === null) {
-      this.props = []
-    }
-    updateProperty(this.props, propType.STYLE, name, value)
-    return this
-  }
-  /**
-   * @param {Values<{ [name: string]: string }>} styles
-   */
-  styles(styles) {
-    for (const name in styles) {
-      this.style(name, styles[name])
-    }
-    return this
-  }
-  /**
-   * @param {...Child} children
-   */
-  add(...children) {
-    if (this.children === null) {
-      this.children = []
-    }
-    this.children.push(...children)
-    return this
-  }
-  /**
-   * @returns {HTMLElementTagNameMap[TagName]}
-   */
-  render() {
-    const elt = document.createElement(this.tagName)
-    while (this.props?.length) {
-      const value = this.props.pop()
-      const nameOrDir = this.props.pop()
-      const type = /** @type {PropType} */ (this.props.pop())
-      if (type === propType.EVENT) {
-        elt.addEventListener(nameOrDir, value)
-      } else if (type === propType.DIR) {
-        effect(() => nameOrDir(elt, value))
-      } else if (isResolvable(value)) {
-        effect(() => setProperty(elt, type, nameOrDir, resolve(value)))
-      } else {
-        setProperty(elt, type, nameOrDir, value)
-      }
-    }
-    if (this.children !== null) {
-      elt.append(...render(false, this.children))
-    }
-    this.props = null
-    this.children = null
-    return elt
-  }
-}
 /**
- * @template {PropType} Type
- * @param {Element} elt
- * @param {Type} type
- * @param {string} name
- * @param {any} value
+ * @typedef {EventListener & { [name: string]: boolean }} ModifiedEventListener
  */
-function setProperty(elt, type, name, value) {
-  if (type === propType.ATTR) {
-    if (value == null) {
-      elt.removeAttribute(name)
-    } else {
-      elt.setAttribute(name, String(value))
-    }
-  } else if (type === propType.PROP) {
-    elt[name] = value
-  } else if (type === propType.STYLE) {
-    elt["style"][name] = value ?? null
-  }
-}
 /**
- * @template {PropType} Type
- * @param {any[]} props
- * @param {Type} type
- * @param {string | Directive<any, any>} name
- * @param {Type extends 2 ? EventListener : unknown} value
+ * @typedef {null | ?undefined | string | number | boolean | Node | { value: Child } | (() => Child) | { [Symbol.iterator](): Iterable<Child> }} Child
  */
-function updateProperty(props, type, name, value) {
-  let i = props.length, _name, _type
-  while (i--) {
-    _name = props[--i]
-    _type = props[--i]
-    if (_name === name && _type === type) {
-      props[i + 2] = value
-      return
-    }
-  }
-  props.push(type, name, value)
-}
 /**
- * @param {unknown} value
- * @returns {value is State | Function}
+ * @type {{ [type: string]: true | undefined }}
  */
-function isResolvable(value) {
-  return value instanceof State ||
-    (typeof value === "function" && value.length === 0)
-}
+const listenerMap = {}
+/**
+ * @type {WeakMap<EventTarget, { [type: string]: Set<ModifiedEventListener> }>}
+ */
+const targetListeners = new WeakMap()
 /**
  * @param {unknown} value
  */
 function resolve(value) {
-  if (typeof value === "function" && value.length === 0) {
+  if (typeof value === "function") {
     return value()
   }
   return value instanceof State ? value.value : value
 }
 /**
- * @param {boolean} immediate
- * @param  {...any} children
+ * @param {unknown} value
+ * @returns {value is (() => any) | State}
+ */
+function resolvable(value) {
+  return value instanceof State ||
+    (typeof value === "function" && value.length === 0)
+}
+/**
+ * @param  {...Child} children
  * @returns {Generator<ChildNode | string>}
  */
-export function* render(immediate, ...children) {
+export function* render(...children) {
   for (const child of children) {
     if (child == null || typeof child === "boolean") {
       continue
@@ -302,27 +131,35 @@ export function* render(immediate, ...children) {
       yield child + ""
     } else if (child instanceof Node) {
       yield /** @type {ChildNode} */ (child)
-    } else if (child instanceof ElementHTML) {
-      yield child.render()
-    } else if (isResolvable(child)) {
-      if (immediate) {
-        yield* render(immediate, resolve(child))
-      } else {
-        const before = new Text()
-        mount(null, child, before)
-        yield before
-      }
-    } else if (Symbol.iterator in child) {
-      yield* render(immediate, ...child)
+    } else if (resolvable(child)) {
+      const before = new Text()
+      mount(null, child, before)
+      yield before
+    } else if (child[Symbol.iterator]) {
+      yield* render(...child[Symbol.iterator]())
     } else {
-      yield String(child)
+      console.info(`unknown child type "${String(child)}"`)
     }
   }
 }
+
 /**
- * @param {Node | undefined | null} targetNode
- * @param {Child} child
- * @param {ChildNode | undefined | null} [before]
+ * @overload
+ * @param {Node} targetNode
+ * @param {unknown} child
+ * @returns {() => void}
+ */
+/**
+ * @overload
+ * @param {Node | null} targetNode
+ * @param {unknown} child
+ * @param {ChildNode} [before]
+ * @returns {() => void}
+ */
+/**
+ * @param {Node | null} targetNode
+ * @param {unknown} child
+ * @param {ChildNode} [before]
  * @returns {(() => void) | void}
  */
 export function mount(targetNode, child, before) {
@@ -333,10 +170,10 @@ export function mount(targetNode, child, before) {
     let children = null
     effect(() => {
       children = reconcile(
-        targetNode ?? before?.parentElement,
-        before,
+        targetNode ?? before?.parentElement ?? null,
+        before ?? null,
         children,
-        Array.from(render(true, resolve(child))),
+        Array.from(render(resolve(child))),
       )
     })
     onCleanup(() => {
@@ -344,15 +181,16 @@ export function mount(targetNode, child, before) {
       while (children?.length) {
         children.pop()?.remove()
       }
+      children = null
     })
     return cleanup
   })
 }
 /**
- * @param {Node | null | undefined} parentNode
- * @param {ChildNode | null | undefined} before
- * @param {ChildNode[] | null | undefined} children
- * @param {(ChildNode | string)[] | null | undefined} nodes
+ * @param {Node | null} parentNode
+ * @param {ChildNode | null} before
+ * @param {ChildNode[] | null} children
+ * @param {(ChildNode | string)[] | null} nodes
  * @returns {ChildNode[] | null}
  */
 function reconcile(parentNode, before, children, nodes) {
@@ -379,7 +217,7 @@ function reconcile(parentNode, before, children, nodes) {
       if (typeof nodes[i] === "string") {
         nodes[i] = new Text(nodes[i])
       }
-      parentNode?.insertBefore(nodes[i], child?.nextSibling ?? before ?? null)
+      parentNode?.insertBefore(nodes[i], child?.nextSibling ?? before)
     }
   })
   while (children?.length) {
@@ -389,111 +227,145 @@ function reconcile(parentNode, before, children, nodes) {
 }
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
- * @param {TagName} tagName
- * @returns {ElementHTML<TagName>}
- */
-export function createElement(tagName) {
-  return new ElementHTML(tagName)
-}
-/**
- * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
- * @param {TagName} tagName
- * @returns {ElementHTML<TagName>}
- */
-/**
- * @template {keyof HTMLElementTagNameMap} TagName
- * @overload
- * @param {TagName} tagName
- * @param {Values<{ [name: string]: unknown }>} props
- * @returns {ElementHTML<TagName>}
- */
-/**
- * @template {keyof HTMLElementTagNameMap} TagName
- * @overload
- * @param {TagName} tagName
- * @param {Child[]} children
- * @returns {ElementHTML<TagName>}
- */
-/**
- * @template {keyof HTMLElementTagNameMap} TagName
- * @overload
- * @param {TagName} tagName
- * @param {Values<{ [name: string]: unknown }>?} [props]
+ * @param {TagName} type
+ * @param {Attribute<TagName>[]?} [attributes]
  * @param {...Child} children
- * @returns {ElementHTML<TagName>}
+ * @returns {HTMLElementTagNameMap[TagName]}
  */
-export function h(type, props, ...children) {
-  const elt = new ElementHTML(type)
-  if (Array.isArray(props)) {
-    elt.add(...props)
-  } else if (props) {
-    elt.properties(props)
+/**
+ * @template {(...args: any[]) => any} Component
+ * @overload
+ * @param {Component} component
+ * @param {...Parameters<Component>} args
+ * @returns {Generator<ChildNode | string>}
+ */
+/**
+ * @param {keyof HTMLElementTagNameMap | ((...args: any[]) => any)} type
+ * @param {...any} args
+ */
+export function create(type, ...args) {
+  if (typeof type === "function") {
+    return root(() => render(type(...args)))
   }
-  if (children.length) {
-    elt.add(...children)
+  const elt = document.createElement(type)
+  if (args.length) {
+    const [attributes, ...children] = args
+    if (attributes) {
+      setAttributes(elt, attributes, children)
+    }
+    if (children.length) {
+      elt.append(...render(...children))
+    }
   }
   return elt
 }
 /**
- * @param {ParentNode} element
- * @returns {Application}
+ * @param {HTMLElement} elt
+ * @param {Attribute<any>[]} attributes
+ * @param {any[]} children
  */
-export function createApp(element) {
-  return new Application(element)
+function setAttributes(elt, attributes, children) {
+  for (const [name, value, ...args] of attributes) {
+    if (typeof name === "function") {
+      effect(() => name(elt, value))
+    } else if (name === "children") {
+      children.push(value, ...args)
+    } else if (name.startsWith("on:")) {
+      addListenener(elt, name, /** @type {any} */ (value), args)
+    } else if (resolvable(value)) {
+      effect(() => setAttribute(elt, name, resolve(value), args))
+    } else {
+      setAttribute(elt, name, value, args)
+    }
+  }
 }
 /**
- * @template {keyof HTMLElementTagNameMap} TagName
- * @param {TagName} tagName
- * @param {{ [name: string]: any }?} [props]
- * @param  {...any} children
+ * @param {Event} event
  */
-export function element(tagName, props, ...children) {
-  const elt = document.createElement(tagName)
-  if (props) {
-    for (const name in props) {
-      const prefix = name[0]
-      if (prefix === "@") {
-        elt.addEventListener(name.slice(1), props[name])
-      } else if (prefix === ".") {
-        const prop = name.slice(1)
-        if (isResolvable(props[name])) {
-          effect(() => {
-            elt[prop] = resolve(props[name])
-          })
-        } else {
-          elt[prop] = props[name]
+function eventListener(event) {
+  let target = event.target
+  while (target !== null) {
+    const listeners = targetListeners.get(target)?.[event.type]
+    if (listeners) {
+      for (const listener of listeners) {
+        if (listener.prevent) {
+          event.preventDefault()
         }
-      } else if (prefix === ":") {
-        const prop = name.slice(1)
-        if (isResolvable(props[name])) {
-          effect(() => {
-            elt.setAttribute(prop, String(resolve(props[name])))
-          })
-        } else {
-          elt.setAttribute(prop, String(props[name]))
+        if (listener.stop) {
+          event.stopPropagation()
         }
-      } else if (name in elt) {
-        if (isResolvable(props[name])) {
-          effect(() => {
-            elt[name] = resolve(props[name])
-          })
-        } else {
-          elt[name] = props[name]
+        if (listener.stopImmediate) {
+          event.stopImmediatePropagation()
         }
-      } else {
-        if (isResolvable(props[name])) {
-          effect(() => {
-            elt.setAttribute(name, String(resolve(props[name])))
-          })
-        } else {
-          elt.setAttribute(name, String(props[name]))
+        listener(event)
+        if (listener.once) {
+          listeners.delete(listener)
+        }
+        if (listener.stopImmediate) {
+          return
         }
       }
     }
+    target = target["parentNode"]
   }
-  if (children.length) {
-    elt.append(...render(false, children))
+}
+
+/**
+ * @param {HTMLElement} elt
+ * @param {string} name
+ * @param {ModifiedEventListener} listener
+ * @param {any[] | undefined | null} [args]
+ */
+function addListenener(elt, name, listener, args) {
+  const type = name.slice(3)
+  let listeners = targetListeners.get(elt)
+  if (listeners === undefined) {
+    targetListeners.set(elt, listeners = {})
   }
-  return elt
+  if (listeners[type] === undefined) {
+    listeners[type] = new Set()
+  }
+  listeners[type].add(Object.assign(listener, {
+    once: hasArg(args, "once"),
+    prevent: hasArg(args, "prevent"),
+    stop: hasArg(args, "stop"),
+    stopImmediate: hasArg(args, "stopImmediate"),
+  }))
+  if (listenerMap[type] === undefined) {
+    listenerMap[type] = true
+    addEventListener(type, eventListener)
+  }
+}
+/**
+ * @param {HTMLElement} elt
+ * @param {string} name
+ * @param {any} value
+ * @param {any[] | null | undefined} [args]
+ */
+function setAttribute(elt, name, value, args) {
+  if (name.startsWith("style:")) {
+    elt.style[name.slice(6)] = value ?? null
+    return
+  }
+  const isProp = hasArg(args, "prop") || name in elt
+  if (isProp) {
+    elt[name] = value
+  } else {
+    if (value == null) {
+      elt.removeAttribute(name)
+    } else {
+      elt.setAttribute(name, String(value))
+    }
+  }
+}
+/**
+ * @param {any[] | undefined | null} args
+ * @param {any} arg
+ */
+function hasArg(args, arg) {
+  if (args == null) {
+    return false
+  }
+  return args.includes(arg)
 }

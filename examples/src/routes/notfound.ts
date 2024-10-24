@@ -9,6 +9,8 @@ export default function NotFound() {
       document.body.style.backgroundColor = backgroundColor
     })
   })
-  return Page({ title: "Page not found :(", description: "(ha-ha!)" })
-    .add(Paragraph`There is no content for "${location.pathname}".`)
+  return Page(
+    { title: "Page not found :(", description: "(ha-ha!)" },
+    Paragraph`There is no content for "${location.pathname}".`,
+  )
 }

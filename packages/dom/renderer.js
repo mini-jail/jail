@@ -1,7 +1,6 @@
-import { Computed, effect, onCleanup, root, State } from "space/signal"
+import { effect, onCleanup, root, State } from "space/signal"
 import { getTree } from "./compiler.js"
 
-const bindingTypes = { ".": "property", ":": "attribute", "@": "event" }
 const nameRE = /(?<t>[.:@])?(?<n>[^.:]+)(?::(?<a>[^.:]+))?(?:.(?<m>\S+)*)?/
 
 /**
@@ -13,25 +12,19 @@ const nameRE = /(?<t>[.:@])?(?<n>[^.:]+)(?::(?<a>[^.:]+))?(?:.(?<m>\S+)*)?/
 function* renderDOM(child, values, svg) {
   if (child == null) {
     return
-  }
-  if (typeof child === "string") {
-    return yield child
-  }
-  if (typeof child === "number") {
-    if (isResolvable(values[child])) {
-      const before = new Text()
-      mount(null, values[child], before)
-      return yield before
-    }
-    return yield* render(false, values[child])
-  }
-  if (Symbol.iterator in child) {
+  } else if (typeof child === "string") {
+    yield child
+  } else if (typeof child === "number") {
+    const before = new Text()
+    mount(null, values[child], before)
+    yield before
+  } else if (Symbol.iterator in child) {
     for (const subChild of child) {
       yield* renderDOM(subChild, values, svg)
     }
-    return
+  } else {
+    yield* render(createElement(child, values, svg))
   }
-  yield* render(false, createElement(child, values, svg))
 }
 
 /**
@@ -68,7 +61,7 @@ function createElement(tree, values, svg) {
  * @param {boolean} svg
  */
 function createComponent(component, tree, values, svg) {
-  const children = [], props = { children }
+  const children = [], props = {}
   if (tree.props) {
     for (const name in tree.props) {
       const type = tree.props[name]
@@ -76,13 +69,13 @@ function createComponent(component, tree, values, svg) {
       if (name === "...") {
         for (const key in value) {
           if (key === "children") {
-            children.push(...render(false, value))
+            children.push(value)
           } else {
             props[key] = value[key]
           }
         }
       } else if (name === "children") {
-        children.push(...render(false, value))
+        children.push(value)
       } else {
         props[name] = value
       }
@@ -91,30 +84,75 @@ function createComponent(component, tree, values, svg) {
   if (tree.children !== null) {
     children.push(...renderDOM(tree.children, values, svg))
   }
-  return component(props)
+  return component({
+    ...props,
+    get children() {
+      return Array.from(render(...children))
+    },
+  })
 }
 
 /**
- * @param {string} key
- * @param {any} value
- * @returns {import("./mod.js").Binding<any>}
+ * @template [Type = any]
  */
-function createBinding(key, value) {
-  const groups = nameRE.exec(key)?.groups
-  if (!groups) {
-    throw new TypeError(`"${key}" does't match "${nameRE}"`)
+class Binding {
+  static shortcutTypes = { ".": "property", ":": "attribute", "@": "event" }
+  static types = { style: "style" }
+  /**
+   * @readonly
+   * @type {"property" | "attribute" | "style" | "event" | "auto"}
+   */
+  type
+  /**
+   * @readonly
+   * @type {string}
+   */
+  name
+  /**
+   * @readonly
+   * @type {string?}
+   */
+  arg
+  /**
+   * @private
+   * @readonly
+   * @type {Type}
+   */
+  rawValue
+  /**
+   * @private
+   * @readonly
+   * @type {string?}
+   */
+  rawModifiers
+  /**
+   * @param {string} key
+   * @param {Type} value
+   */
+  constructor(key, value) {
+    const groups = nameRE.exec(key)?.groups
+    if (!groups) {
+      throw new TypeError(`"${key}" does't match "${nameRE}"`)
+    }
+    this.type = Binding.shortcutTypes[groups.t] ??
+      Binding.types[groups.n] ??
+      "auto"
+    this.name = groups.n
+    this.arg = groups.arg ?? null
+    this.rawModifiers = groups.m ?? null
+    this.rawValue = value
   }
-  return {
-    type: bindingTypes[groups.t] ?? "auto",
-    name: groups.n,
-    arg: groups.a ?? null,
-    modifiers: groups.m?.split(".").reduce((mods, key) => {
+  /**
+   * @type {{ [name: string]: true | undefined}?}
+   */
+  get modifiers() {
+    return this.rawModifiers?.split(".").reduce((mods, key) => {
       mods[key] = true
       return mods
-    }, {}) ?? null,
-    get value() {
-      return value instanceof State ? value.value : value
-    },
+    }, {}) ?? null
+  }
+  get value() {
+    return resolve(this.rawValue)
   }
 }
 
@@ -133,7 +171,7 @@ function setProperties(elt, props, values, svg) {
     } else if (name === "children") {
       elt.append(...renderDOM(value, values, svg))
     } else {
-      const binding = createBinding(name, value)
+      const binding = new Binding(name, value)
       if (value instanceof State) {
         effect(() => setProperty(elt, binding))
       } else {
@@ -144,10 +182,12 @@ function setProperties(elt, props, values, svg) {
 }
 
 /**
- * @type {{ [name: string]: (elt: HTMLElement, binding: import("space/dom").Binding<any>) => void }}
+ * @param {HTMLElement} elt
+ * @param {Binding} binding
  */
-const customProperties = {
-  style(elt, { arg, value }) {
+function setProperty(elt, binding) {
+  const { modifiers, name, type, value, arg } = binding
+  if (type === "style") {
     if (arg) {
       elt.style[arg] = value ?? null
     } else if (value != null && typeof value === "object") {
@@ -155,24 +195,7 @@ const customProperties = {
     } else {
       elt.style.cssText = value + ""
     }
-  },
-  textContent(elt, binding) {
-    if (elt["__textContent"] === undefined) {
-      elt["__textContent"] = new Text()
-      elt.prepend(elt["__textContent"])
-    }
-    elt["__textContent"].data = binding.value + ""
-  },
-}
-
-/**
- * @param {HTMLElement} elt
- * @param {import("./mod.js").Binding<any>} binding
- */
-function setProperty(elt, binding) {
-  const { modifiers, name, type, value } = binding
-  if (name in customProperties) {
-    return customProperties[name](elt, binding)
+    return
   }
   if (type === "property") {
     elt[name] = value
@@ -242,11 +265,27 @@ export function svg(statics, ...values) {
 }
 
 /**
- * @param {boolean} immediate
+ * @param {unknown} value
+ * @returns {value is State | Function}
+ */
+function isResolvable(value) {
+  return value instanceof State ||
+    (typeof value === "function" && value.length === 0)
+}
+/**
+ * @param {unknown} value
+ */
+function resolve(value) {
+  if (typeof value === "function" && value.length === 0) {
+    return value()
+  }
+  return value instanceof State ? value.value : value
+}
+/**
  * @param  {...any} children
  * @returns {Generator<ChildNode | string>}
  */
-export function* render(immediate, ...children) {
+export function* render(...children) {
   for (const child of children) {
     if (child == null || typeof child === "boolean") {
       continue
@@ -255,15 +294,11 @@ export function* render(immediate, ...children) {
     } else if (child instanceof Node) {
       yield /** @type {ChildNode} */ (child)
     } else if (isResolvable(child)) {
-      if (immediate) {
-        yield* render(immediate, resolve(child))
-      } else {
-        const before = new Text()
-        mount(null, child, before)
-        yield before
-      }
+      const before = new Text()
+      mount(null, child, before)
+      yield before
     } else if (Symbol.iterator in child) {
-      yield* render(immediate, ...child)
+      yield* render(...child)
     } else {
       yield String(child)
     }
@@ -273,30 +308,38 @@ export function* render(immediate, ...children) {
  * @param {Node | undefined | null} targetNode
  * @param {any} child
  * @param {ChildNode | undefined | null} [before]
+ * @returns {(() => void) | void}
  */
 export function mount(targetNode, child, before) {
-  root(() => {
-    const children = new Computed(() => {
-      const nodes = reconcile(
-        targetNode ?? before?.parentElement,
-        before,
-        children.value,
-        Array.from(render(true, child)),
+  return root((cleanup) => {
+    /**
+     * @type {ChildNode[]?}
+     */
+    let children = null
+    effect(() => {
+      children = reconcile(
+        targetNode ?? before?.parentElement ?? null,
+        before ?? null,
+        children,
+        Array.from(render(resolve(child))),
       )
-      return nodes
     })
     onCleanup(() => {
       before?.remove()
-      children.value?.forEach((child) => child.remove())
+      while (children?.length) {
+        children.pop()?.remove()
+      }
+      before = null
+      children = null
     })
+    return cleanup
   })
 }
-
 /**
- * @param {Node | null | undefined} parentNode
- * @param {ChildNode | null | undefined} before
- * @param {ChildNode[] | null | undefined} children
- * @param {(ChildNode | string)[] | null | undefined} nodes
+ * @param {Node | null} parentNode
+ * @param {ChildNode | null} before
+ * @param {ChildNode[] | null} children
+ * @param {(ChildNode | string)[] | null} nodes
  * @returns {ChildNode[] | null}
  */
 function reconcile(parentNode, before, children, nodes) {
@@ -323,27 +366,11 @@ function reconcile(parentNode, before, children, nodes) {
       if (typeof nodes[i] === "string") {
         nodes[i] = new Text(nodes[i])
       }
-      parentNode?.insertBefore(nodes[i], child?.nextSibling ?? before ?? null)
+      parentNode?.insertBefore(nodes[i], child?.nextSibling ?? before)
     }
   })
   while (children?.length) {
     children.pop()?.remove()
   }
   return nodes?.length ? /** @type {ChildNode[]} */ (nodes) : null
-}
-
-/**
- * @param {any} data
- * @returns {data is State | (() => any)}
- */
-export function isResolvable(data) {
-  return typeof data === "function" || data instanceof State
-}
-
-/**
- * @param {any} data
- * @returns {any}
- */
-export function resolve(data) {
-  return typeof data === "function" ? data() : data?.value ?? data
 }

@@ -1,4 +1,4 @@
-import { effect, onCleanup, State } from "space/signal"
+import { computed, effect, onCleanup, state } from "space/signal"
 import { Context } from "space/signal/context"
 /**
  * @typedef {{
@@ -6,11 +6,11 @@ import { Context } from "space/signal/context"
  *   params?: { [param: string]: string | undefined }
  * }} RouterContext
  */
-export const path = new State("")
 /**
  * @type {Context<RouterContext>}
  */
 export const routerContext = new Context()
+export const path = state("")
 const routeTypeHandlerMap = {
   hash() {
     effect(() => {
@@ -73,61 +73,27 @@ function hashChangeListener() {
   path.value = hash()
 }
 /**
- * @extends {State<import("space/element").Child>}
+ * @template Child
+ * @param {keyof typeof routeTypeHandlerMap} type
+ * @param {[path: string, child: () => Child][]} routeArray
  */
-export class Router extends State {
+export function Router(type, routeArray) {
   /**
-   * @private
-   * @type {{ matcher: RegExp, child: import("space/element").FunctionChild }[]}
+   * @type {[ matcher: RegExp, child: () => Child][]}
    */
-  routes = []
-  /**
-   * @private
-   * @type {import("space/element").FunctionChild?}
-   */
-  fallbackRoute = null
-  /**
-   * @param {"hash" | "pathname"} type
-   */
-  constructor(type) {
-    super()
-    routeTypeHandlerMap[type]()
-    onCleanup(() => this.routes.length = 0)
-    effect(() => {
-      const nextPath = path.value
-      const route = this.routes.find((route) => route.matcher.test(nextPath))
-      if (route) {
+  const routes = routeArray.map(([path, child]) => [createMatcher(path), child])
+  routeTypeHandlerMap[type]()
+  onCleanup(() => routes.length = 0)
+  return computed(() => {
+    const nextPath = path.value
+    for (const [matcher, child] of routes) {
+      if (matcher.test(nextPath)) {
         routerContext.provide({
           path: nextPath,
-          params: route.matcher.exec(nextPath)?.groups,
+          params: matcher.exec(nextPath)?.groups,
         })
-        super.value = route.child()
-        return
+        return child()
       }
-      super.value = this.fallbackRoute?.()
-    })
-  }
-  /**
-   * @param {string} path
-   * @param {import("space/element").FunctionChild} child
-   * @returns {this}
-   */
-  route(path, child) {
-    this.routes.push({ matcher: createMatcher(path), child })
-    return this
-  }
-  /**
-   * @param {import("space/element").FunctionChild} child
-   * @returns {this}
-   */
-  fallback(child) {
-    this.fallbackRoute = child
-    return this
-  }
-  /**
-   * @override
-   */
-  get value() {
-    return super.value
-  }
+    }
+  })
 }
