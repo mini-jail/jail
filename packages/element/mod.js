@@ -1,11 +1,7 @@
-import { effect, onCleanup, root, State } from "space/signal"
-/**
- * @template Element, Type
- * @typedef {(elt: Element, value: Type) => void} Directive
- */
+import { effect, onCleanup, root } from "space/signal"
 /**
  * @template Type
- * @typedef {?Type | State<?Type> | (() => ?Type)} $
+ * @typedef {?Type | (() => ?Type)} $
  */
 /**
  * @typedef {"prevent" | "stop" | "stopImmediate" | "once"} EventModifier
@@ -14,21 +10,18 @@ import { effect, onCleanup, root, State } from "space/signal"
  * @typedef {[
  *   name: `aria-${string}`,
  *   value: $<string | number | boolean>,
- *   ...args: never[]
  * ]} AriaAttribute
  */
 /**
  * @typedef {[
  *   name: `aria${Capitalize<string>}`,
  *   value: $<string | number | boolean>,
- *   ...args: never[]
  * ]} AriaProperty
  */
 /**
  * @typedef {[
  *   name: `style:${keyof CSSStyleDeclaration & string}`,
  *   value: $<string>,
- *   ...args: never[]
  * ]} StyleAttribute
  */
 /**
@@ -42,35 +35,30 @@ import { effect, onCleanup, root, State } from "space/signal"
  * @typedef {[
  *   name: "id" | "class" | "className" | "slot" | "lang" | "nonce" | "role" | "title",
  *   value: $<string>,
- *   ...args: never[]
  * ]} StringAttribute
  */
 /**
  * @typedef {[
  *   name: "hidden" | "inert" | "spellcheck" | "translate",
  *   value: $<boolean | "true" | "false">,
- *   ...args: never[]
  * ]} BooleanAttribute
  */
 /**
  * @typedef {[
  *   name: "tabIndex" | "tabindex",
  *   value: $<number | string>,
- *   ...args: never[]
  * ]} NumberAttribute
  */
 /**
  * @typedef {[
  *   name: `attr:${string}`,
  *   value: $<object>,
- *   ...args: never[]
  * ]} PrefixedAttribute
  */
 /**
  * @typedef {[
  *   name: `prop:${string}`,
  *   value: $<object>,
- *   ...args: never[]
  * ]} PrefixedProperty
  */
 /**
@@ -90,18 +78,15 @@ import { effect, onCleanup, root, State } from "space/signal"
  * ]} EventAttribute
  */
 /**
- * @template Element, Type
+ * @template Element
  * @typedef {[
- *   directive: Directive<Element, Type>,
- *   value: Type,
- *   ...args: never[]
+ *   directive: (elt: Element) => void,
  * ]} DirectiveAttribute
  */
 /**
  * @typedef {[
  *   name: string,
  *   value: $<object>,
- *   ...args: never[]
  * ]} UnknownAttribute
  */
 /**
@@ -115,7 +100,7 @@ import { effect, onCleanup, root, State } from "space/signal"
  *           ChildrenAttribute |
  *           GlobalEventAttribute<HTMLElementTagNameMap[TagName]> |
  *           EventAttribute<HTMLElementTagNameMap[TagName]> |
- *           DirectiveAttribute<HTMLElementTagNameMap[TagName], object> |
+ *           DirectiveAttribute<HTMLElementTagNameMap[TagName]> |
  *           PrefixedAttribute |
  *           PrefixedProperty |
  *           UnknownAttribute
@@ -140,18 +125,14 @@ const targetListeners = new WeakMap()
  * @param {unknown} value
  */
 function resolve(value) {
-  if (typeof value === "function") {
-    return value()
-  }
-  return value instanceof State ? value.value : value
+  return typeof value === "function" ? value() : value
 }
 /**
  * @param {unknown} value
- * @returns {value is (() => any) | State}
+ * @returns {value is (() => any)}
  */
 function resolvable(value) {
-  return value instanceof State ||
-    (typeof value === "function" && value.length === 0)
+  return typeof value === "function" && value.length === 0
 }
 /**
  * @param  {...Child} children
@@ -297,7 +278,7 @@ function assign(elt, attributes, ...children) {
   if (attributes) {
     for (const [name, value, ...args] of attributes) {
       if (typeof name === "function") {
-        effect(() => name(elt, value))
+        effect(() => name(elt))
       } else if (name === "children") {
         children.push(value, ...args)
       } else if (name.startsWith("on:")) {

@@ -40,10 +40,6 @@ export class Context {
  * @param {Type} defaultValue
  * @returns {Context<Type>}
  */
-/**
- * @param {unknown} [defaultValue]
- * @returns {Context<unknown>}
- */
 export function context(defaultValue) {
   return new Context(defaultValue)
 }

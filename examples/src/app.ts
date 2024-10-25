@@ -26,17 +26,17 @@ function Header() {
 
 function* App() {
   const animateProps = {
-    state: path,
+    signal: path,
     delay: 50,
     duration: 250,
-    fill: "both",
+    fill: <FillMode> "both",
     keyframes: [
       { opacity: 0, transform: "translateY(-10px)" },
       { opacity: 1, transform: "unset" },
     ],
   }
   yield Header()
-  yield create("main", [[animate, animateProps]], [
+  yield create("main", [[animate(animateProps)]], [
     Router("pathname", [
       ["/", Home],
       ["/counter", Counter],

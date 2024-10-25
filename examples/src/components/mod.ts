@@ -1,24 +1,25 @@
 import { type Child, create } from "space/element"
 import { Context } from "space/signal/context"
-import { computed, effect, onCleanup, State, state } from "space/signal"
+import { computed, effect, onCleanup, signal } from "space/signal"
 
 type TriangleProps = { x: number; y: number; target: number; size: number }
 type DotProps = { x: number; y: number; target: number }
 interface AnimateProps extends KeyframeAnimationOptions {
-  state?: State
+  signal?: () => void
   keyframes: Keyframe[]
 }
 interface PageProps {
   title: string
   description: string
 }
+const counterContext = new Context(signal(0))
 
-const counterContext = new Context({ value: 0 })
-
-export function animate(elt: HTMLElement, props: AnimateProps) {
-  const { keyframes, state, ...options } = props
-  state?.value
-  elt.animate(keyframes, options)
+export function animate(props: AnimateProps) {
+  return (elt: HTMLElement) => {
+    const { keyframes, signal, ...options } = props
+    signal?.()
+    elt.animate(keyframes, options)
+  }
 }
 
 export function Page(props: PageProps, ...children: Child[]) {
@@ -46,9 +47,9 @@ export function Anchor(href: string, ...children: Child[]) {
 
 function Dot({ x, y, target }: DotProps) {
   const counter = counterContext.inject()
-  const hover = state(false)
+  const hover = signal(false)
   const text = computed(() => {
-    return hover.value ? "*" + counter.value + "*" : counter.value + ""
+    return hover() ? "*" + counter() + "*" : counter() + ""
   })
   const cssText = `
     width: ${target}px;
@@ -62,9 +63,9 @@ function Dot({ x, y, target }: DotProps) {
   return create("div", [
     ["class", "sierpinski-dot"],
     ["style:cssText", cssText],
-    ["style:backgroundColor", () => hover.value ? "lightpink" : "white"],
-    ["on:mouseover", () => hover.value = true],
-    ["on:mouseout", () => hover.value = false],
+    ["style:backgroundColor", () => hover() ? "lightpink" : "white"],
+    ["on:mouseover", () => hover(true)],
+    ["on:mouseout", () => hover(false)],
   ], text)
 }
 
@@ -82,19 +83,19 @@ function* Triangle(
 
 export function SierpinskiTriangle() {
   let id: number, frameId: number
-  const elapsed = state(0)
-  const count = state(0)
+  const elapsed = signal(0)
+  const count = signal(0)
   const scale = computed(() => {
-    const e = (elapsed.value / 1000) % 10
+    const e = (elapsed() / 1000) % 10
     return (1 + (e > 5 ? 10 - e : e) / 10) / 2
   })
   counterContext.provide(count)
   effect(() => {
     console.log("Sierpinski is alive")
-    id = setInterval(() => count.value = (count.value % 10) + 1, 1000)
+    id = setInterval(() => count((count() % 10) + 1), 1000)
     const start = Date.now()
     const frame = () => {
-      elapsed.value = Date.now() - start
+      elapsed(Date.now() - start)
       frameId = requestAnimationFrame(frame)
     }
     frameId = requestAnimationFrame(frame)
@@ -106,6 +107,6 @@ export function SierpinskiTriangle() {
   })
   return create("div", [
     ["class", "sierpinski-wrapper"],
-    ["style:transform", () => `scale(${scale.value}) translateZ(0.1px)`],
+    ["style:transform", () => `scale(${scale()}) translateZ(0.1px)`],
   ], ...Triangle({ x: 0, y: 0, target: 750, size: 25 }))
 }

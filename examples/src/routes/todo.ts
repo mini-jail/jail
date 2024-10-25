@@ -1,4 +1,4 @@
-import { computed, state } from "space/signal"
+import { computed, signal } from "space/signal"
 import { create } from "space/element"
 import { Page } from "../components/mod.ts"
 
@@ -10,30 +10,30 @@ type ToDoItem = {
 
 let itemID = 0
 
-const list = state<ToDoItem[]>([
+const list = signal<ToDoItem[]>([
   { id: itemID++, done: true, text: "eat cornflakes without soymilk" },
   { id: itemID++, done: false, text: "buy soymilk" },
 ])
 
-function* List() {
-  if (list.value.length === 0) {
-    return yield "Nothing to do"
+function List() {
+  if (list().length === 0) {
+    return "Nothing to do"
   }
-  for (const item of list.value) {
-    yield Item(item)
-  }
+  return list().map(Item)
 }
 
 function Item(props: ToDoItem) {
   const deleteItem = () => {
-    list.value = list.value.filter((item) => item.id !== props.id)
+    list((items) => items.filter((item) => item.id !== props.id))
   }
   const toggleItem = () => {
-    const item = list.value.find((item) => item.id === props.id)
-    if (item) {
-      item.done = !item.done
-      list.value = list.value.slice()
-    }
+    list((items) => {
+      const item = items.find((item) => item.id === props.id)
+      if (item) {
+        item.done = !item.done
+      }
+      return items
+    })
   }
   return create("div", [["class", "todo-item"], ["id", "item_" + props.id]], [
     create("div", [
@@ -51,17 +51,19 @@ function Item(props: ToDoItem) {
 }
 
 export default function ToDo() {
-  const text = state("")
+  const text = signal("")
   const addItem = () => {
-    list.value = list.value.concat({
-      id: itemID++,
-      done: false,
-      text: text.value,
-    })
-    text.value = ""
+    list((items) =>
+      items.concat({
+        id: itemID++,
+        done: false,
+        text: text(),
+      })
+    )
+    text("")
   }
-  const length = computed(() => list.value.length)
-  const done = computed(() => list.value.filter((item) => item.done).length)
+  const length = computed(() => list().length)
+  const done = computed(() => list().filter((item) => item.done).length)
 
   return Page(
     {
@@ -76,7 +78,7 @@ export default function ToDo() {
           ["required", true],
           ["class", "todo_input"],
           ["value", text],
-          ["on:input", ({ target: { value } }) => text.value = value],
+          ["on:input", ({ target }) => text(target.value)],
         ]),
       ]),
       create("div", [["class", "todo-items"]], List),

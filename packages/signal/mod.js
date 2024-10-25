@@ -1,7 +1,19 @@
 /**
- * @type {WeakMap<State, Set<Node>>}
+ * @template Type
+ * @typedef {{
+ *   (): Type
+ *   (value: Type): void
+ *   (fn: (value: Type) => Type): void
+ * }} Signal
  */
-const stateMap = new WeakMap()
+/**
+ * @type {WeakMap<object, Set<Node>>}
+ */
+const targetMap = new WeakMap()
+/**
+ * @type {WeakMap<Node, object[]>}
+ */
+const nodeMap = new WeakMap()
 /**
  * @type {Set<Node>}
  */
@@ -12,114 +24,156 @@ let isRunning = false
  * @type {Node?}
  */
 let activeNode = null
-/**
- * @template [Type = any]
- */
-class Node {
-  /**
-   * @type {Type | undefined}
-   */
-  value
-  parentNode = activeNode
+function Node() {
+  this.value = undefined
+  this.parentNode = activeNode
   /**
    * @type {Node[]?}
    */
-  childNodes = null
-  /**
-   * @type {State[]?}
-   */
-  states = null
+  this.childNodes = null
   /**
    * @type {{ [key: string |  symbol]: any }?}
    */
-  context = null
+  this.context = null
   /**
    * @type {(() => void)[]?}
    */
-  cleanups = null
+  this.cleanups = null
   /**
-   * @type {((value: Type | undefined) => Type)?}
+   * @type {((value: unknown) => unknown)?}
    */
-  onupdate = null
-  constructor() {
-    if (activeNode) {
-      if (activeNode.childNodes === null) {
-        activeNode.childNodes = [this]
-      } else {
-        activeNode.childNodes.push(this)
-      }
+  this.onupdate = null
+  if (activeNode) {
+    if (activeNode.childNodes === null) {
+      activeNode.childNodes = [this]
+    } else {
+      activeNode.childNodes.push(this)
     }
   }
 }
 /**
- * @template [Type = any]
+ * @param {Node | null} node
+ * @param {string | symbol} key
+ * @returns {any}
  */
-export class State {
-  /**
-   * @protected
-   * @type {Type}
-   */
-  internalValue
-  /**
-   * @param {Type} [value]
-   */
-  constructor(value) {
-    this.internalValue = /** @type {Type} */ (value)
+function lookup(node, key) {
+  return node === null
+    ? undefined
+    : node.context !== null && key in node.context
+    ? node.context[key]
+    : lookup(node.parentNode, key)
+}
+/**
+ * @param {any} error
+ */
+function handleError(error) {
+  const errorFns = lookup(activeNode, errorKey)
+  if (!errorFns) {
+    return reportError(error)
   }
-  get value() {
-    if (activeNode?.onupdate) {
-      let nodes = stateMap.get(this)
-      if (nodes === undefined) {
-        stateMap.set(this, nodes = new Set())
-      }
-      nodes.add(activeNode)
-      if (activeNode.states === null) {
-        activeNode.states = [this]
-      } else if (!activeNode.states.includes(this)) {
-        activeNode.states.push(this)
-      }
-    }
-    return this.internalValue
+  errorFns.forEach((fn) => fn(error))
+}
+/**
+ * @param {Node} node
+ */
+function updateNode(node) {
+  cleanNode(node, false)
+  if (node.onupdate === null) {
+    return
   }
-  set value(value) {
-    this.internalValue = value
-    stateMap.get(this)?.forEach(addNodeToQueue)
+  const prevNode = activeNode
+  try {
+    activeNode = node
+    node.value = node.onupdate(node.value)
+  } catch (error) {
+    handleError(error)
+  } finally {
+    activeNode = prevNode
   }
 }
 /**
- * @template [Type = any]
- * @extends {State<Type>}
+ * @param {Node} node
  */
-class Computed extends State {
-  /**
-   * @param {() => Type} fn
-   */
-  constructor(fn) {
-    super()
-    effect(() => {
-      super.value = fn()
+function addNodeToQueue(node) {
+  nodeQueue.add(node)
+  if (isRunning === false) {
+    isRunning = true
+    queueMicrotask(() => {
+      nodeQueue.forEach(updateNode)
+      nodeQueue.clear()
+      isRunning = false
     })
   }
-  /**
-   * @override
-   */
-  get value() {
-    return super.value
+}
+/**
+ * @param {Node} node
+ * @param {boolean} [dispose]
+ */
+function cleanNode(node, dispose) {
+  const targets = nodeMap.get(node)
+  if (targets?.length) {
+    let target = targets.pop()
+    while (target) {
+      targetMap.get(target)?.delete(node)
+      target = targets.pop()
+    }
+  }
+  if (node.childNodes?.length) {
+    let childNode = node.childNodes.pop()
+    while (childNode) {
+      cleanNode(childNode, childNode.onupdate ? true : dispose)
+      childNode = node.childNodes.pop()
+    }
+  }
+  if (node.cleanups?.length) {
+    let cleanup = node.cleanups.pop()
+    while (cleanup) {
+      cleanup()
+      cleanup = node.cleanups.pop()
+    }
+  }
+  node.context = null
+  if (dispose) {
+    node.value = undefined
+    node.parentNode = null
+    node.childNodes = null
+    node.cleanups = null
+    node.onupdate = null
+    nodeMap.delete(node)
   }
 }
 /**
  * @template Type
- * @param {Type} [value]
+ * @overload
+ * @returns {Signal<Type | undefined>}
  */
-export function state(value) {
-  return new State(value)
+/**
+ * @template Type
+ * @overload
+ * @param {Type} value
+ * @returns {Signal<Type>}
+ */
+export function signal(value) {
+  return function Signal() {
+    if (arguments.length) {
+      value = typeof arguments[0] === "function"
+        ? arguments[0](value)
+        : arguments[0]
+      return push(Signal)
+    }
+    pull(Signal)
+    return value
+  }
 }
 /**
  * @template Type
  * @param {() => Type} fn
+ * @returns {() => Type}
  */
 export function computed(fn) {
-  return new Computed(fn)
+  const computed = signal()
+  effect(() => computed(fn()))
+  return () => computed()
 }
 /**
  * @overload
@@ -243,94 +297,25 @@ export function catchError(fn) {
   }
 }
 /**
- * @param {Node | null} node
- * @param {string | symbol} key
- * @returns {any}
+ * @param {object} target
  */
-function lookup(node, key) {
-  return node === null
-    ? undefined
-    : node.context !== null && key in node.context
-    ? node.context[key]
-    : lookup(node.parentNode, key)
-}
-/**
- * @param {any} error
- */
-function handleError(error) {
-  const errorFns = lookup(activeNode, errorKey)
-  if (!errorFns) {
-    return reportError(error)
-  }
-  for (const errorFn of errorFns) {
-    errorFn(error)
-  }
-}
-/**
- * @param {Node} node
- */
-function updateNode(node) {
-  cleanNode(node, false)
-  if (node.onupdate === null) {
-    return
-  }
-  const prevNode = activeNode
-  try {
-    activeNode = node
-    node.value = node.onupdate(node.value)
-  } catch (error) {
-    handleError(error)
-  } finally {
-    activeNode = prevNode
-  }
-}
-/**
- * @param {Node} node
- */
-function addNodeToQueue(node) {
-  nodeQueue.add(node)
-  if (isRunning === false) {
-    isRunning = true
-    queueMicrotask(() => {
-      nodeQueue.forEach(updateNode)
-      nodeQueue.clear()
-      isRunning = false
-    })
-  }
-}
-/**
- * @param {Node} node
- * @param {boolean} [dispose]
- */
-function cleanNode(node, dispose) {
-  if (node.states?.length) {
-    let state = node.states.pop()
-    while (state) {
-      stateMap.get(state)?.delete(node)
-      state = node.states.pop()
+export function pull(target) {
+  if (activeNode?.onupdate) {
+    let nodes = targetMap.get(target)
+    let targets = nodeMap.get(activeNode)
+    if (nodes === undefined) {
+      targetMap.set(target, nodes = new Set())
     }
-  }
-  if (node.childNodes?.length) {
-    let childNode = node.childNodes.pop()
-    while (childNode) {
-      cleanNode(childNode, childNode.onupdate ? true : dispose)
-      childNode = node.childNodes.pop()
+    if (targets === undefined) {
+      nodeMap.set(activeNode, targets = [])
     }
+    nodes.add(activeNode)
+    targets.push(target)
   }
-  if (node.cleanups?.length) {
-    let cleanup = node.cleanups.pop()
-    while (cleanup) {
-      cleanup()
-      cleanup = node.cleanups.pop()
-    }
-  }
-  node.context = null
-  if (dispose) {
-    node.value = undefined
-    node.parentNode = null
-    node.childNodes = null
-    node.cleanups = null
-    node.onupdate = null
-    node.states = null
-  }
+}
+/**
+ * @param {object} target
+ */
+export function push(target) {
+  targetMap.get(target)?.forEach(addNodeToQueue)
 }

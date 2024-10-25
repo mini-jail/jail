@@ -1,7 +1,6 @@
 {
   "imports": {
     "space/signal": "./packages/signal/mod.js",
-    "space/signal/rune": "./packages/signal-rune/mod.js",
     "space/signal/context": "./packages/signal-context/mod.js",
     "space/signal/reducer": "./packages/signal-reducer/mod.js",
     "space/signal/ressource": "./packages/signal-ressource/mod.js",

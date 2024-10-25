@@ -1,4 +1,4 @@
-import { computed, effect, onCleanup, state } from "space/signal"
+import { computed, effect, onCleanup, signal } from "space/signal"
 import { Context } from "space/signal/context"
 /**
  * @typedef {{
@@ -10,11 +10,11 @@ import { Context } from "space/signal/context"
  * @type {Context<RouterContext>}
  */
 export const routerContext = new Context()
-export const path = state("")
+export const path = signal("")
 const routeTypeHandlerMap = {
   hash() {
     effect(() => {
-      path.value = hash()
+      path(hash())
       addEventListener("hashchange", hashChangeListener)
     })
     onCleanup(() => {
@@ -31,7 +31,7 @@ const routeTypeHandlerMap = {
         if (pathname?.startsWith("/")) {
           event.preventDefault()
           if (pathname !== url.pathname) {
-            path.value = pathname
+            path(pathname)
             url.pathname = pathname
             return history.pushState(null, "", url)
           }
@@ -40,7 +40,7 @@ const routeTypeHandlerMap = {
       }
     }
     effect(() => {
-      path.value = location.pathname
+      path(location.pathname)
       addEventListener("click", clickListener)
       addEventListener("popstate", popStateListener)
     })
@@ -64,13 +64,13 @@ function createMatcher(path) {
  */
 function popStateListener(event) {
   event.preventDefault()
-  path.value = location.pathname
+  path(location.pathname)
 }
 function hash() {
   return location.hash.slice(1) || "/"
 }
 function hashChangeListener() {
-  path.value = hash()
+  path(hash())
 }
 /**
  * @template Child
@@ -85,7 +85,7 @@ export function Router(type, routeArray) {
   routeTypeHandlerMap[type]()
   onCleanup(() => routes.length = 0)
   return computed(() => {
-    const nextPath = path.value
+    const nextPath = path()
     for (const [matcher, child] of routes) {
       if (matcher.test(nextPath)) {
         routerContext.provide({
