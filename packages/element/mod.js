@@ -108,7 +108,9 @@ import { effect, onCleanup, root } from "space/signal"
  */
 /**
  * @template Target
- * @typedef {((this: Target, event: Event & { target: Target }) => void) & { [name: string]: boolean }} ModifiedEventListener
+ * @typedef {((event: Event & { target: Target }) => void) &
+ *           { [name: string]: boolean }
+ * } Listener
  */
 /**
  * @typedef {null | ?undefined | string | number | boolean | Node | { value: Child } | (() => Child) | { [Symbol.iterator](): Iterable<Child> }} Child
@@ -118,7 +120,7 @@ import { effect, onCleanup, root } from "space/signal"
  */
 const listenerMap = {}
 /**
- * @type {WeakMap<EventTarget, { [type: string]: Set<ModifiedEventListener<EventTarget>> }>}
+ * @type {WeakMap<EventTarget, { [type: string]: Set<Listener<EventTarget>> }>}
  */
 const targetListeners = new WeakMap()
 /**
@@ -282,11 +284,11 @@ function assign(elt, attributes, ...children) {
       } else if (name === "children") {
         children.push(value, ...args)
       } else if (name.startsWith("on:")) {
-        addListenener(elt, name, value, args)
+        listen(elt, name, value, args)
       } else if (resolvable(value)) {
-        effect(() => setAttribute(elt, name, resolve(value)))
+        effect(() => attribute(elt, name, resolve(value)))
       } else {
-        setAttribute(elt, name, value)
+        attribute(elt, name, value)
       }
     }
   }
@@ -295,7 +297,7 @@ function assign(elt, attributes, ...children) {
   }
 }
 /**
- * @param {object} event
+ * @param {Event & { target: any }} event
  */
 function eventListener(event) {
   let target = event.target
@@ -303,54 +305,48 @@ function eventListener(event) {
     const listeners = targetListeners.get(target)?.[event.type]
     if (listeners) {
       for (const listener of listeners) {
-        try {
-          if (listener.prevent) {
-            event.preventDefault()
-          }
-          if (listener.stop) {
-            event.stopPropagation()
-          }
-          if (listener.stopImmediate) {
-            event.stopImmediatePropagation()
-          }
-          listener.call(target, event)
-        } catch (error) {
-          console.error(listener, error)
-        } finally {
-          if (listener.once) {
-            listeners.delete(listener)
-          }
+        if (listener.prevent) {
+          event.preventDefault()
+        }
+        if (listener.stop) {
+          event.stopPropagation()
+        }
+        if (listener.stopImmediate) {
+          event.stopImmediatePropagation()
+        }
+        listener(event)
+        if (listener.once) {
+          listeners.delete(listener)
         }
         if (listener.stopImmediate) {
           return
         }
       }
     }
-    target = target["parentNode"]
+    target = target.parentNode
   }
 }
 
 /**
  * @param {EventTarget} target
  * @param {string} name
- * @param {ModifiedEventListener<EventTarget>} listener
+ * @param {Listener<EventTarget>} listener
  * @param {any[] | undefined | null} [args]
  */
-function addListenener(target, name, listener, args) {
-  const type = name.slice(3)
+function listen(target, name, listener, args) {
+  listener.once = hasArg(args, "once")
+  listener.prevent = hasArg(args, "prevent")
+  listener.stop = hasArg(args, "stop")
+  listener.stopImmediate = hasArg(args, "stopImmediate")
   let listeners = targetListeners.get(target)
   if (listeners === undefined) {
     targetListeners.set(target, listeners = {})
   }
+  const type = name.slice(3)
   if (listeners[type] === undefined) {
     listeners[type] = new Set()
   }
-  listeners[type].add(Object.assign(listener, {
-    once: hasArg(args, "once"),
-    prevent: hasArg(args, "prevent"),
-    stop: hasArg(args, "stop"),
-    stopImmediate: hasArg(args, "stopImmediate"),
-  }))
+  listeners[type].add(listener)
   if (listenerMap[type] === undefined) {
     listenerMap[type] = true
     addEventListener(type, eventListener)
@@ -361,7 +357,7 @@ function addListenener(target, name, listener, args) {
  * @param {string} name
  * @param {any} value
  */
-function setAttribute(elt, name, value) {
+function attribute(elt, name, value) {
   if (name.startsWith("style:")) {
     elt.style[name.slice(6)] = value ?? null
     return

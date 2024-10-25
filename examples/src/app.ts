@@ -30,7 +30,7 @@ function* App() {
     delay: 50,
     duration: 250,
     fill: <FillMode> "both",
-    keyframes: [
+    keyframes: <Keyframe[]> [
       { opacity: 0, transform: "translateY(-10px)" },
       { opacity: 1, transform: "unset" },
     ],

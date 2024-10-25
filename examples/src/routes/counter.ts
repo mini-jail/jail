@@ -5,13 +5,9 @@ import { Page } from "../components/mod.ts"
 const code = /*js*/ `
 function* SpaceCounter() {
   const counter = signal(0)
-  yield create("button", [
-    ["on:click", () => counter(counter() - 1)]
-  ], "-")
+  yield create("button", [["on:click", () => counter((value) => --value)]], "-")
   yield ["current value: ", counter]
-  yield create("button", [
-    ["on:click", () => counter(counter() + 1)]
-  ], "+")
+  yield create("button", [["on:click", () => counter((value) => ++value)]], "+")
 }
 
 function ReactCounter() {
