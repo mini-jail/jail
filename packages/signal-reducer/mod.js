@@ -20,7 +20,6 @@ import { pull, push } from "space/signal"
  * @returns {Reducer<Type, Action>}
  */
 export function reducer(reducer, value) {
-  // @ts-ignore: this is fine
   return function Reducer() {
     if (arguments.length) {
       value = reducer(value, arguments[0])
