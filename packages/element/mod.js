@@ -27,7 +27,6 @@ import { effect, onCleanup, root } from "space/signal"
 /**
  * @typedef {[
  *   name: "children",
- *   child: Child,
  *   ...children: Child[],
  * ]} ChildrenAttribute
  */
@@ -65,7 +64,7 @@ import { effect, onCleanup, root } from "space/signal"
  * @template Element
  * @typedef {[
  *   type: `on:${keyof GlobalEventHandlersEventMap}`,
- *   listener: (event: Event & { target: Element }) => void,
+ *   listener: (event: DOMEvent<Element, Event>) => void,
  *   ...args: EventModifier[],
  * ]} GlobalEventAttribute
  */
@@ -73,7 +72,7 @@ import { effect, onCleanup, root } from "space/signal"
  * @template Element
  * @typedef {[
  *   type: `on:${string}`,
- *   listener: (event: Event & { target: Element }) => void,
+ *   listener: (event: DOMEvent<Element, Event>) => void,
  *   ...args: EventModifier[],
  * ]} EventAttribute
  */
@@ -108,9 +107,13 @@ import { effect, onCleanup, root } from "space/signal"
  */
 /**
  * @template Target
- * @typedef {((event: Event & { target: Target }) => void) &
+ * @typedef {((event: DOMEvent<Target, Event>) => void) &
  *           { [name: string]: boolean }
  * } Listener
+ */
+/**
+ * @template Target, Event
+ * @typedef {Event & { target: Target }} DOMEvent
  */
 /**
  * @typedef {null | ?undefined | string | number | boolean | Node | { value: Child } | (() => Child) | { [Symbol.iterator](): Iterable<Child> }} Child
