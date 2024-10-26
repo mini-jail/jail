@@ -1,7 +1,7 @@
 import { effect, onCleanup, root } from "space/signal"
 /**
  * @template Type
- * @typedef {?Type | (() => ?Type)} $
+ * @typedef {Type | (() => Type | null | undefined) | null | undefined} $
  */
 /**
  * @typedef {"prevent" | "stop" | "stopImmediate" | "once"} EventModifier
@@ -10,18 +10,21 @@ import { effect, onCleanup, root } from "space/signal"
  * @typedef {[
  *   name: `aria-${string}`,
  *   value: $<string | number | boolean>,
+ *   ...never[],
  * ]} AriaAttribute
  */
 /**
  * @typedef {[
  *   name: `aria${Capitalize<string>}`,
  *   value: $<string | number | boolean>,
+ *   ...never[],
  * ]} AriaProperty
  */
 /**
  * @typedef {[
  *   name: `style:${keyof CSSStyleDeclaration & string}`,
  *   value: $<string>,
+ *   ...never[],
  * ]} StyleAttribute
  */
 /**
@@ -32,32 +35,40 @@ import { effect, onCleanup, root } from "space/signal"
  */
 /**
  * @typedef {[
- *   name: "id" | "class" | "className" | "slot" | "lang" | "nonce" | "role" | "title",
+ *   name: "id" | "class" | "className" |
+ *         "slot" | "lang" | "nonce" |
+ *         "role" | "title" | "value" |
+ *         "placeholder" | "type" | "href",
  *   value: $<string>,
+ *   ...never[],
  * ]} StringAttribute
  */
 /**
  * @typedef {[
- *   name: "hidden" | "inert" | "spellcheck" | "translate",
+ *   name: "hidden" | "inert" | "spellcheck" | "translate" | "required",
  *   value: $<boolean | "true" | "false">,
+ *   ...never[],
  * ]} BooleanAttribute
  */
 /**
  * @typedef {[
- *   name: "tabIndex" | "tabindex",
+ *   name: "tabIndex" | "tabindex" | "min" | "max" | "value",
  *   value: $<number | string>,
+ *   ...never[],
  * ]} NumberAttribute
  */
 /**
  * @typedef {[
  *   name: `attr:${string}`,
  *   value: $<object>,
+ *   ...never[],
  * ]} PrefixedAttribute
  */
 /**
  * @typedef {[
  *   name: `prop:${string}`,
  *   value: $<object>,
+ *   ...never[],
  * ]} PrefixedProperty
  */
 /**
@@ -80,13 +91,8 @@ import { effect, onCleanup, root } from "space/signal"
  * @template Element
  * @typedef {[
  *   directive: (elt: Element) => void,
+ *   ...never[],
  * ]} DirectiveAttribute
- */
-/**
- * @typedef {[
- *   name: string,
- *   value: $<object>,
- * ]} UnknownAttribute
  */
 /**
  * @template {keyof HTMLElementTagNameMap} TagName
@@ -101,8 +107,7 @@ import { effect, onCleanup, root } from "space/signal"
  *           EventAttribute<HTMLElementTagNameMap[TagName]> |
  *           DirectiveAttribute<HTMLElementTagNameMap[TagName]> |
  *           PrefixedAttribute |
- *           PrefixedProperty |
- *           UnknownAttribute
+ *           PrefixedProperty
  * } Attribute
  */
 /**
