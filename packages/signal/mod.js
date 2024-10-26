@@ -7,13 +7,9 @@
  * }} Signal
  */
 /**
- * @type {WeakMap<object, Set<Node>>}
+ * @type {WeakMap<object, Node[]>}
  */
-const targetMap = new WeakMap()
-/**
- * @type {WeakMap<Node, object[]>}
- */
-const nodeMap = new WeakMap()
+const sourceMap = new WeakMap()
 /**
  * @type {Set<Node>}
  */
@@ -31,6 +27,10 @@ function Node() {
    * @type {Node[]?}
    */
   this.childNodes = null
+  /**
+   * @type {object[]?}
+   */
+  this.sources = null
   /**
    * @type {{ [key: string |  symbol]: any }?}
    */
@@ -110,12 +110,18 @@ function addNodeToQueue(node) {
  * @param {boolean} [dispose]
  */
 function cleanNode(node, dispose) {
-  const targets = nodeMap.get(node)
-  if (targets?.length) {
-    let target = targets.pop()
-    while (target) {
-      targetMap.get(target)?.delete(node)
-      target = targets.pop()
+  if (node.sources?.length) {
+    let source = node.sources.pop(), sourceNodes
+    while (source) {
+      sourceNodes = sourceMap.get(source)
+      if (sourceNodes) {
+        let nodeIndex = sourceNodes.indexOf(node)
+        while (nodeIndex !== -1) {
+          sourceNodes.splice(nodeIndex, 1)
+          nodeIndex = sourceNodes.indexOf(node)
+        }
+      }
+      source = node.sources.pop()
     }
   }
   if (node.childNodes?.length) {
@@ -137,9 +143,9 @@ function cleanNode(node, dispose) {
     node.value = undefined
     node.parentNode = null
     node.childNodes = null
+    node.sources = null
     node.cleanups = null
     node.onupdate = null
-    nodeMap.delete(node)
   }
 }
 /**
@@ -297,25 +303,26 @@ export function catchError(fn) {
   }
 }
 /**
- * @param {object} target
+ * @param {object} source
  */
-export function pull(target) {
+export function pull(source) {
   if (activeNode?.onupdate) {
-    let nodes = targetMap.get(target)
-    let targets = nodeMap.get(activeNode)
-    if (nodes === undefined) {
-      targetMap.set(target, nodes = new Set())
+    const nodeSet = sourceMap.get(source)
+    if (nodeSet === undefined) {
+      sourceMap.set(source, [activeNode])
+    } else {
+      nodeSet.push(activeNode)
     }
-    if (targets === undefined) {
-      nodeMap.set(activeNode, targets = [])
+    if (activeNode.sources === null) {
+      activeNode.sources = [source]
+    } else {
+      activeNode.sources.push(source)
     }
-    nodes.add(activeNode)
-    targets.push(target)
   }
 }
 /**
- * @param {object} target
+ * @param {object} source
  */
-export function push(target) {
-  targetMap.get(target)?.forEach(addNodeToQueue)
+export function push(source) {
+  sourceMap.get(source)?.forEach(addNodeToQueue)
 }
