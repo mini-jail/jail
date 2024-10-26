@@ -1,134 +1,25 @@
 import { effect, onCleanup, root } from "space/signal"
 /**
- * @template Type
- * @typedef {Type | (() => Type | null | undefined) | null | undefined} $
+ * @template T
+ * @typedef {import("./types.d.ts").HTMLAttribute<T>} HTMLAttribute
  */
 /**
- * @typedef {"prevent" | "stop" | "stopImmediate" | "once"} EventModifier
+ * @typedef {import("./types.d.ts").Child} Child
  */
 /**
- * @typedef {[
- *   name: `aria-${string}`,
- *   value: $<string | number | boolean>,
- *   ...never[],
- * ]} AriaAttribute
+ * @template T, E
+ * @typedef {import("./types.d.ts").DOMEvent<T, E>} DOMEvent
  */
 /**
- * @typedef {[
- *   name: `aria${Capitalize<string>}`,
- *   value: $<string | number | boolean>,
- *   ...never[],
- * ]} AriaProperty
- */
-/**
- * @typedef {[
- *   name: `style:${keyof CSSStyleDeclaration & string}`,
- *   value: $<string>,
- *   ...never[],
- * ]} StyleAttribute
- */
-/**
- * @typedef {[
- *   name: "children",
- *   ...children: Child[],
- * ]} ChildrenAttribute
- */
-/**
- * @typedef {[
- *   name: "id" | "class" | "className" |
- *         "slot" | "lang" | "nonce" |
- *         "role" | "title" | "value" |
- *         "placeholder" | "type" | "href",
- *   value: $<string>,
- *   ...never[],
- * ]} StringAttribute
- */
-/**
- * @typedef {[
- *   name: "hidden" | "inert" | "spellcheck" | "translate" | "required",
- *   value: $<boolean | "true" | "false">,
- *   ...never[],
- * ]} BooleanAttribute
- */
-/**
- * @typedef {[
- *   name: "tabIndex" | "tabindex" | "min" | "max" | "value",
- *   value: $<number | string>,
- *   ...never[],
- * ]} NumberAttribute
- */
-/**
- * @typedef {[
- *   name: `attr:${string}`,
- *   value: $<object>,
- *   ...never[],
- * ]} PrefixedAttribute
- */
-/**
- * @typedef {[
- *   name: `prop:${string}`,
- *   value: $<object>,
- *   ...never[],
- * ]} PrefixedProperty
- */
-/**
- * @template Element
- * @typedef {[
- *   type: `on:${keyof GlobalEventHandlersEventMap}`,
- *   listener: (event: DOMEvent<Element, Event>) => void,
- *   ...args: EventModifier[],
- * ]} GlobalEventAttribute
- */
-/**
- * @template Element
- * @typedef {[
- *   type: `on:${string}`,
- *   listener: (event: DOMEvent<Element, Event>) => void,
- *   ...args: EventModifier[],
- * ]} EventAttribute
- */
-/**
- * @template Element
- * @typedef {[
- *   directive: (elt: Element) => void,
- *   ...never[],
- * ]} DirectiveAttribute
- */
-/**
- * @template {keyof HTMLElementTagNameMap} TagName
- * @typedef {StringAttribute |
- *           BooleanAttribute |
- *           NumberAttribute |
- *           AriaAttribute |
- *           AriaProperty |
- *           StyleAttribute |
- *           ChildrenAttribute |
- *           GlobalEventAttribute<HTMLElementTagNameMap[TagName]> |
- *           EventAttribute<HTMLElementTagNameMap[TagName]> |
- *           DirectiveAttribute<HTMLElementTagNameMap[TagName]> |
- *           PrefixedAttribute |
- *           PrefixedProperty
- * } Attribute
- */
-/**
- * @template Target
- * @typedef {((event: DOMEvent<Target, Event>) => void) &
- *           { [name: string]: boolean }
- * } Listener
- */
-/**
- * @template Target, Event
- * @typedef {Event & { target: Target }} DOMEvent
- */
-/**
- * @typedef {null | ?undefined | string | number | boolean | Node | { value: Child } | (() => Child) | { [Symbol.iterator](): Iterable<Child> }} Child
+ * @template T, E
+ * @typedef {import("./types.d.ts").DOMEventListener<T, E>} DOMEventListener
  */
 /**
  * @type {{ [type: string]: true | undefined }}
  */
 const listenerMap = {}
 /**
- * @type {WeakMap<EventTarget, { [type: string]: Set<Listener<EventTarget>> }>}
+ * @type {WeakMap<EventTarget, { [type: string]: Set<DOMEventListener<EventTarget, Event>> }>}
  */
 const targetListeners = new WeakMap()
 /**
@@ -161,13 +52,12 @@ export function* render(...children) {
       mount(null, child, before)
       yield before
     } else if (child[Symbol.iterator]) {
-      yield* render(...child[Symbol.iterator]())
+      yield* render(...child)
     } else {
       console.info("unknown child type", child)
     }
   }
 }
-
 /**
  * @overload
  * @param {Node} targetNode
@@ -254,7 +144,7 @@ function reconcile(parentNode, before, children, nodes) {
  * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
  * @param {TagName} type
- * @param {Attribute<TagName>[]?} [attributes]
+ * @param {HTMLAttribute<HTMLElementTagNameMap[TagName]>[]?} [attributes]
  * @param {...Child} children
  * @returns {HTMLElementTagNameMap[TagName]}
  */
@@ -264,10 +154,6 @@ function reconcile(parentNode, before, children, nodes) {
  * @param {Component} component
  * @param {...Parameters<Component>} args
  * @returns {Generator<ChildNode | string>}
- */
-/**
- * @param {string | ((...args: any[]) => any)} type
- * @param {...any} args
  */
 export function create(type, ...args) {
   if (typeof type === "function") {
@@ -281,7 +167,7 @@ export function create(type, ...args) {
 }
 /**
  * @param {HTMLElement} elt
- * @param {Attribute<any>[]?} [attributes]
+ * @param {any[]?} [attributes]
  * @param {...Child} children
  */
 function assign(elt, attributes, ...children) {
@@ -305,7 +191,7 @@ function assign(elt, attributes, ...children) {
   }
 }
 /**
- * @param {Event & { target: any }} event
+ * @param {DOMEvent<EventTarget, object>} event
  */
 function eventListener(event) {
   let target = event.target
@@ -338,7 +224,7 @@ function eventListener(event) {
 /**
  * @param {EventTarget} target
  * @param {string} name
- * @param {Listener<EventTarget>} listener
+ * @param {DOMEventListener<EventTarget, Event>} listener
  * @param {any[] | undefined | null} [args]
  */
 function listen(target, name, listener, args) {
@@ -366,6 +252,10 @@ function listen(target, name, listener, args) {
  * @param {any} value
  */
 function attribute(elt, name, value) {
+  if (name === "style") {
+    Object.assign(elt.style, value)
+    return
+  }
   if (name.startsWith("style:")) {
     elt.style[name.slice(6)] = value ?? null
     return
