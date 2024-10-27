@@ -10,16 +10,19 @@ import Sierpinski from "./routes/sierpinski.ts"
 import ToDo from "./routes/todo.ts"
 
 function Header() {
+  const pages = [
+    { href: "/", text: "home" },
+    { href: "/counter", text: "counter" },
+    { href: "/sierpinski", text: "sierpinski" },
+    { href: "/todo", text: "todo" },
+    { href: "/about", text: "about" },
+    { href: "/error", text: "error" },
+  ]
   return create("header", null, [
-    create("h3", [["children", "space", path]]),
+    create("h3", null, "space", path),
     create("nav", null, [
-      create("a", [["href", "/"]], "home"),
-      create("a", [["href", "/counter"]], "counter"),
-      create("a", [["href", "/sierpinski"]], "sierpinski"),
-      create("a", [["href", "/todo"]], "todo"),
-      create("a", [["href", "/about"]], "about"),
-      create("a", [["href", "/error"]], "error"),
-      create("a", [["on:click", unmount]], "unmount"),
+      pages.map(({ href, text }) => create("a", { href }, text)),
+      create("a", { onClick: unmount }, "unmount"),
     ]),
   ])
 }
@@ -35,16 +38,18 @@ function* App() {
       { opacity: 1, transform: "unset" },
     ],
   }
-  yield Header()
-  yield create("main", [[animate(animateProps)]], [
-    Router("pathname", [
-      ["/", Home],
-      ["/counter", Counter],
-      ["/about", About],
-      ["/sierpinski", Sierpinski],
-      ["/todo", ToDo],
-      ["/[^]*", NotFound],
-    ]),
+  yield create(Header)
+  yield create("main", { ref: animate(animateProps) }, [
+    create(
+      Router,
+      { type: "pathname" },
+      { path: "/", child: Home },
+      { path: "/counter", child: Counter },
+      { path: "/about", child: About },
+      { path: "/sierpinski", child: Sierpinski },
+      { path: "/todo", child: ToDo },
+      { path: "/[^]*", child: NotFound },
+    ),
   ])
 }
 

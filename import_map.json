@@ -5,9 +5,7 @@
     "space/signal/reducer": "./packages/signal-reducer/mod.js",
     "space/signal/ressource": "./packages/signal-ressource/mod.js",
     "space/signal/debounced": "./packages/signal-debounced/mod.js",
-    "space/dom": "./packages/dom/mod.js",
     "space/element": "./packages/element/mod.js",
-    "space/element/router": "./packages/element-router/mod.js",
-    "space/deploy": "./packages/deploy/mod.ts"
+    "space/element/router": "./packages/element-router/mod.js"
   }
 }

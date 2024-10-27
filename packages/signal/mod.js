@@ -7,24 +7,24 @@
  * }} Signal
  */
 /**
- * @type {WeakMap<object, Node[]>}
+ * @type {WeakMap<object, SignalNode[]>}
  */
 const sourceMap = new WeakMap()
 /**
- * @type {Set<Node>}
+ * @type {Set<SignalNode>}
  */
 const nodeQueue = new Set()
 const errorKey = Symbol("Error")
 let isRunning = false
 /**
- * @type {Node?}
+ * @type {SignalNode?}
  */
 let activeNode = null
-function Node() {
+function SignalNode() {
   this.value = undefined
   this.parentNode = activeNode
   /**
-   * @type {Node[]?}
+   * @type {SignalNode[]?}
    */
   this.childNodes = null
   /**
@@ -52,7 +52,7 @@ function Node() {
   }
 }
 /**
- * @param {Node | null} node
+ * @param {SignalNode | null} node
  * @param {string | symbol} key
  * @returns {any}
  */
@@ -74,7 +74,7 @@ function handleError(error) {
   errorFns.forEach((fn) => fn(error))
 }
 /**
- * @param {Node} node
+ * @param {SignalNode} node
  */
 function updateNode(node) {
   cleanNode(node, false)
@@ -92,7 +92,7 @@ function updateNode(node) {
   }
 }
 /**
- * @param {Node} node
+ * @param {SignalNode} node
  */
 function addNodeToQueue(node) {
   nodeQueue.add(node)
@@ -106,7 +106,7 @@ function addNodeToQueue(node) {
   }
 }
 /**
- * @param {Node} node
+ * @param {SignalNode} node
  * @param {boolean} [dispose]
  */
 function cleanNode(node, dispose) {
@@ -197,7 +197,7 @@ export function computed(fn) {
  * @returns {void}
  */
 export function effect(update) {
-  const node = new Node()
+  const node = new SignalNode()
   node.onupdate = update
   if (isRunning) {
     nodeQueue.add(node)
@@ -213,7 +213,7 @@ export function effect(update) {
 export function root(fn) {
   const prevNode = activeNode
   try {
-    const node = new Node()
+    const node = new SignalNode()
     activeNode = node
     return fn(() => cleanNode(node, true))
   } catch (error) {

@@ -1,6 +1,6 @@
 import { type Child, create } from "space/element"
 import { Context } from "space/signal/context"
-import { computed, effect, onCleanup, signal } from "space/signal"
+import { effect, onCleanup, signal } from "space/signal"
 
 type TriangleProps = { x: number; y: number; target: number; size: number }
 type DotProps = { x: number; y: number; target: number }
@@ -42,15 +42,12 @@ export function Paragraph(
 }
 
 export function Anchor(href: string, ...children: Child[]) {
-  return create("a", [["href", href]], ...children)
+  return create("a", { href }, ...children)
 }
 
 function Dot({ x, y, target }: DotProps) {
   const counter = counterContext.inject()
   const hover = signal(false)
-  const text = computed(() => {
-    return hover() ? "*" + counter() + "*" : counter() + ""
-  })
   const cssText = `
     width: ${target}px;
     height: ${target}px;
@@ -60,13 +57,16 @@ function Dot({ x, y, target }: DotProps) {
     font-size: ${(target / 2.5)}px;
     border-radius: ${target}px;
   `
-  return create("div", [
-    ["class", "sierpinski-dot"],
-    ["style:cssText", cssText],
-    ["style:backgroundColor", () => hover() ? "lightpink" : "white"],
-    ["on:mouseover", () => hover(true)],
-    ["on:mouseout", () => hover(false)],
-  ], text)
+  return create("div", {
+    class: "sierpinski-dot",
+    "style:cssText": cssText,
+    "style:backgroundColor": () => hover() ? "lightpink" : "white",
+    onMouseOver: () => hover(true),
+    onMouseOut: () => hover(false),
+    children: () => {
+      return hover() ? "*" + counter() + "*" : counter() + ""
+    },
+  })
 }
 
 function* Triangle(
@@ -85,10 +85,10 @@ export function SierpinskiTriangle() {
   let id: number, frameId: number
   const elapsed = signal(0)
   const count = signal(0)
-  const scale = computed(() => {
+  const scale = () => {
     const e = (elapsed() / 1000) % 10
     return (1 + (e > 5 ? 10 - e : e) / 10) / 2
-  })
+  }
   counterContext.provide(count)
   effect(() => {
     console.log("Sierpinski is alive")
@@ -105,8 +105,9 @@ export function SierpinskiTriangle() {
     cancelAnimationFrame(frameId)
     console.log("Sierpinski is dead")
   })
-  return create("div", [
-    ["class", "sierpinski-wrapper"],
-    ["style:transform", () => `scale(${scale()}) translateZ(0.1px)`],
-  ], ...Triangle({ x: 0, y: 0, target: 750, size: 25 }))
+  return create("div", {
+    class: "sierpinski-wrapper",
+    "style:transform": () => `scale(${scale()}) translateZ(0.1px)`,
+    children: Triangle({ x: 0, y: 0, target: 750, size: 25 }),
+  })
 }

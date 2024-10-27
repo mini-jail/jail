@@ -74,25 +74,25 @@ function hashChangeListener() {
 }
 /**
  * @template Child
- * @param {keyof typeof routeTypeHandlerMap} type
- * @param {[path: string, child: () => Child][]} routeArray
+ * @param {{ type: keyof typeof routeTypeHandlerMap }} props
+ * @param {...({ path: string, child: Child })} children
  */
-export function Router(type, routeArray) {
-  /**
-   * @type {[ matcher: RegExp, child: () => Child][]}
-   */
-  const routes = routeArray.map(([path, child]) => [createMatcher(path), child])
-  routeTypeHandlerMap[type]()
+export function Router(props, ...children) {
+  const routes = children.map(({ child, path }) => ({
+    matcher: createMatcher(path),
+    child,
+  }))
+  routeTypeHandlerMap[props.type]()
   onCleanup(() => routes.length = 0)
   return computed(() => {
     const nextPath = path()
-    for (const [matcher, child] of routes) {
-      if (matcher.test(nextPath)) {
+    for (const route of routes) {
+      if (route.matcher.test(nextPath)) {
         routerContext.provide({
           path: nextPath,
-          params: matcher.exec(nextPath)?.groups,
+          params: route.matcher.exec(nextPath)?.groups,
         })
-        return child()
+        return route.child
       }
     }
   })

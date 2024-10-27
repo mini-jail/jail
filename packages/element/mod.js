@@ -1,25 +1,28 @@
 import { effect, onCleanup, root } from "space/signal"
 /**
- * @template T
- * @typedef {import("./types.d.ts").HTMLAttribute<T>} HTMLAttribute
+ * @template Element
+ * @typedef {import("./types.d.ts").HTMLAttributes<Element>} HTMLAttributes
  */
 /**
  * @typedef {import("./types.d.ts").Child} Child
  */
 /**
- * @template T, E
- * @typedef {import("./types.d.ts").DOMEvent<T, E>} DOMEvent
+ * @template Target, Event
+ * @typedef {import("./types.d.ts").DOMEvent<Target, Event>} DOMEvent
  */
 /**
- * @template T, E
- * @typedef {import("./types.d.ts").DOMEventListener<T, E>} DOMEventListener
+ * @template Target, Event
+ * @typedef {import("./types.d.ts").DOMEventListener<Target, Event>} DOMEventListener
+ */
+/**
+ * @typedef {import("./types.d.ts").EventOptions} EventOptions
  */
 /**
  * @type {{ [type: string]: true | undefined }}
  */
 const listenerMap = {}
 /**
- * @type {WeakMap<EventTarget, { [type: string]: Set<DOMEventListener<EventTarget, Event>> }>}
+ * @type {WeakMap<EventTarget, { [type: string]: DOMEventListener<EventTarget, Event> | undefined }>}
  */
 const targetListeners = new WeakMap()
 /**
@@ -144,50 +147,60 @@ function reconcile(parentNode, before, children, nodes) {
  * @template {keyof HTMLElementTagNameMap} TagName
  * @overload
  * @param {TagName} type
- * @param {HTMLAttribute<HTMLElementTagNameMap[TagName]>[]?} [attributes]
+ * @param {HTMLAttributes<HTMLElementTagNameMap[TagName]>?} [attributes]
  * @param {...Child} children
  * @returns {HTMLElementTagNameMap[TagName]}
  */
 /**
- * @template {(...args: any[]) => any} Component
+ * @template {(props: object, ...children: any[]) => any} Component
  * @overload
  * @param {Component} component
- * @param {...Parameters<Component>} args
+ * @param {Parameters<Component>[0]} [attributes]
+ * @param {...(Parameters<Component> extends [unknown, ...infer U] ? U : never)[number][]} children
  * @returns {Generator<ChildNode | string>}
  */
-export function create(type, ...args) {
+/**
+ * @param {string | ((props: any, ...children: any[]) => any)} type
+ * @param {object?} [attributes]
+ * @param {...any} children
+ */
+export function create(type, attributes, ...children) {
   if (typeof type === "function") {
-    return root(() => render(type(...args)))
+    return root(() => render(type(attributes, ...children)))
   }
   const elt = document.createElement(type)
-  if (args.length) {
-    assign(elt, ...args)
+  if (attributes) {
+    assign(elt, attributes, children)
+  }
+  if (children.length) {
+    elt.append(...render(...children))
   }
   return elt
 }
 /**
  * @param {HTMLElement} elt
- * @param {any[]?} [attributes]
- * @param {...Child} children
+ * @param {HTMLAttributes<HTMLElement>} attributes
+ * @param {Child[]} children
  */
-function assign(elt, attributes, ...children) {
-  if (attributes) {
-    for (const [name, value, ...args] of attributes) {
-      if (typeof name === "function") {
-        effect(() => name(elt))
-      } else if (name === "children") {
-        children.push(value, ...args)
-      } else if (name.startsWith("on:")) {
-        listen(elt, name, value, args)
-      } else if (resolvable(value)) {
-        effect(() => attribute(elt, name, resolve(value)))
+function assign(elt, attributes, children) {
+  for (const name in attributes) {
+    const value = attributes[name]
+    if (name === "ref") {
+      effect(() => value(elt))
+    } else if (name === "children") {
+      children.push(value)
+    } else if (name.startsWith("on")) {
+      const type = name[2] === ":" ? name.slice(3) : name.slice(2).toLowerCase()
+      if (Array.isArray(value)) {
+        listen(elt, type, value[0], value[1])
       } else {
-        attribute(elt, name, value)
+        listen(elt, type, value)
       }
+    } else if (resolvable(value)) {
+      effect(() => attribute(elt, name, resolve(value)))
+    } else {
+      attribute(elt, name, value)
     }
-  }
-  if (children.length) {
-    elt.append(...render(...children))
   }
 }
 /**
@@ -196,25 +209,24 @@ function assign(elt, attributes, ...children) {
 function eventListener(event) {
   let target = event.target
   while (target !== null) {
-    const listeners = targetListeners.get(target)?.[event.type]
-    if (listeners) {
-      for (const listener of listeners) {
-        if (listener.prevent) {
-          event.preventDefault()
-        }
-        if (listener.stop) {
-          event.stopPropagation()
-        }
-        if (listener.stopImmediate) {
-          event.stopImmediatePropagation()
-        }
-        listener(event)
-        if (listener.once) {
-          listeners.delete(listener)
-        }
-        if (listener.stopImmediate) {
-          return
-        }
+    const listeners = targetListeners.get(target),
+      listener = listeners?.[event.type]
+    if (listener) {
+      if (listener.options?.prevent) {
+        event.preventDefault()
+      }
+      if (listener.options?.stop) {
+        event.stopPropagation()
+      }
+      if (listener.options?.stopImmediate) {
+        event.stopImmediatePropagation()
+      }
+      listener(event)
+      if (listener.options?.once) {
+        listeners[event.type] = undefined
+      }
+      if (listener.options?.stopImmediate) {
+        return
       }
     }
     target = target.parentNode
@@ -225,25 +237,30 @@ function eventListener(event) {
  * @param {EventTarget} target
  * @param {string} name
  * @param {DOMEventListener<EventTarget, Event>} listener
- * @param {any[] | undefined | null} [args]
+ * @param {EventOptions} [options]
  */
-function listen(target, name, listener, args) {
-  listener.once = hasArg(args, "once")
-  listener.prevent = hasArg(args, "prevent")
-  listener.stop = hasArg(args, "stop")
-  listener.stopImmediate = hasArg(args, "stopImmediate")
+function listen(target, name, listener, options) {
+  listener.options = options
   let listeners = targetListeners.get(target)
   if (listeners === undefined) {
     targetListeners.set(target, listeners = {})
   }
-  const type = name.slice(3)
-  if (listeners[type] === undefined) {
-    listeners[type] = new Set()
+  listeners[name] = listener
+  if (listenerMap[name] === undefined) {
+    listenerMap[name] = true
+    document.addEventListener(name, eventListener)
   }
-  listeners[type].add(listener)
-  if (listenerMap[type] === undefined) {
-    listenerMap[type] = true
-    addEventListener(type, eventListener)
+}
+/**
+ * @param {HTMLElement} elt
+ * @param {string} name
+ * @param {string?} value
+ */
+function style(elt, name, value) {
+  if (Reflect.has(elt.style, name)) {
+    elt.style[name] = value
+  } else {
+    elt.style.setProperty(name, value)
   }
 }
 /**
@@ -252,12 +269,21 @@ function listen(target, name, listener, args) {
  * @param {any} value
  */
 function attribute(elt, name, value) {
-  if (name === "style") {
-    Object.assign(elt.style, value)
-    return
-  }
-  if (name.startsWith("style:")) {
-    elt.style[name.slice(6)] = value ?? null
+  if (name.startsWith("style")) {
+    if (typeof value === "string") {
+      return style(elt, name[5] === ":" ? name.slice(6) : "cssText", value)
+    }
+    for (const prop in value) {
+      if (resolvable(value[prop])) {
+        return effect(() => {
+          for (const prop in value) {
+            style(elt, prop, resolve(value[prop]))
+          }
+        })
+      } else {
+        style(elt, prop, value[prop])
+      }
+    }
     return
   }
   let isProp = Reflect.has(elt, name)
@@ -277,14 +303,4 @@ function attribute(elt, name, value) {
       elt.setAttribute(name, String(value))
     }
   }
-}
-/**
- * @param {any[] | undefined | null} args
- * @param {any} arg
- */
-function hasArg(args, arg) {
-  if (args == null) {
-    return false
-  }
-  return args.includes(arg)
 }

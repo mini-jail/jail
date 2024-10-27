@@ -5,9 +5,9 @@ import { Page } from "../components/mod.ts"
 const code = /*js*/ `
 function* SpaceCounter() {
   const counter = signal(0)
-  yield create("button", [["on:click", () => counter((value) => --value)]], "-")
+  yield create("button", { onClick: () => counter((value) => --value) }, "-")
   yield ["current value: ", counter]
-  yield create("button", [["on:click", () => counter((value) => ++value)]], "+")
+  yield create("button", { onClick: () => counter((value) => ++value) }, "+")
 }
 
 function ReactCounter() {
@@ -26,15 +26,16 @@ export default function Counter() {
   const counter = signal(0)
   const show = signal(false)
   return Page({ title: "counter example", description: "(...what else?)" }, [
-    create("button", [["on:click", () => counter((value) => --value)]], "-"),
-    create("span", null, "current value: ", counter),
-    create("button", [["on:click", () => counter((value) => ++value)]], "+"),
+    create("button", { onClick: () => counter((value) => --value) }, "-"),
+    "current value: ",
+    counter,
+    create("button", { onClick: () => counter((value) => ++value) }, "+"),
     create("div", null, [
-      create("button", [["on:click", () => show(!show())]], [
+      create("button", { onClick: () => show(!show()) }, [
         () => show() ? "hide code" : "show code",
       ]),
     ]),
-    create("code", [["style:display", () => show() ? "" : "none"]], [
+    create("code", { "style:display": () => show() ? "" : "none" }, [
       code.split("\n").map((line) => create("pre", null, line)),
     ]),
   ])
